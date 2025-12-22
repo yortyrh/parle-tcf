@@ -1,0 +1,122 @@
+import {
+  type JobContext,
+  ServerOptions,
+  cli,
+  defineAgent,
+  metrics,
+  voice,
+} from '@livekit/agents';
+import * as openai from '@livekit/agents-plugin-openai';
+import { BackgroundVoiceCancellation } from '@livekit/noise-cancellation-node';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { TCFTache1, TCFTache2, TCFTache3 } from '@/agents';
+import { loadServiceConfig } from '@/config';
+import type { TaskType } from '@/config';
+
+dotenv.config({ path: '.env.local' });
+
+/**
+ * Obtient la fonction de noise cancellation appropriée basée sur la configuration
+ */
+function getNoiseCancellation(type: string) {
+  // Pour l'instant, seul BackgroundVoiceCancellation est supporté
+  // BackgroundVoiceCancellationTelephony pourrait être ajouté dans le futur
+  if (type === 'BackgroundVoiceCancellation' || type === 'BackgroundVoiceCancellationTelephony') {
+    return BackgroundVoiceCancellation();
+  }
+  return BackgroundVoiceCancellation();
+}
+
+export default defineAgent({
+  entry: async (ctx: JobContext) => {
+    // Charger la configuration du service
+    const serviceConfig = loadServiceConfig();
+
+    const session = new voice.AgentSession({
+      llm: new openai.realtime.RealtimeModel({
+        voice: serviceConfig.llm.voice,
+        temperature: 0.8,
+        modalities: serviceConfig.llm.modalities as ('text' | 'audio')[],
+      }),
+      // llm: new google.beta.realtime.RealtimeModel({
+      //   model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+      //   voice: 'Puck',
+      //   temperature: 0.8,
+      //   apiKey: process.env.GEMINI_API_KEY ?? '',
+      // }),
+    });
+
+    // Metrics collection, to measure pipeline performance
+    // For more information, see https://docs.livekit.io/agents/build/metrics/
+    const usageCollector = new metrics.UsageCollector();
+    session.on(voice.AgentSessionEventTypes.MetricsCollected, (ev) => {
+      metrics.logMetrics(ev.metrics);
+      usageCollector.collect(ev.metrics);
+    });
+
+    const logUsage = async () => {
+      const summary = usageCollector.getSummary();
+      console.log(`Usage: ${JSON.stringify(summary)}`);
+    };
+
+    ctx.addShutdownCallback(logUsage);
+
+    // Join the room and connect to the user first
+    await ctx.connect();
+    
+    // Wait for a participant to join and read their metadata to determine task type
+    const getParticipantMetadata = (): TaskType => {
+      const participants = Array.from(ctx.room.remoteParticipants.values());
+      if (participants.length > 0) {
+        const participant = participants[0];
+        if (participant) {
+          try {
+            const metadata = JSON.parse(participant.metadata || '{}');
+            const taskType = (metadata.taskType || 'tache1') as TaskType;
+            return taskType;
+          } catch (error) {
+            console.error('Error parsing participant metadata:', error);
+          }
+        }
+      }
+      return 'tache1';
+    };
+
+    // Wait a moment for participant to join
+    await new Promise(resolve => setTimeout(resolve, serviceConfig.connection.participantWaitTime));
+    const taskType = getParticipantMetadata();
+    console.log(`TCF ${taskType} started in exam mode`);
+
+    // Create the appropriate agent instance based on task type
+    const agent = (() => {
+      switch (taskType) {
+        case 'tache1':
+          return new TCFTache1();
+        case 'tache2':
+          return new TCFTache2();
+        case 'tache3':
+          return new TCFTache3();
+        default:
+          console.warn(`Unknown task type: ${taskType}, defaulting to tache1`);
+          return new TCFTache1();
+      }
+    })();
+    
+    // Start the session, which initializes the voice pipeline and warms up the models
+    await session.start({
+      agent,
+      room: ctx.room,
+      inputOptions: {
+        // LiveKit Cloud enhanced noise cancellation
+        // Configuration loaded from service.yml
+        noiseCancellation: getNoiseCancellation(serviceConfig.session.inputOptions.noiseCancellation),
+      },
+    });
+
+    // Initialiser le timer pour le mode examen
+    agent.initializeExamTimer(ctx);
+  },
+});
+
+cli.runApp(new ServerOptions({ agent: fileURLToPath(import.meta.url) }));

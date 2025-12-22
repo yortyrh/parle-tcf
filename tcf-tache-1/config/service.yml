@@ -1,0 +1,33 @@
+# Configuration du service LiveKit Agent
+
+# Modèle de langage (LLM)
+llm:
+  provider: "openai"
+  model: "realtime"
+  
+  # Configuration de la voix
+  voice: "alloy"  # Options: alloy, echo, fable, onyx, nova, shimmer
+  
+  # Modalités supportées
+  modalities:
+    - "text"
+    - "audio"
+
+# Configuration de la session
+session:
+  # Collecte des métriques de performance
+  metricsEnabled: true
+  
+  # Options d'entrée audio
+  inputOptions:
+    # Annulation de bruit (LiveKit Cloud)
+    # Pour l'instant, seul BackgroundVoiceCancellation est supporté
+    noiseCancellation: "BackgroundVoiceCancellation"
+
+# Configuration de la connexion
+connection:
+  # Délai d'attente pour la connexion du participant (ms)
+  participantWaitTime: 1000
+  
+  # Délai avant déconnexion après fin d'examen (ms)
+  disconnectDelay: 3000
