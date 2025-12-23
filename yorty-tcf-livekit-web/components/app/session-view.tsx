@@ -95,7 +95,6 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
               controls={controls}
               isConnected={session.isConnected}
               onDisconnect={session.end}
-              onChatOpenChange={() => {}}
             />
           </div>
         </div>

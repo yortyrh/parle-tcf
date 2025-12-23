@@ -1,11 +1,10 @@
 'use client';
 
-import { type HTMLAttributes, useCallback, useState } from 'react';
+import { type HTMLAttributes } from 'react';
 import { Track } from 'livekit-client';
 import { useChat, useRemoteParticipants } from '@livekit/components-react';
-import { ChatTextIcon, PhoneDisconnectIcon } from '@phosphor-icons/react/dist/ssr';
+import { PhoneDisconnectIcon } from '@phosphor-icons/react/dist/ssr';
 import { Button } from '@/components/livekit/button';
-import { Toggle } from '@/components/livekit/toggle';
 import { cn } from '@/lib/utils';
 import { ChatInput } from './chat-input';
 import { UseInputControlsProps, useInputControls } from './hooks/use-input-controls';
@@ -23,7 +22,6 @@ export interface ControlBarControls {
 export interface AgentControlBarProps extends UseInputControlsProps {
   controls?: ControlBarControls;
   isConnected?: boolean;
-  onChatOpenChange?: (open: boolean) => void;
   onDeviceError?: (error: { source: Track.Source; error: Error }) => void;
 }
 
@@ -37,12 +35,10 @@ export function AgentControlBar({
   isConnected = false,
   onDisconnect,
   onDeviceError,
-  onChatOpenChange,
   ...props
 }: AgentControlBarProps & HTMLAttributes<HTMLDivElement>) {
   const { send } = useChat();
   const participants = useRemoteParticipants();
-  const [chatOpen, setChatOpen] = useState(false);
   const publishPermissions = usePublishPermissions();
   const {
     micTrackRef,
@@ -54,14 +50,6 @@ export function AgentControlBar({
   const handleSendMessage = async (message: string) => {
     await send(message);
   };
-
-  const handleToggleTranscript = useCallback(
-    (open: boolean) => {
-      setChatOpen(open);
-      onChatOpenChange?.(open);
-    },
-    [onChatOpenChange, setChatOpen]
-  );
 
   const visibleControls = {
     leave: controls?.leave ?? true,
@@ -84,11 +72,7 @@ export function AgentControlBar({
     >
       {/* Chat Input */}
       {visibleControls.chat && (
-        <ChatInput
-          chatOpen={chatOpen}
-          isAgentAvailable={isAgentAvailable}
-          onSend={handleSendMessage}
-        />
+        <ChatInput chatOpen={true} isAgentAvailable={isAgentAvailable} onSend={handleSendMessage} />
       )}
 
       <div className="flex gap-1">
@@ -107,17 +91,6 @@ export function AgentControlBar({
               onActiveDeviceChange={handleAudioDeviceChange}
             />
           )}
-
-          {/* Toggle Transcript */}
-          <Toggle
-            size="icon"
-            variant="secondary"
-            aria-label="Toggle transcript"
-            pressed={chatOpen}
-            onPressedChange={handleToggleTranscript}
-          >
-            <ChatTextIcon weight="bold" />
-          </Toggle>
         </div>
 
         {/* Disconnect */}
