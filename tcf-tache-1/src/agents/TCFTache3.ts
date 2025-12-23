@@ -16,4 +16,3 @@ export class TCFTache3 extends TCFAgent {
     super('tache3', exercise);
   }
 }
-

@@ -1,7 +1,6 @@
 // Types pour la configuration des agents TCF
 
 export type TaskType = 'tache1' | 'tache2' | 'tache3';
-export type Mode = 'exam';
 
 // Types pour la configuration du service
 export interface ServiceConfig {
@@ -32,15 +31,8 @@ export interface AgentSettings {
 }
 
 export interface Durations {
-  disconnectDelay?: number; // Délai avant de déconnecter le participant après la fin de l'examen
+  preparation: number;
   exam: number;
-}
-
-export interface ModeConfig {
-  instructions: string;
-  greeting: string;
-  endExamMessage?: string;
-  feedbackTechniques?: string[];
 }
 
 export interface AgentConfig {
@@ -49,13 +41,7 @@ export interface AgentConfig {
   settings: AgentSettings;
   durations: Durations;
   baseInstructions: string;
-  examMode: ModeConfig;
-  sampleQuestions?: Record<string, string[]>;
-  scenarios?: Record<string, unknown>;
-  topics?: Record<string, string[]>;
-  argumentStructure?: Record<string, string[]>;
-  argumentationVocabulary?: Record<string, string[]>;
-  usefulPhrases?: Record<string, string[]>;
-  followUpQuestions?: string[];
+  instructions: string;
+  greeting: string;
 }
 

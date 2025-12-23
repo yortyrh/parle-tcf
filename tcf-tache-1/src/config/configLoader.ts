@@ -57,18 +57,14 @@ function validateConfig(config: AgentConfig, taskType: TaskType): void {
     'settings',
     'durations',
     'baseInstructions',
-    'examMode'
+    'instructions',
+    'greeting'
   ];
 
   for (const field of requiredFields) {
     if (!(field in config)) {
       throw new Error(`Missing required field '${field}' in ${taskType} configuration`);
     }
-  }
-
-  // Valider les sous-objets
-  if (!config.examMode.instructions || !config.examMode.greeting) {
-    throw new Error(`Missing examMode instructions or greeting in ${taskType} configuration`);
   }
 }
 

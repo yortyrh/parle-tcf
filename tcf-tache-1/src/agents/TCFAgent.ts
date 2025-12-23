@@ -9,7 +9,6 @@ import type { TCFExercise } from '@/exercises/exerciseLoader';
 export class TCFAgent extends voice.Agent {
   private config: AgentConfig;
   private taskType: TaskType;
-  private mode: Mode;
   private exercise: TCFExercise | null;
 
   constructor(taskType: TaskType, exercise: TCFExercise | null = null) {
@@ -17,8 +16,7 @@ export class TCFAgent extends voice.Agent {
     const config = loadAgentConfig(taskType);
 
     // Construire les instructions complètes (toujours en mode exam)
-    const modeConfig = config.examMode;
-    let fullInstructions = `${config.baseInstructions}\n\n${modeConfig.instructions}`;
+    let fullInstructions = `${config.baseInstructions}\n\n${config.instructions}`;
 
     // Ajouter l'exercice sélectionné aux instructions si fourni
     if (exercise && exercise.content) {
@@ -33,7 +31,6 @@ export class TCFAgent extends voice.Agent {
 
     this.config = config;
     this.taskType = taskType;
-    this.mode = 'exam'; // Toujours en mode exam
     this.exercise = exercise;
   }
 
@@ -41,10 +38,8 @@ export class TCFAgent extends voice.Agent {
    * Appelé quand l'agent entre dans la session
    */
   override async onEnter(): Promise<void> {
-    const modeConfig = this.config.examMode;
-    
     // Construire le message de salutation, incluant l'exercice si disponible
-    let greetingMessage = modeConfig.greeting;
+    let greetingMessage = this.config.greeting;
     if (this.exercise && this.exercise.content) {
       greetingMessage += `\n\n${this.exercise.content}`;
     }
@@ -90,6 +85,12 @@ export class TCFAgent extends voice.Agent {
     return this.exercise;
   }
 
+  async sendDataMessage(context: JobContext, message: unknown): Promise<void> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify(message));
+    await context.room.localParticipant?.publishData(data, { reliable: true });
+  }
+
   /**
    * Initialise l'écoute du timer pour le mode examen
    * Le timer démarre quand l'étudiant commence à parler
@@ -105,29 +106,30 @@ export class TCFAgent extends voice.Agent {
         timerStarted = true;
         
         try {
-          const encoder = new TextEncoder();
-          const data = encoder.encode(JSON.stringify({
-            type: 'start_timer',
-            currentTime: Date.now(),
-            duration: this.getDuration(),
-            message: 'Le chronomètre démarre'
-          }));
-          await ctx.room.localParticipant?.publishData(data, { reliable: true });
-
-          if (this.config.examMode.endExamMessage) {
-            const endExamMessage: string = this.config.examMode.endExamMessage;
-            setTimeout(async () => {
-              // Générer un message audio de fin d'examen
-              console.log('Générer un message audio de fin d\'examen : ', endExamMessage);
-              this.session.interrupt();
-              const handle = this.session.generateReply({
-                instructions: endExamMessage
-              });
-              await handle.waitForPlayout();
-            }, this.getDuration() * 1000);
+          if (this.config.durations.preparation > 0) {
+            await this.sendDataMessage(ctx, {
+              type: 'start_preparation_timer',
+              currentTime: Date.now(),
+              duration: this.config.durations.preparation
+            });
+            await new Promise(resolve => setTimeout(resolve, this.config.durations.preparation * 1000));
+            await this.sendDataMessage(ctx, {
+              type: 'end_preparation_timer',
+            });
+          }
+          if (this.config.durations.exam > 0) {
+            await this.sendDataMessage(ctx, {
+              type: 'start_exam_timer',
+              currentTime: Date.now(),
+              duration: this.config.durations.exam
+            });
+            await new Promise(resolve => setTimeout(resolve, this.config.durations.exam * 1000));
+            await this.sendDataMessage(ctx, {
+              type: 'end_exam_timer',
+            });
           }
         } catch (error) {
-          console.error('Error sending start_timer:', error);
+          console.error('Error sending timer messages:', error);
         }
       }
     });
