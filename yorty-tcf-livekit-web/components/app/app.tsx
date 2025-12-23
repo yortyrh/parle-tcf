@@ -28,14 +28,11 @@ interface AppProps {
 
 export function App({ appConfig }: AppProps) {
   const [taskId, setTaskId] = useState<number>(1);
-  const session = useSession(
-    TokenSource.endpoint('/api/connection-details'),
-    {
-      participantMetadata: JSON.stringify({
-        taskType: `tache${taskId}`
-      })
-    }
-  );
+  const session = useSession(TokenSource.endpoint('/api/connection-details'), {
+    participantMetadata: JSON.stringify({
+      taskType: `tache${taskId}`,
+    }),
+  });
 
   return (
     <SessionProvider session={session}>
