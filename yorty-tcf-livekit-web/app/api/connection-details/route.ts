@@ -32,14 +32,20 @@ export async function POST(req: Request) {
     // Parse agent configuration from request body
     const body = await req.json();
     const agentName: string = body?.room_config?.agents?.[0]?.agent_name;
+    const taskId: number | undefined = body?.taskId;
 
     // Generate participant token
     const participantName = 'user';
     const participantIdentity = `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
     const roomName = `voice_assistant_room_${Math.floor(Math.random() * 10_000)}`;
 
+    // Create metadata for participant
+    const metadata = taskId ? JSON.stringify({ taskType: `tache${taskId}` }) : undefined;
+
+    console.log('✅ Creating participant token with metadata:', metadata);
+
     const participantToken = await createParticipantToken(
-      { identity: participantIdentity, name: participantName },
+      { identity: participantIdentity, name: participantName, metadata },
       roomName,
       agentName
     );

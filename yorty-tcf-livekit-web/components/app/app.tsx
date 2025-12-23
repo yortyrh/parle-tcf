@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { TokenSource } from 'livekit-client';
 import {
   RoomAudioRenderer,
@@ -26,16 +27,21 @@ interface AppProps {
 }
 
 export function App({ appConfig }: AppProps) {
+  const [taskId, setTaskId] = useState<number>(1);
   const session = useSession(
     TokenSource.endpoint('/api/connection-details'),
-    appConfig.agentName ? { agentName: appConfig.agentName } : undefined
+    {
+      participantMetadata: JSON.stringify({
+        taskType: `tache${taskId}`
+      })
+    }
   );
 
   return (
     <SessionProvider session={session}>
       <AppSetup />
       <main className="h-svh">
-        <ViewController appConfig={appConfig} />
+        <ViewController appConfig={appConfig} onTaskSelect={setTaskId} />
       </main>
       <StartAudio label="Démarrer l'audio" />
       <RoomAudioRenderer />
