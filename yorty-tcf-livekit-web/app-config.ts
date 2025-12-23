@@ -1,3 +1,9 @@
+export interface Task {
+  id: number;
+  title: string;
+  description: string;
+}
+
 export interface AppConfig {
   pageTitle: string;
   pageDescription: string;
@@ -17,8 +23,7 @@ export interface AppConfig {
   agentName?: string;
 
   // Task information
-  taskTitle?: string;
-  taskDescription?: string;
+  tasks: Task[];
 }
 
 export const APP_CONFIG_DEFAULTS: AppConfig = {
@@ -40,6 +45,21 @@ export const APP_CONFIG_DEFAULTS: AppConfig = {
   agentName: undefined,
 
   // Task information
-  taskTitle: 'Tâche 1',
-  taskDescription: 'Exercice de compréhension orale',
+  tasks: [
+    {
+      id: 1,
+      title: 'Tâche 1',
+      description: 'Exercice de compréhension orale - Niveau débutant',
+    },
+    {
+      id: 2,
+      title: 'Tâche 2',
+      description: 'Exercice de conversation - Niveau intermédiaire',
+    },
+    {
+      id: 3,
+      title: 'Tâche 3',
+      description: 'Exercice de présentation - Niveau avancé',
+    },
+  ],
 };

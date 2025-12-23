@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useSessionContext, useSessionMessages } from '@livekit/components-react';
-import type { AppConfig } from '@/app-config';
+import type { AppConfig, Task } from '@/app-config';
 import { ChatTranscript } from '@/components/app/chat-transcript';
 import { TileLayout } from '@/components/app/tile-layout';
 import {
@@ -35,9 +35,10 @@ function Fade({
 
 interface SessionViewProps {
   appConfig: AppConfig;
+  selectedTask: Task | null;
 }
 
-export function SessionView({ appConfig }: SessionViewProps) {
+export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -71,10 +72,10 @@ export function SessionView({ appConfig }: SessionViewProps) {
           {/* Right: Task Information */}
           <div className="flex flex-col gap-2">
             <h4 className="text-foreground text-base leading-snug font-semibold capitalize transition-all duration-500">
-              {appConfig.taskTitle || 'Tâche'}
+              {selectedTask?.title || 'Tâche'}
             </h4>
             <p className="text-muted-foreground text-sm leading-5 font-normal transition-all duration-500">
-              {appConfig.taskDescription || 'Description de la tâche'}
+              {selectedTask?.description || 'Description de la tâche'}
             </p>
           </div>
         </div>

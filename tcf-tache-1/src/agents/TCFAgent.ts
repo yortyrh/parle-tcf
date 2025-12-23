@@ -1,6 +1,6 @@
 import { voice, type JobContext } from '@livekit/agents';
 import { loadAgentConfig } from '@/config';
-import type { TaskType, Mode, AgentConfig } from '@/config';
+import type { TaskType, AgentConfig } from '@/config';
 import type { TCFExercise } from '@/exercises/exerciseLoader';
 
 /**
@@ -62,13 +62,6 @@ export class TCFAgent extends voice.Agent {
    */
   getTaskType(): TaskType {
     return this.taskType;
-  }
-
-  /**
-   * Obtient le mode de cet agent
-   */
-  getMode(): Mode {
-    return this.mode;
   }
 
   /**

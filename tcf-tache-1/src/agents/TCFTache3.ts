@@ -1,5 +1,4 @@
 import { TCFAgent } from '@/agents/TCFAgent';
-import type { Mode } from '@/config';
 import { getRandomExercise } from '@/exercises/exerciseLoader';
 
 /**

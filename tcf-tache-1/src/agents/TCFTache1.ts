@@ -1,5 +1,4 @@
 import { TCFAgent } from '@/agents/TCFAgent';
-import type { Mode } from '@/config';
 
 /**
  * Agent pour TCF Tâche 1 - Expression Orale
