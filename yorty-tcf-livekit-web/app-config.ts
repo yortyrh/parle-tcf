@@ -49,17 +49,20 @@ export const APP_CONFIG_DEFAULTS: AppConfig = {
     {
       id: 1,
       title: 'Tâche 1',
-      description: 'Exercice de compréhension orale - Niveau débutant',
+      description:
+        'Présentation de soi, puis un entretien dirigé, exercice de conversation sur des sujets quotidiens',
     },
     {
       id: 2,
       title: 'Tâche 2',
-      description: 'Exercice de conversation - Niveau intermédiaire',
+      description:
+        'Jeux de rôles, où on pose des questions pour obtenir des informations sur une situation quotidienne',
     },
     {
       id: 3,
       title: 'Tâche 3',
-      description: 'Exercice de présentation - Niveau avancé',
+      description:
+        "Présentation d'un sujet, souvent lié à la vie quotidienne ou des débats de société",
     },
   ],
 };

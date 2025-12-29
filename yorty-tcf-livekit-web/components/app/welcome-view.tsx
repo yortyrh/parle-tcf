@@ -21,6 +21,16 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
     }
   };
 
+  const handleTaskClick = (taskId: number) => {
+    // Sur mobile (< 640px), démarrer directement la session
+    // Sur desktop, sélectionner la tâche
+    if (window.innerWidth < 640) {
+      onStartCall(taskId);
+    } else {
+      setSelectedTaskId(taskId);
+    }
+  };
+
   return (
     <section className="flex w-full flex-col items-center justify-center overflow-y-auto p-3 text-center sm:p-6">
       <Image
@@ -34,7 +44,9 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
         Discutez en direct avec votre agent vocal TCF
       </h1>
       <p className="text-muted-foreground mb-6 px-4 text-xs sm:mb-8 sm:text-sm">
-        Sélectionnez une tâche pour commencer
+        {/* Texte adaptatif selon la taille d'écran */}
+        <span className="sm:hidden">Appuyez sur une tâche pour commencer</span>
+        <span className="hidden sm:inline">Sélectionnez une tâche pour commencer</span>
       </p>
 
       {/* Task Selection Cards */}
@@ -42,16 +54,17 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
         {tasks.map((task) => (
           <button
             key={task.id}
-            onClick={() => setSelectedTaskId(task.id)}
+            onClick={() => handleTaskClick(task.id)}
             className={cn(
               'relative rounded-lg border-2 p-4 text-left transition-all duration-200 sm:rounded-xl sm:p-6',
+              'flex flex-col items-start justify-start',
               'active:scale-95 sm:hover:scale-105 sm:hover:shadow-lg',
               selectedTaskId === task.id
                 ? 'border-primary bg-primary/5 shadow-md'
                 : 'border-border bg-card active:border-primary/50 sm:hover:border-primary/50'
             )}
           >
-            <div className="flex flex-col gap-1.5 sm:gap-2">
+            <div className="flex w-full flex-col gap-1.5 sm:gap-2">
               <div className="flex items-center gap-2">
                 <div
                   className={cn(
@@ -76,12 +89,13 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
         ))}
       </div>
 
+      {/* Bouton Commencer - visible uniquement sur desktop */}
       <Button
         variant="primary"
         size="lg"
         onClick={handleStartCall}
         disabled={selectedTaskId === null}
-        className="w-full max-w-xs font-mono text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-64 sm:text-base"
+        className="hidden w-64 font-mono text-base disabled:cursor-not-allowed disabled:opacity-50 sm:block"
       >
         {startButtonText}
       </Button>
