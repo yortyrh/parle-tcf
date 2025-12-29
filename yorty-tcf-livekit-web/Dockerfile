@@ -1,59 +1,78 @@
 # Dockerfile for Next.js Web Application
-# syntax=docker/dockerfile:1
+# Inspired by https://github.com/vercel/next.js/tree/canary/examples/with-docker
 
-# Use the official Node.js v22 base image
 ARG NODE_VERSION=22
-FROM node:${NODE_VERSION}-slim AS base
 
-# Configure pnpm
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+# ============================================
+# Stage 1: Dependencies
+# ============================================
+FROM node:${NODE_VERSION}-alpine AS deps
+RUN apk add --no-cache libc6-compat
 
-# Install system dependencies
-RUN apt-get update -qq && apt-get install --no-install-recommends -y ca-certificates && rm -rf /var/lib/apt/lists/*
-
-# Install pnpm
-RUN npm install -g pnpm@10
-
-# Set working directory
 WORKDIR /app
 
-# Copy dependency files
+# Install pnpm globally
+RUN npm install -g pnpm@10
+
+# Copy package files
 COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Copy application files
+# ============================================
+# Stage 2: Builder
+# ============================================
+FROM node:${NODE_VERSION}-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@10
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy application code
 COPY . .
 
-# Build the Next.js application
+# Disable Next.js telemetry
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build the application
 RUN pnpm build
 
-# Create non-privileged user
-ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/app" \
-    --shell "/sbin/nologin" \
-    --uid "${UID}" \
-    appuser
+# ============================================
+# Stage 3: Runner (Production)
+# ============================================
+FROM node:${NODE_VERSION}-alpine AS runner
 
-# Set proper permissions
-RUN chown -R appuser:appuser /app
+WORKDIR /app
 
-# Note: We don't run pnpm prune --prod for Next.js because TypeScript
-# is needed at runtime to load next.config.ts
-
-USER appuser
-
-# Set Node.js to production mode
+# Set production environment
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Expose the default Next.js port
+# Create non-privileged user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy necessary files from builder
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+
+# Copy standalone build output
+# Next.js automatically copies necessary files to standalone folder
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
 EXPOSE 3000
 
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
 # Start the application
-CMD ["pnpm", "start"]
+CMD ["node", "server.js"]
 
