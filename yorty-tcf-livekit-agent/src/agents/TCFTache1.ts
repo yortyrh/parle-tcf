@@ -1,4 +1,4 @@
-import { TCFAgent } from '@/agents/TCFAgent';
+import { TCFAgent } from './TCFAgent.js';
 
 /**
  * Agent pour TCF Tâche 1 - Expression Orale

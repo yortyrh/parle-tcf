@@ -6,7 +6,7 @@ Application complète pour l'examen oral du TCF (Test de Connaissance du França
 
 Le projet est composé de deux parties principales :
 
-### 1. `tcf-tache-1` - Agent LiveKit (Backend)
+### 1. `yorty-tcf-livekit-agent` - Agent LiveKit (Backend)
 
 Agent Node.js qui gère les examens oraux du TCF avec trois types de tâches :
 - **Tâche 1** : Expression Orale - Conversation sur des sujets quotidiens (2 minutes)
@@ -19,7 +19,7 @@ Agent Node.js qui gère les examens oraux du TCF avec trois types de tâches :
 - OpenAI Realtime API
 - Configuration YAML pour les instructions des examinateurs
 
-### 2. `tcf-tache-1-react` - Application Web (Frontend)
+### 2. `yorty-tcf-livekit-web` - Application Web (Frontend)
 
 Interface React/Next.js pour les candidats qui passent l'examen.
 
@@ -33,7 +33,7 @@ Interface React/Next.js pour les candidats qui passent l'examen.
 
 ### Variables d'environnement
 
-#### Agent (`tcf-tache-1/.env.local`)
+#### Agent (`yorty-tcf-livekit-agent/.env.local`)
 ```env
 OPENAI_API_KEY=your_openai_api_key
 LIVEKIT_URL=your_livekit_url
@@ -41,9 +41,9 @@ LIVEKIT_API_KEY=your_livekit_api_key
 LIVEKIT_API_SECRET=your_livekit_api_secret
 ```
 
-#### Application Web (`tcf-tache-1-react/.env.local`)
+#### Application Web (`yorty-tcf-livekit-web/.env.local`)
 ```env
-NEXT_PUBLIC_LIVEKIT_URL=your_livekit_url
+LIVEKIT_URL=your_livekit_url
 LIVEKIT_API_KEY=your_livekit_api_key
 LIVEKIT_API_SECRET=your_livekit_api_secret
 ```
@@ -52,27 +52,52 @@ LIVEKIT_API_SECRET=your_livekit_api_secret
 
 ### Agent
 ```bash
-cd tcf-tache-1
+cd yorty-tcf-livekit-agent
 pnpm install
 ```
 
 ### Application Web
 ```bash
-cd tcf-tache-1-react
+cd yorty-tcf-livekit-web
 pnpm install
 ```
 
 ## Développement
 
-### Agent
+### Option 1 : Docker Compose (Recommandé)
+
+La façon la plus simple de démarrer le projet complet :
+
 ```bash
-cd tcf-tache-1
+# Copier et configurer les variables d'environnement
+cp .env.example .env
+# Éditer .env avec vos identifiants LiveKit et OpenAI
+
+# Démarrer tous les services
+docker-compose up -d
+
+# Voir les logs
+docker-compose logs -f
+
+# Accéder à l'application
+# Ouvrir http://localhost:3000
+```
+
+Pour plus de détails, consultez [DOCKER.md](./DOCKER.md).
+
+### Option 2 : Développement local
+
+#### Agent
+```bash
+cd yorty-tcf-livekit-agent
+pnpm install
 pnpm dev
 ```
 
-### Application Web
+#### Application Web
 ```bash
-cd tcf-tache-1-react
+cd yorty-tcf-livekit-web
+pnpm install
 pnpm dev
 ```
 
@@ -89,12 +114,12 @@ pnpm dev
 ## Structure des fichiers de configuration
 
 Les instructions des examinateurs sont définies dans :
-- `tcf-tache-1/config/agents/tache1.yml`
-- `tcf-tache-1/config/agents/tache2.yml`
-- `tcf-tache-1/config/agents/tache3.yml`
+- `yorty-tcf-livekit-agent/config/agents/tache1.yml`
+- `yorty-tcf-livekit-agent/config/agents/tache2.yml`
+- `yorty-tcf-livekit-agent/config/agents/tache3.yml`
 
 Les exercices pour les tâches 2 et 3 sont stockés dans :
-- `tcf-tache-1/config/tcf-exercises.csv`
+- `yorty-tcf-livekit-agent/config/tcf-exercises.csv`
 
 ## Licence
 

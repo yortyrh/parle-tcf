@@ -6,15 +6,13 @@ export {
   clearConfigCache,
   loadServiceConfig,
   reloadServiceConfig 
-} from './configLoader';
+} from './configLoader.js';
 
 export type { 
   AgentConfig, 
   TaskType, 
-  Mode, 
   AgentSettings, 
   Durations, 
-  ModeConfig,
   ServiceConfig 
-} from './types';
+} from './types.js';
 

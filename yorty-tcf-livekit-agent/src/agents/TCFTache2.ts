@@ -1,5 +1,5 @@
-import { TCFAgent } from '@/agents/TCFAgent';
-import { getRandomExercise } from '@/exercises/exerciseLoader';
+import { TCFAgent } from './TCFAgent.js';
+import { getRandomExercise } from '../exercises/exerciseLoader.js';
 
 /**
  * Agent pour TCF Tâche 2 - Interaction

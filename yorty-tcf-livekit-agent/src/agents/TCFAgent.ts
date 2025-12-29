@@ -1,7 +1,7 @@
 import { voice, type JobContext } from '@livekit/agents';
-import { loadAgentConfig } from '@/config';
-import type { TaskType, AgentConfig } from '@/config';
-import type { TCFExercise } from '@/exercises/exerciseLoader';
+import { loadAgentConfig } from '../config/index.js';
+import type { TaskType, AgentConfig } from '../config/index.js';
+import type { TCFExercise } from '../exercises/exerciseLoader.js';
 
 /**
  * Agent TCF générique qui charge sa configuration depuis des fichiers YAML

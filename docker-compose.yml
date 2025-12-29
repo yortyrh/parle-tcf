@@ -1,0 +1,58 @@
+services:
+  # Agent LiveKit (Backend)
+  agent:
+    build:
+      context: ./yorty-tcf-livekit-agent
+      dockerfile: Dockerfile
+    container_name: tcf-agent
+    environment:
+      # LiveKit Configuration
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      # OpenAI Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Node environment
+      - NODE_ENV=production
+    volumes:
+      # Mount configuration files to allow runtime updates
+      - ./yorty-tcf-livekit-agent/config:/app/config:ro
+    restart: unless-stopped
+    networks:
+      - tcf-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Application Web (Frontend)
+  web:
+    build:
+      context: ./yorty-tcf-livekit-web
+      dockerfile: Dockerfile
+    container_name: tcf-web
+    environment:
+      # LiveKit Configuration
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      # Node environment
+      - NODE_ENV=production
+    ports:
+      - "80:3000"
+    restart: unless-stopped
+    networks:
+      - tcf-network
+    depends_on:
+      - agent
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  tcf-network:
+    driver: bridge
+

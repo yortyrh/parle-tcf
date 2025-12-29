@@ -10,9 +10,9 @@ import * as openai from '@livekit/agents-plugin-openai';
 import { BackgroundVoiceCancellation } from '@livekit/noise-cancellation-node';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
-import { TCFTache1, TCFTache2, TCFTache3 } from '@/agents';
-import { loadServiceConfig } from '@/config';
-import type { TaskType } from '@/config';
+import { TCFTache1, TCFTache2, TCFTache3 } from './agents/index.js';
+import { loadServiceConfig } from './config/index.js';
+import type { TaskType } from './config/index.js';
 
 dotenv.config({ path: '.env.local' });
 
