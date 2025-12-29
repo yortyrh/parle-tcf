@@ -7,11 +7,11 @@ export function TileLayout() {
 
   return (
     <div className="flex items-center justify-center">
-      {/* Audio Agent Visualizer - Compact for card header */}
+      {/* Audio Agent Visualizer - Compact for card header, smaller on mobile */}
       <div
         className={cn(
           'bg-background aspect-square rounded-md border transition-all duration-500',
-          'border-input/50 h-[80px] w-[80px] drop-shadow-lg'
+          'border-input/50 h-14 w-14 drop-shadow-lg sm:h-[80px] sm:w-[80px]'
         )}
       >
         <BarVisualizer
@@ -19,11 +19,11 @@ export function TileLayout() {
           state={agentState}
           options={{ minHeight: 5 }}
           trackRef={agentAudioTrack}
-          className={cn('flex h-full items-center justify-center gap-1')}
+          className={cn('flex h-full items-center justify-center gap-0.5 sm:gap-1')}
         >
           <span
             className={cn([
-              'bg-muted min-h-2.5 w-2.5 rounded-full',
+              'bg-muted min-h-2 w-2 rounded-full sm:min-h-2.5 sm:w-2.5',
               'origin-center transition-colors duration-250 ease-linear',
               'data-[lk-highlighted=true]:bg-foreground data-[lk-muted=true]:bg-muted',
             ])}

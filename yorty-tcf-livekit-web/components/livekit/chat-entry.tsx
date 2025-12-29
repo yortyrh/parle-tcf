@@ -34,13 +34,17 @@ export const ChatEntry = ({
     <div
       title={title}
       data-lk-message-origin={messageOrigin}
-      className={cn('mb-4 flex gap-2.5', isLocal ? 'flex-row-reverse' : '', className)}
+      className={cn(
+        'mb-3 flex gap-2 sm:mb-4 sm:gap-2.5',
+        isLocal ? 'flex-row-reverse' : '',
+        className
+      )}
       {...props}
     >
       {/* Avatar placeholder - could be added later */}
       <div
         className={cn(
-          'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold',
+          'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold sm:h-10 sm:w-10 sm:text-sm',
           isLocal ? 'bg-indigo-600 text-white' : 'bg-gray-300 text-gray-700'
         )}
       >
@@ -48,12 +52,14 @@ export const ChatEntry = ({
       </div>
 
       {/* Message content */}
-      <div className={cn('grid', isLocal ? 'justify-items-end' : 'justify-items-start')}>
+      <div
+        className={cn('grid min-w-0 flex-1', isLocal ? 'justify-items-end' : 'justify-items-start')}
+      >
         {/* Sender name */}
         {name && (
           <h5
             className={cn(
-              'pb-1 text-sm leading-snug font-semibold text-gray-900',
+              'pb-0.5 text-xs leading-snug font-semibold text-gray-900 sm:pb-1 sm:text-sm',
               isLocal && 'text-right'
             )}
           >
@@ -62,18 +68,18 @@ export const ChatEntry = ({
         )}
 
         {/* Message bubble */}
-        <div className="grid w-max max-w-md">
+        <div className="grid w-auto max-w-[85%] sm:max-w-md">
           <div
             className={cn(
-              'inline-flex items-center gap-3 px-3.5 py-2',
+              'inline-flex items-center gap-2 px-2.5 py-1.5 sm:gap-3 sm:px-3.5 sm:py-2',
               isLocal
-                ? 'rounded-3xl rounded-tr-none bg-indigo-600'
-                : 'rounded-3xl rounded-tl-none bg-gray-100'
+                ? 'rounded-2xl rounded-tr-none bg-indigo-600 sm:rounded-3xl'
+                : 'rounded-2xl rounded-tl-none bg-gray-100 sm:rounded-3xl'
             )}
           >
             <h5
               className={cn(
-                'text-sm leading-snug font-normal',
+                'text-xs leading-snug font-normal break-words sm:text-sm',
                 isLocal ? 'text-white' : 'text-gray-900'
               )}
             >
@@ -84,11 +90,11 @@ export const ChatEntry = ({
           {/* Timestamp */}
           <div
             className={cn(
-              'inline-flex items-center py-1',
-              isLocal ? 'justify-end pr-2' : 'justify-start pl-2'
+              'inline-flex items-center py-0.5 sm:py-1',
+              isLocal ? 'justify-end pr-1.5 sm:pr-2' : 'justify-start pl-1.5 sm:pl-2'
             )}
           >
-            <h6 className="text-xs leading-4 font-normal text-gray-500">
+            <h6 className="text-[10px] leading-4 font-normal text-gray-500 sm:text-xs">
               {hasBeenEdited && '* '}
               {time.toLocaleTimeString(locale, { timeStyle: 'short' })}
             </h6>

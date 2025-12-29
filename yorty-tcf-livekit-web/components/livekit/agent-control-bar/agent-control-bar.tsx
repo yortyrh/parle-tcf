@@ -65,7 +65,7 @@ export function AgentControlBar({
     <div
       aria-label="Voice assistant controls"
       className={cn(
-        'bg-background border-input/50 dark:border-muted flex flex-col rounded-[31px] border p-3 drop-shadow-md/3',
+        'bg-background border-input/50 dark:border-muted flex flex-col rounded-2xl sm:rounded-[31px] border p-2 sm:p-3 drop-shadow-md/3',
         className
       )}
       {...props}
@@ -75,8 +75,8 @@ export function AgentControlBar({
         <ChatInput chatOpen={true} isAgentAvailable={isAgentAvailable} onSend={handleSendMessage} />
       )}
 
-      <div className="flex gap-1">
-        <div className="flex grow gap-1">
+      <div className="flex gap-1 sm:gap-1.5">
+        <div className="flex grow gap-1 sm:gap-1.5">
           {/* Toggle Microphone */}
           {visibleControls.microphone && (
             <TrackSelector
@@ -99,11 +99,11 @@ export function AgentControlBar({
             variant="destructive"
             onClick={onDisconnect}
             disabled={!isConnected}
-            className="font-mono"
+            className="font-mono text-xs sm:text-sm px-3 sm:px-4"
           >
-            <PhoneDisconnectIcon weight="bold" />
-            <span className="hidden md:inline">END CALL</span>
-            <span className="inline md:hidden">END</span>
+            <PhoneDisconnectIcon weight="bold" className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">END CALL</span>
+            <span className="inline sm:hidden">FIN</span>
           </Button>
         )}
       </div>
