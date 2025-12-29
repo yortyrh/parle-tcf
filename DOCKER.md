@@ -205,13 +205,100 @@ Docker Compose est principalement destiné au déploiement en production ou aux 
 
 ## Production
 
-Pour un déploiement en production, considérez :
+### Déploiement sur EC2 (ou serveur distant)
 
-1. **Variables d'environnement sécurisées** : Utilisez Docker secrets ou un gestionnaire de secrets
-2. **Reverse proxy** : Ajoutez Nginx ou Traefik pour le SSL/TLS
-3. **Monitoring** : Intégrez des outils de monitoring (Prometheus, Grafana)
-4. **Logs** : Configurez un système de logging centralisé
-5. **Scaling** : Utilisez Docker Swarm ou Kubernetes pour l'orchestration
+Si votre serveur a une version ancienne de Docker/Buildx, utilisez cette méthode :
+
+#### 1. Sur votre machine locale
+
+```bash
+# Définir votre nom d'utilisateur Docker Hub
+export DOCKER_USERNAME=votre-username
+
+# Exécuter le script de déploiement
+./deploy.sh
+```
+
+Ou manuellement :
+
+```bash
+# Se connecter à Docker Hub
+docker login
+
+# Builder les images
+docker compose build
+
+# Tag et push
+docker tag yorty-tcf-livekit-agent:latest votre-username/yorty-tcf-livekit-agent:latest
+docker tag yorty-tcf-livekit-web:latest votre-username/yorty-tcf-livekit-web:latest
+
+docker push votre-username/yorty-tcf-livekit-agent:latest
+docker push votre-username/yorty-tcf-livekit-web:latest
+```
+
+#### 2. Sur votre serveur EC2
+
+```bash
+# Copier les fichiers nécessaires
+scp docker-compose.prod.yml ec2-user@your-ec2-ip:~/
+scp -r yorty-tcf-livekit-agent/config ec2-user@your-ec2-ip:~/yorty-tcf-livekit-agent/
+scp .env ec2-user@your-ec2-ip:~/
+
+# Se connecter au serveur
+ssh ec2-user@your-ec2-ip
+
+# Éditer docker-compose.prod.yml et remplacer <votre-username>
+sed -i 's/<votre-username>/votre-username/g' docker-compose.prod.yml
+
+# Pull les images
+docker compose -f docker-compose.prod.yml pull
+
+# Démarrer les services
+docker compose -f docker-compose.prod.yml up -d
+
+# Voir les logs
+docker compose -f docker-compose.prod.yml logs -f
+```
+
+#### 3. Mettre à jour le déploiement
+
+```bash
+# Sur votre machine locale
+./deploy.sh
+
+# Sur EC2
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Mise à jour de Docker sur EC2
+
+Si vous préférez mettre à jour Docker sur EC2 :
+
+```bash
+# Amazon Linux 2
+sudo yum update -y docker
+sudo systemctl restart docker
+
+# Ou installer la dernière version
+sudo yum remove docker docker-client docker-client-latest docker-common
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl start docker
+sudo usermod -aG docker ec2-user
+```
+
+### Recommandations pour la production
+
+1. **Variables d'environnement sécurisées** : Utilisez AWS Secrets Manager ou Docker secrets
+2. **Reverse proxy** : Ajoutez Nginx ou Traefik pour le SSL/TLS avec Let's Encrypt
+3. **Monitoring** : Intégrez CloudWatch, Prometheus, ou Grafana
+4. **Logs** : Configurez CloudWatch Logs ou un système de logging centralisé
+5. **Scaling** : Utilisez AWS ECS, Docker Swarm ou Kubernetes pour l'orchestration
+6. **Backup** : Sauvegardez régulièrement les configurations et données
+7. **Security Groups** : Configurez correctement les groupes de sécurité EC2
+8. **SSL/TLS** : Utilisez un certificat SSL pour sécuriser les communications
 
 ## Support
 
