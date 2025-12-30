@@ -42,6 +42,11 @@ export class TCFAgent extends voice.Agent {
    * Appelé quand l'agent entre dans la session
    */
   override async onEnter(): Promise<void> {
+    // Envoyer les données de l'exercice au client web
+    if (this.context) {
+      await this.sendExerciseData();
+    }
+
     // Construire le message de salutation, incluant l'exercice si disponible
     let greetingMessage = this.config.greeting;
     if (this.exercise && this.exercise.content) {
@@ -98,8 +103,41 @@ export class TCFAgent extends voice.Agent {
   }
 
   /**
-   * Définit le contexte de la job (doit être appelé avant onEnter)
+   * Envoie les données de l'exercice au client web
    */
+  private async sendExerciseData(): Promise<void> {
+    if (!this.context) return;
+
+    // Déterminer le titre et la description en fonction du type de tâche
+    let title: string;
+    let description: string;
+
+    if (this.taskType === 'tache1') {
+      title = 'Tâche 1 - Entretien dirigé';
+      description = 'Présentation de soi, puis un entretien dirigé, exercice de conversation sur des sujets quotidiens';
+    } else if (this.taskType === 'tache2') {
+      title = 'Tâche 2 - Exercice en interaction';
+      description = this.exercise?.content || 'Jeux de rôles, où on pose des questions pour obtenir des informations sur une situation quotidienne';
+    } else if (this.taskType === 'tache3') {
+      title = 'Tâche 3 - Expression d\'un point de vue';
+      description = this.exercise?.content || 'Présentation d\'un sujet, souvent lié à la vie quotidienne ou des débats de société';
+    } else {
+      title = 'TCF Expression Orale';
+      description = 'Exercise TCF';
+    }
+
+    const exerciseData = {
+      type: 'exercise_data',
+      data: {
+        title,
+        description,
+        content: this.exercise?.content || '',
+      }
+    };
+
+    console.log('[Exercise] Envoi des données:', exerciseData.data);
+    await this.sendDataMessage(this.context, exerciseData);
+  }
 
   /**
    * Démarre le timer de préparation
