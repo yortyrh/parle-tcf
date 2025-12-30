@@ -65,7 +65,7 @@ export function AgentControlBar({
     <div
       aria-label="Voice assistant controls"
       className={cn(
-        'bg-background border-input/50 dark:border-muted flex flex-col rounded-2xl sm:rounded-[31px] border p-2 sm:p-3 drop-shadow-md/3',
+        'bg-background border-input/50 dark:border-muted flex flex-col rounded-2xl border p-2 drop-shadow-md/3 sm:rounded-[31px] sm:p-3',
         className
       )}
       {...props}
@@ -99,9 +99,9 @@ export function AgentControlBar({
             variant="destructive"
             onClick={onDisconnect}
             disabled={!isConnected}
-            className="font-mono text-xs sm:text-sm px-3 sm:px-4"
+            className="px-3 font-mono text-xs sm:px-4 sm:text-sm"
           >
-            <PhoneDisconnectIcon weight="bold" className="w-4 h-4 sm:w-5 sm:h-5" />
+            <PhoneDisconnectIcon weight="bold" className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="hidden sm:inline">END CALL</span>
             <span className="inline sm:hidden">FIN</span>
           </Button>

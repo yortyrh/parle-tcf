@@ -10,7 +10,7 @@ import {
   AgentControlBar,
   type ControlBarControls,
 } from '@/components/livekit/agent-control-bar/agent-control-bar';
-import { useTimerControls, useExerciseData } from '@/hooks';
+import { useExerciseData, useTimerControls } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../livekit/scroll-area/scroll-area';
 

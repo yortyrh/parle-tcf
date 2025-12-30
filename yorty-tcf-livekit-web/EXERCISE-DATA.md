@@ -29,6 +29,7 @@ Au lieu de passer les informations de tâche statiquement en props, le système 
 ```
 
 **Champs :**
+
 - `type` : `"exercise_data"` (identifiant du type de message)
 - `data.title` : Titre de la tâche affiché en haut
 - `data.description` : Description de l'exercice affichée sous le titre
@@ -100,21 +101,25 @@ private async sendExerciseData(): Promise<void> {
 ### Logique par Tâche
 
 #### Tâche 1 (Pas d'exercice spécifique)
+
 ```typescript
-title = 'Tâche 1 - Entretien dirigé'
-description = 'Présentation de soi, puis un entretien dirigé, exercice de conversation sur des sujets quotidiens'
+title = 'Tâche 1 - Entretien dirigé';
+description =
+  'Présentation de soi, puis un entretien dirigé, exercice de conversation sur des sujets quotidiens';
 ```
 
 #### Tâche 2 (Exercice chargé depuis CSV)
+
 ```typescript
-title = 'Tâche 2 - Exercice en interaction'
-description = exercise.content // Ex: "Je suis un(e) ami(e) canadien(ne)..."
+title = 'Tâche 2 - Exercice en interaction';
+description = exercise.content; // Ex: "Je suis un(e) ami(e) canadien(ne)..."
 ```
 
 #### Tâche 3 (Question chargée depuis CSV)
+
 ```typescript
-title = 'Tâche 3 - Expression d\'un point de vue'
-description = exercise.content // Ex: "Selon vous, les livres ont-ils perdu leur utilité..."
+title = "Tâche 3 - Expression d'un point de vue";
+description = exercise.content; // Ex: "Selon vous, les livres ont-ils perdu leur utilité..."
 ```
 
 ## 🌐 Utilisation Côté Web (Frontend)
@@ -141,12 +146,17 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
 ### Fallback avec `selectedTask`
 
 Le système garde un fallback sur `selectedTask` pour :
+
 - Afficher quelque chose pendant que les données arrivent
 - Assurer la compatibilité si l'agent n'envoie pas de données
 
 ```typescript
-{exerciseData?.title || selectedTask?.title || 'Tâche'}
-{exerciseData?.description || selectedTask?.description || 'Description de la tâche'}
+{
+  exerciseData?.title || selectedTask?.title || 'Tâche';
+}
+{
+  exerciseData?.description || selectedTask?.description || 'Description de la tâche';
+}
 ```
 
 ## 🎨 Affichage dans l'Interface
@@ -176,10 +186,12 @@ Les informations sont affichées dans le header de `SessionView` :
 ### Fichiers Concernés
 
 #### Backend
+
 - **TCFAgent.ts** : Méthode `sendExerciseData()` et appel dans `onEnter()`
 - **exerciseLoader.ts** : Chargement des exercices depuis CSV
 
 #### Frontend
+
 - **hooks/useExerciseData.ts** : Hook pour écouter les messages
 - **hooks/index.ts** : Export du hook
 - **components/app/session-view.tsx** : Affichage des données
@@ -268,4 +280,3 @@ Ouvrez la console et cherchez les logs préfixés par `[Exercise]`.
 
 **Dernière mise à jour** : 29 décembre 2024  
 **Version** : 1.0.0
-

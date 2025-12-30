@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { DataPacket_Kind, type RemoteParticipant } from 'livekit-client';
 import { useRemoteParticipants } from '@livekit/components-react';
 
 export interface TimerState {
@@ -80,11 +79,7 @@ export function useTimerControls() {
 
   useEffect(() => {
     // Fonction pour gérer les données reçues
-    const handleDataReceived = (
-      payload: Uint8Array,
-      participant: RemoteParticipant | undefined,
-      kind: DataPacket_Kind
-    ) => {
+    const handleDataReceived = (payload: Uint8Array) => {
       // Décoder les données
       const decoder = new TextDecoder();
       const text = decoder.decode(payload);
@@ -105,7 +100,7 @@ export function useTimerControls() {
         ) {
           handleTimerMessage(data as TimerControlMessage);
         }
-      } catch (error) {
+      } catch {
         // Pas un message JSON ou pas un message de timer, ignorer
         console.debug('[Timer] Message non-JSON ignoré');
       }

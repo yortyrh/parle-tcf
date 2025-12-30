@@ -33,6 +33,7 @@ L'agent envoie des messages JSON via le data channel pour contrôler le timer :
 ```
 
 **Paramètres :**
+
 - `type` : `"start_preparation_timer"`
 - `duration` : Durée en secondes (optionnel, défaut: 60)
 - `timestamp` : Timestamp de démarrage en millisecondes (optionnel, défaut: Date.now())
@@ -46,6 +47,7 @@ L'agent envoie des messages JSON via le data channel pour contrôler le timer :
 ```
 
 **Paramètres :**
+
 - `type` : `"end_preparation_timer"`
 
 ### 3. Démarrer le timer d'examen
@@ -59,6 +61,7 @@ L'agent envoie des messages JSON via le data channel pour contrôler le timer :
 ```
 
 **Paramètres :**
+
 - `type` : `"start_exam_timer"`
 - `duration` : Durée en secondes (optionnel, défaut: 120)
 - `timestamp` : Timestamp de démarrage en millisecondes (optionnel, défaut: Date.now())
@@ -72,6 +75,7 @@ L'agent envoie des messages JSON via le data channel pour contrôler le timer :
 ```
 
 **Paramètres :**
+
 - `type` : `"end_exam_timer"`
 
 ## 💻 Utilisation côté Agent (Backend)
@@ -81,8 +85,8 @@ L'agent envoie des messages JSON via le data channel pour contrôler le timer :
 Le projet inclut une classe `TimerController` qui simplifie l'envoi de messages de timer :
 
 ```typescript
-import { TimerController, TCF_DURATIONS } from './agents/TimerController.js';
 import type { JobContext } from '@livekit/agents';
+import { TCF_DURATIONS, TimerController } from './agents/TimerController.js';
 
 class MyTCFAgent extends TCFAgent {
   private timer: TimerController;
@@ -95,7 +99,7 @@ class MyTCFAgent extends TCFAgent {
   async handleTache2(exercise: TCFExercise) {
     // Phase de préparation (2 minutes)
     await this.timer.runPreparationPhase(TCF_DURATIONS.TACHE_2.preparation);
-    
+
     // Phase d'examen (3 minutes)
     await this.timer.runExamPhase(TCF_DURATIONS.TACHE_2.exam);
   }
@@ -103,16 +107,13 @@ class MyTCFAgent extends TCFAgent {
   async handleTache3WithWarnings(exercise: TCFExercise) {
     // Phase de préparation
     await this.timer.runPreparationPhase(TCF_DURATIONS.TACHE_3.preparation);
-    
+
     // Phase d'examen avec avertissements vocaux
-    await this.timer.runExamPhaseWithWarnings(
-      TCF_DURATIONS.TACHE_3.exam,
-      async (timeLeft) => {
-        if (timeLeft === 60) {
-          await this.say("Il vous reste 1 minute.");
-        }
+    await this.timer.runExamPhaseWithWarnings(TCF_DURATIONS.TACHE_3.exam, async (timeLeft) => {
+      if (timeLeft === 60) {
+        await this.say('Il vous reste 1 minute.');
       }
-    );
+    });
   }
 }
 ```
@@ -150,16 +151,19 @@ async handleCustomTimer() {
 Le timer change d'apparence selon le temps restant :
 
 ### État Normal (> 30 secondes)
+
 - Bordure bleu primaire
 - Fond bleu clair
 - Texte bleu
 
 ### État Avertissement (≤ 30 secondes)
+
 - Bordure orange
 - Fond orange clair
 - Texte orange
 
 ### État Danger (≤ 10 secondes)
+
 - Bordure rouge
 - Fond rouge clair
 - Texte rouge
@@ -171,11 +175,13 @@ Le timer change d'apparence selon le temps restant :
 Le timer s'adapte automatiquement :
 
 **Mobile (< 640px) :**
+
 - Taille réduite
 - Texte plus petit
 - Position : top-2 right-2
 
 **Desktop (≥ 640px) :**
+
 - Taille normale
 - Position : top-4 right-4
 
@@ -202,6 +208,7 @@ interface TimerState {
 ```
 
 **Props :**
+
 - `timerState` : État du timer (requis)
 - `className` : Classes CSS supplémentaires (optionnel)
 
@@ -221,6 +228,7 @@ Le hook `useTimerControls` affiche des logs détaillés dans la console du navig
 ```
 
 **Types de logs :**
+
 - ✅ Messages de timer reçus avec leurs paramètres
 - ✅ Démarrage/arrêt des timers
 - ⚠️ Messages non-JSON ignorés
@@ -236,11 +244,11 @@ Pour vérifier que les messages arrivent bien côté client, ouvrez la console d
 
 ## 📊 Durées Recommandées par Tâche TCF
 
-| Tâche | Préparation | Examen |
-|-------|-------------|--------|
-| Tâche 1 | 0 min | 2 min |
-| Tâche 2 | 2 min | 3-4 min |
-| Tâche 3 | 3 min | 4-5 min |
+| Tâche   | Préparation | Examen  |
+| ------- | ----------- | ------- |
+| Tâche 1 | 0 min       | 2 min   |
+| Tâche 2 | 2 min       | 3-4 min |
+| Tâche 3 | 3 min       | 4-5 min |
 
 ## ⚠️ Remarques Importantes
 
@@ -286,4 +294,3 @@ Pour vérifier que les messages arrivent bien côté client, ouvrez la console d
 
 **Dernière mise à jour** : 29 décembre 2024  
 **Version** : 1.0.0
-
