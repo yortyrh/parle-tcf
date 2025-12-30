@@ -1,3 +1,4 @@
+import type { JobContext } from '@livekit/agents';
 import { TCFAgent } from './TCFAgent.js';
 
 /**
@@ -5,7 +6,7 @@ import { TCFAgent } from './TCFAgent.js';
  * Configuration chargée depuis config/agents/tache1.yml
  */
 export class TCFTache1 extends TCFAgent {
-  constructor() {
-    super('tache1');
+  constructor(context: JobContext) {
+    super('tache1', null, context);
   }
 }

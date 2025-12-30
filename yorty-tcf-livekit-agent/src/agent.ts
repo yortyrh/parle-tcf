@@ -92,17 +92,17 @@ export default defineAgent({
     const agent = (() => {
       switch (taskType) {
         case 'tache1':
-          return new TCFTache1();
+          return new TCFTache1(ctx);
         case 'tache2':
-          return new TCFTache2();
+          return new TCFTache2(ctx);
         case 'tache3':
-          return new TCFTache3();
+          return new TCFTache3(ctx);
         default:
           console.warn(`Unknown task type: ${taskType}, defaulting to tache1`);
-          return new TCFTache1();
+          return new TCFTache1(ctx);
       }
     })();
-    
+
     // Start the session, which initializes the voice pipeline and warms up the models
     await session.start({
       agent,
@@ -114,8 +114,13 @@ export default defineAgent({
       },
     });
 
-    // Initialiser le timer pour le mode examen
-    agent.initializeExamTimer(ctx);
+    // Ajouter un callback de nettoyage pour les timers
+    ctx.addShutdownCallback(async () => {
+      await agent.cleanup();
+    });
+    
+    // Initialiser le contexte et les écouteurs avant de démarrer la session
+    agent.initializeExamTimer();
   },
 });
 

@@ -5,10 +5,12 @@ import { useSessionContext, useSessionMessages } from '@livekit/components-react
 import type { AppConfig, Task } from '@/app-config';
 import { ChatTranscript } from '@/components/app/chat-transcript';
 import { TileLayout } from '@/components/app/tile-layout';
+import { TimerDisplay } from '@/components/app/timer-display';
 import {
   AgentControlBar,
   type ControlBarControls,
 } from '@/components/livekit/agent-control-bar/agent-control-bar';
+import { useTimerControls } from '@/hooks/useTimerControls';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../livekit/scroll-area/scroll-area';
 
@@ -42,6 +44,7 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { timerState } = useTimerControls();
 
   const controls: ControlBarControls = {
     leave: true,
@@ -62,6 +65,11 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-4">
       {/* Card Container */}
       <div className="border-border bg-card flex h-full w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-solid shadow-lg transition-all duration-500 sm:rounded-2xl">
+        {/* Timer Display - Top Right Corner */}
+        <div className="absolute top-2 right-2 z-20 sm:top-4 sm:right-4">
+          <TimerDisplay timerState={timerState} />
+        </div>
+
         {/* Card Header with TileLayout and Task Info */}
         <div className="border-border flex items-start gap-3 border-b border-solid p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-6 xl:p-7">
           {/* Left: Audio Visualizer */}
