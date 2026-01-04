@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { BarVisualizer } from '@livekit/components-react';
 import type { TrackReferenceOrPlaceholder } from '@livekit/components-core';
+import { BarVisualizer } from '@livekit/components-react';
 import { Robot, User } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
@@ -42,7 +42,8 @@ export const ChatEntry = ({
   const title = time.toLocaleTimeString(locale, { timeStyle: 'full' });
   const isLocal = messageOrigin === 'local';
   const isAgent = !isLocal;
-  const showVisualizer = isAgent && isLastAgentMessage && (agentState === 'speaking' || agentState === 'listening');
+  const showVisualizer =
+    isAgent && isLastAgentMessage && (agentState === 'speaking' || agentState === 'listening');
 
   return (
     <div
@@ -60,7 +61,7 @@ export const ChatEntry = ({
         <div className="flex-shrink-0">
           <div
             className={cn(
-              'bg-background aspect-square rounded-sm border transition-all duration-500 px-1',
+              'bg-background aspect-square rounded-sm border px-1 transition-all duration-500',
               'border-input/50 h-8 w-8 drop-shadow-lg sm:h-10 sm:w-10'
             )}
           >

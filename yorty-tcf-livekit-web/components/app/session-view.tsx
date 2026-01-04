@@ -9,10 +9,10 @@ import {
   AgentControlBar,
   type ControlBarControls,
 } from '@/components/livekit/agent-control-bar/agent-control-bar';
-import { useExerciseData, useTimerControls, useReportData } from '@/hooks';
+import { useExerciseData, useReportData, useTimerControls } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../livekit/scroll-area/scroll-area';
-import { ReportViewer, ReportButton } from './report-viewer';
+import { ReportButton, ReportViewer } from './report-viewer';
 
 function Fade({
   top = false,
@@ -78,24 +78,23 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
         {/* Card Header with Task Info */}
         <div className="border-border flex items-start gap-3 border-b border-solid p-4 sm:flex-row sm:gap-4">
           {/* Task Information */}
-          <div className="mx-auto flex min-w-0 max-w-[860px] flex-1 flex-col gap-4">
+          <div className="mx-auto flex max-w-[860px] min-w-0 flex-1 flex-col gap-4">
             {/* Description */}
-            <div className="rounded-lg border-l-4 border-blue-500 bg-blue-50/50 px-4 py-3 shadow-md sm:px-5 sm:py-4 min-h-[90px] flex items-center">
-              <p className="text-cyan-600 font-semibold line-clamp-10 text-base leading-relaxed sm:text-lg sm:leading-relaxed">
-                {exerciseData?.description || selectedTask?.description || 'Description de la tâche'}
+            <div className="flex min-h-[90px] items-center rounded-lg border-l-4 border-blue-500 bg-blue-50/50 px-4 py-3 shadow-md sm:px-5 sm:py-4">
+              <p className="line-clamp-10 text-base leading-relaxed font-semibold text-cyan-600 sm:text-lg sm:leading-relaxed">
+                {exerciseData?.description ||
+                  selectedTask?.description ||
+                  'Description de la tâche'}
               </p>
             </div>
-            
+
             {/* Task Labels/Badges - Below Description */}
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               {/* Bouton du rapport à gauche */}
-              <ReportButton 
-                report={report}
-                onExpand={() => setIsReportMinimized(false)}
-              />
-              
+              <ReportButton report={report} onExpand={() => setIsReportMinimized(false)} />
+
               {/* Badges à droite */}
-              <div className="flex flex-wrap items-center gap-2 ml-auto">
+              <div className="ml-auto flex flex-wrap items-center gap-2">
                 {(() => {
                   const title = exerciseData?.title || selectedTask?.title || 'Tâche';
                   // Split title by " - " to separate task number from exercise type
@@ -153,7 +152,7 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
       </div>
 
       {/* Report Viewer */}
-      <ReportViewer 
+      <ReportViewer
         report={report}
         isMinimized={isReportMinimized}
         onToggleMinimize={() => setIsReportMinimized(!isReportMinimized)}

@@ -11,7 +11,7 @@ interface ChatTranscriptProps {
 
 export function ChatTranscript({ hidden = false, messages = [], className }: ChatTranscriptProps) {
   const { state: agentState, audioTrack: agentAudioTrack } = useVoiceAssistant();
-  
+
   if (hidden) return null;
 
   // Find the index of the last agent message
