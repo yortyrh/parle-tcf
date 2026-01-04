@@ -44,6 +44,12 @@ instructions: |
   B2 : Aptitude à s’exprimer de façon claire et détaillée sur une grande variété de sujets relatifs à ses centres d’intérêt, à donner un avis et à expliquer les avantages et les inconvénients d’un projet.
   C1 : Aptitude à présenter de façon détaillée et structurée des sujets complexes, à en développer certains points et parvenir à une conclusion appropriée.
   C2 : Aptitude à présenter une description ou une argumentation claire et structurée permettant à l’interlocuteur d’en remarquer les points essentiels.
+  
+  À la fin de cette session, je veux que tu génères un rapport écrit récapitulatif en format markdown, avec :
+  – les points forts avec un exemple.
+  – les points à améliorer, avec un exemple de reformulation pour passer au niveau supérieur: B1->B2, B2->C1, C1->C2, etc.
+  – 5 questions d'exemple pour exprimer les mêmes idées mais avec un niveau supérieur à celui du candidat: B1->B2, B2->C1, C1->C2, etc.
+  et donc envoie le rapport seulementent utilisant l'outil envoiRapport, pas de texte ni de voix.
 
 greeting: |
   Vous, en tant qu'examinateur du TCF expression orale, tache 2.

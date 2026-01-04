@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSessionContext, useSessionMessages } from '@livekit/components-react';
 import type { AppConfig, Task } from '@/app-config';
 import { ChatTranscript } from '@/components/app/chat-transcript';
@@ -9,9 +9,10 @@ import {
   AgentControlBar,
   type ControlBarControls,
 } from '@/components/livekit/agent-control-bar/agent-control-bar';
-import { useExerciseData, useTimerControls } from '@/hooks';
+import { useExerciseData, useTimerControls, useReportData } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../livekit/scroll-area/scroll-area';
+import { ReportViewer, ReportButton } from './report-viewer';
 
 function Fade({
   top = false,
@@ -45,6 +46,8 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { timerState } = useTimerControls();
   const exerciseData = useExerciseData();
+  const report = useReportData();
+  const [isReportMinimized, setIsReportMinimized] = useState(true);
 
   const controls: ControlBarControls = {
     leave: true,
@@ -60,6 +63,13 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Afficher automatiquement le rapport quand il arrive
+  useEffect(() => {
+    if (report) {
+      setIsReportMinimized(false);
+    }
+  }, [report]);
 
   return (
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-4">
@@ -77,25 +87,34 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
             </div>
             
             {/* Task Labels/Badges - Below Description */}
-            <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
-              {(() => {
-                const title = exerciseData?.title || selectedTask?.title || 'Tâche';
-                // Split title by " - " to separate task number from exercise type
-                const parts = title.split(' - ');
-                const taskNumber = parts[0] || 'Tâche';
-                const exerciseType = parts[1] || 'Jeu de rôle';
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              {/* Bouton du rapport à gauche */}
+              <ReportButton 
+                report={report}
+                onExpand={() => setIsReportMinimized(false)}
+              />
+              
+              {/* Badges à droite */}
+              <div className="flex flex-wrap items-center gap-2 ml-auto">
+                {(() => {
+                  const title = exerciseData?.title || selectedTask?.title || 'Tâche';
+                  // Split title by " - " to separate task number from exercise type
+                  const parts = title.split(' - ');
+                  const taskNumber = parts[0] || 'Tâche';
+                  const exerciseType = parts[1] || 'Jeu de rôle';
 
-                return (
-                  <>
-                    <span className="inline-flex items-center rounded bg-cyan-700 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-600/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
-                      {taskNumber}
-                    </span>
-                    <span className="inline-flex items-center rounded bg-cyan-600 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-500/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
-                      {exerciseType}
-                    </span>
-                  </>
-                );
-              })()}
+                  return (
+                    <>
+                      <span className="inline-flex items-center rounded bg-cyan-700 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-600/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
+                        {taskNumber}
+                      </span>
+                      <span className="inline-flex items-center rounded bg-cyan-600 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-500/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
+                        {exerciseType}
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           </div>
           {/* Timer Display - Top Right */}
@@ -132,6 +151,13 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
           </div>
         </div>
       </div>
+
+      {/* Report Viewer */}
+      <ReportViewer 
+        report={report}
+        isMinimized={isReportMinimized}
+        onToggleMinimize={() => setIsReportMinimized(!isReportMinimized)}
+      />
     </section>
   );
 }

@@ -1,4 +1,5 @@
-import { voice, type JobContext } from '@livekit/agents';
+import { voice, llm, type JobContext } from '@livekit/agents';
+import { z } from 'zod';
 import { loadAgentConfig } from '../config/index.js';
 import type { TaskType, AgentConfig } from '../config/index.js';
 import type { TCFExercise } from '../exercises/exerciseLoader.js';
@@ -31,6 +32,21 @@ export class TCFAgent extends voice.Agent {
     super({
       allowInterruptions: config.settings.allowInterruptions,
       instructions: fullInstructions,
+      tools: {
+        envoiRapport: llm.tool({
+          description: 'Envoie le rapport en format markdown à la fin de la session',
+          parameters: z.object({
+            report: z.string().describe("Le rapport à envoyer")
+          }),
+          execute: async ({ report }) => {
+            console.log('[envoiRapport] Envoi du rapport:', report);
+            await this.sendDataMessage({
+              type: 'report',
+              report
+            });
+          },
+        }),
+      },
     });
 
     this.config = config;
@@ -96,10 +112,11 @@ export class TCFAgent extends voice.Agent {
     return this.exercise;
   }
 
-  async sendDataMessage(context: JobContext, message: unknown): Promise<void> {
+  async sendDataMessage(message: unknown): Promise<void> {
+    if (!this.context) return;
     const encoder = new TextEncoder();
     const data = encoder.encode(JSON.stringify(message));
-    await context.room.localParticipant?.publishData(data, { reliable: true });
+    await this.context?.room.localParticipant?.publishData(data, { reliable: true });
   }
 
   /**
@@ -136,7 +153,7 @@ export class TCFAgent extends voice.Agent {
     };
 
     console.log('[Exercise] Envoi des données:', exerciseData.data);
-    await this.sendDataMessage(this.context, exerciseData);
+    await this.sendDataMessage(exerciseData);
   }
 
   /**
@@ -150,7 +167,7 @@ export class TCFAgent extends voice.Agent {
 
     console.log(`[Timer] Démarrage du timer de préparation (${duration}s)`);
     
-    await this.sendDataMessage(this.context, {
+    await this.sendDataMessage({
       type: 'start_preparation_timer',
       duration: duration,
       timestamp: Date.now()
@@ -170,7 +187,7 @@ export class TCFAgent extends voice.Agent {
 
     console.log('[Timer] Temps de préparation écoulé');
     
-    await this.sendDataMessage(this.context, {
+    await this.sendDataMessage({
       type: 'end_preparation_timer'
     });
 
@@ -190,7 +207,7 @@ export class TCFAgent extends voice.Agent {
       clearTimeout(this.preparationTimerTimeout);
       this.preparationTimerTimeout = null;
 
-      await this.sendDataMessage(this.context, {
+      await this.sendDataMessage({
         type: 'end_preparation_timer'
       });
     }
@@ -210,7 +227,7 @@ export class TCFAgent extends voice.Agent {
 
     console.log(`[Timer] Démarrage du timer d'examen (${duration}s)`);
     
-    await this.sendDataMessage(this.context, {
+    await this.sendDataMessage({
       type: 'start_exam_timer',
       duration: duration,
       timestamp: Date.now()
@@ -230,7 +247,7 @@ export class TCFAgent extends voice.Agent {
 
     console.log('[Timer] Temps d\'examen écoulé');
     
-    await this.sendDataMessage(this.context, {
+    await this.sendDataMessage({
       type: 'end_exam_timer'
     });
 
