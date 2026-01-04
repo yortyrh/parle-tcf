@@ -44,7 +44,7 @@ export class TimerController {
    */
   private async sendTimerControl(message: TimerControlMessage): Promise<void> {
     try {
-      await this.agent.sendDataMessage(this.context, message);
+      await this.agent.sendDataMessage(message);
       console.log('[Timer] Message envoyé:', message.type, message.duration ? `(${message.duration}s)` : '');
     } catch (error) {
       console.error('[Timer] Erreur lors de l\'envoi du message:', error);
