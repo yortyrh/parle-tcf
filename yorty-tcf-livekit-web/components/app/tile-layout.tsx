@@ -11,7 +11,7 @@ export function TileLayout() {
       <div
         className={cn(
           'bg-background aspect-square rounded-md border transition-all duration-500',
-          'border-input/50 h-14 w-14 drop-shadow-lg sm:h-[80px] sm:w-[80px]'
+          'border-input/50 h-10 w-10 drop-shadow-lg sm:h-12 sm:w-12'
         )}
       >
         <BarVisualizer

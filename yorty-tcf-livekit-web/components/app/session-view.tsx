@@ -4,7 +4,6 @@ import React, { useEffect, useRef } from 'react';
 import { useSessionContext, useSessionMessages } from '@livekit/components-react';
 import type { AppConfig, Task } from '@/app-config';
 import { ChatTranscript } from '@/components/app/chat-transcript';
-import { TileLayout } from '@/components/app/tile-layout';
 import { TimerDisplay } from '@/components/app/timer-display';
 import {
   AgentControlBar,
@@ -66,26 +65,45 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-4">
       {/* Card Container */}
       <div className="border-border bg-card flex h-full w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-solid shadow-lg transition-all duration-500 sm:rounded-2xl">
-        {/* Card Header with TileLayout and Task Info */}
-        <div className="border-border flex items-start gap-3 border-b border-solid p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-6 xl:p-7">
-          {/* Left: Audio Visualizer */}
-          <div className="flex-shrink-0">
-            <TileLayout />
-          </div>
+        {/* Card Header with Task Info */}
+        <div className="border-border flex items-start gap-3 border-b border-solid p-4 sm:flex-row sm:gap-4">
+          {/* Task Information */}
+          <div className="mx-auto flex min-w-0 max-w-[860px] flex-1 flex-col gap-4">
+            {/* Description */}
+            <div className="rounded-lg border-l-4 border-blue-500 bg-blue-50/50 px-4 py-3 shadow-md sm:px-5 sm:py-4 min-h-[90px] flex items-center">
+              <p className="text-cyan-600 font-semibold line-clamp-10 text-base leading-relaxed sm:text-lg sm:leading-relaxed">
+                {exerciseData?.description || selectedTask?.description || 'Description de la tâche'}
+              </p>
+            </div>
+            
+            {/* Task Labels/Badges - Below Description */}
+            <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
+              {(() => {
+                const title = exerciseData?.title || selectedTask?.title || 'Tâche';
+                // Split title by " - " to separate task number from exercise type
+                const parts = title.split(' - ');
+                const taskNumber = parts[0] || 'Tâche';
+                const exerciseType = parts[1] || 'Jeu de rôle';
 
-          {/* Right: Task Information */}
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:gap-2">
-            <h4 className="text-foreground truncate text-sm leading-snug font-semibold capitalize transition-all duration-500 sm:text-base">
-              {exerciseData?.title || selectedTask?.title || 'Tâche'}
-            </h4>
-            <p className="text-muted-foreground line-clamp-6 text-xs leading-tight font-normal transition-all duration-500 sm:text-sm sm:leading-5">
-              {exerciseData?.description || selectedTask?.description || 'Description de la tâche'}
-            </p>
+                return (
+                  <>
+                    <span className="inline-flex items-center rounded bg-cyan-700 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-600/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
+                      {taskNumber}
+                    </span>
+                    <span className="inline-flex items-center rounded bg-cyan-600 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-500/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
+                      {exerciseType}
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
           </div>
-          {/* Timer Display - Top Right Corner */}
-          <div className="ml-auto flex items-center gap-2">
-            <TimerDisplay timerState={timerState} />
-          </div>
+          {/* Timer Display - Top Right */}
+          {timerState.type && timerState.isRunning && (
+            <div className="ml-auto flex items-center">
+              <TimerDisplay timerState={timerState} />
+            </div>
+          )}
         </div>
 
         {/* Chat Transcript Area */}
