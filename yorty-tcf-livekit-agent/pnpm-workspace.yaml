@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - '@ffmpeg-installer/darwin-x64'
+  - esbuild
+  - onnxruntime-node
+  - protobufjs
+  - sharp
