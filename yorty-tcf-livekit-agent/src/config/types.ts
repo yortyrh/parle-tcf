@@ -1,6 +1,6 @@
 // Types pour la configuration des agents TCF
 
-export type TaskType = 'tache1' | 'tache2' | 'tache3';
+export type TaskType = 'tache1' | 'tache2' | 'tache3' | 'tef-section-a' | 'tef-section-b';
 
 // Types pour la configuration du service
 export interface ServiceConfig {
@@ -44,4 +44,3 @@ export interface AgentConfig {
   instructions: string;
   greeting: string;
 }
-

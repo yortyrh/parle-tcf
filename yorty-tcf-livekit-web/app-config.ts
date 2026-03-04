@@ -1,7 +1,8 @@
 export interface Task {
-  id: number;
+  id: number | string;
   title: string;
   description: string;
+  taskType: string;
 }
 
 export interface AppConfig {
@@ -51,18 +52,21 @@ export const APP_CONFIG_DEFAULTS: AppConfig = {
       title: 'Tâche 1',
       description:
         'Présentation de soi, puis un entretien dirigé, exercice de conversation sur des sujets quotidiens',
+      taskType: 'tache1',
     },
     {
       id: 2,
       title: 'Tâche 2',
       description:
         'Jeux de rôles, où on pose des questions pour obtenir des informations sur une situation quotidienne',
+      taskType: 'tache2',
     },
     {
       id: 3,
       title: 'Tâche 3',
       description:
         "Présentation d'un sujet, souvent lié à la vie quotidienne ou des débats de société",
+      taskType: 'tache3',
     },
   ],
 };

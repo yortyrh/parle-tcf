@@ -1,6 +1,6 @@
-import { TCFAgent } from './TCFAgent.js';
-import { getRandomExercise } from '../exercises/exerciseLoader.js';
 import type { JobContext } from '@livekit/agents';
+import { getRandomExercise } from '../exercises/exerciseLoader.js';
+import { TCFAgent } from './TCFAgent.js';
 
 /**
  * Agent pour TCF Tâche 2 - Interaction
@@ -11,9 +11,10 @@ export class TCFTache2 extends TCFAgent {
   constructor(context: JobContext) {
     const exercise = getRandomExercise('tache2');
     if (exercise) {
-      console.log(`TCF Tâche 2 - Exercice sélectionné: ${exercise.id} - ${exercise.content.substring(0, 100)}...`);
+      console.log(
+        `TCF Tâche 2 - Exercice sélectionné: ${exercise.id} - ${exercise.content.substring(0, 100)}...`,
+      );
     }
     super('tache2', exercise, context);
   }
 }
-

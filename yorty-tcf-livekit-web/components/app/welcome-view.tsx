@@ -8,16 +8,16 @@ import { cn } from '@/lib/utils';
 
 interface WelcomeViewProps {
   startButtonText: string;
-  onStartCall: (taskId: number) => void;
+  onStartCall: (taskType: string) => void;
   tasks: Task[];
 }
 
 export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeViewProps) {
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [selectedTaskType, setSelectedTaskType] = useState<string | null>(null);
 
   const handleStartCall = () => {
-    if (selectedTaskId !== null) {
-      onStartCall(selectedTaskId);
+    if (selectedTaskType !== null) {
+      onStartCall(selectedTaskType);
     }
   };
 
@@ -31,7 +31,7 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
         className="mb-4 h-20 w-20 object-contain sm:mb-6 sm:h-32 sm:w-32"
       />
       <h1 className="mb-1 max-w-prose px-4 pt-1 text-base leading-5 font-medium sm:mb-2 sm:text-lg sm:leading-6">
-        Discutez en direct avec votre agent vocal TCF
+        Discutez en direct avec votre agent vocal
       </h1>
       <p className="text-muted-foreground mb-6 px-4 text-xs sm:mb-8 sm:text-sm">
         Sélectionnez une tâche pour commencer
@@ -41,13 +41,13 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
       <div className="mb-6 grid w-full max-w-2xl grid-cols-1 gap-3 px-2 sm:mb-8 sm:gap-4 sm:px-0 md:grid-cols-3">
         {tasks.map((task) => (
           <button
-            key={task.id}
-            onClick={() => setSelectedTaskId(task.id)}
+            key={task.taskType}
+            onClick={() => setSelectedTaskType(task.taskType)}
             className={cn(
               'relative rounded-lg border-2 p-4 text-left transition-all duration-200 sm:rounded-xl sm:p-6',
               'flex flex-col items-start justify-start',
               'active:scale-95 sm:hover:scale-105 sm:hover:shadow-lg',
-              selectedTaskId === task.id
+              selectedTaskType === task.taskType
                 ? 'border-primary bg-primary/5 shadow-md'
                 : 'border-border bg-card active:border-primary/50 sm:hover:border-primary/50'
             )}
@@ -57,7 +57,7 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
                 <div
                   className={cn(
                     'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors sm:h-8 sm:w-8 sm:text-sm',
-                    selectedTaskId === task.id
+                    selectedTaskType === task.taskType
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-muted-foreground'
                   )}
@@ -70,7 +70,7 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
                 {task.description}
               </p>
             </div>
-            {selectedTaskId === task.id && (
+            {selectedTaskType === task.taskType && (
               <div className="bg-primary absolute top-2 right-2 h-2.5 w-2.5 rounded-full sm:h-3 sm:w-3" />
             )}
           </button>
@@ -81,7 +81,7 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
         variant="primary"
         size="lg"
         onClick={handleStartCall}
-        disabled={selectedTaskId === null}
+        disabled={selectedTaskType === null}
         className="w-full max-w-xs font-mono text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-64 sm:text-base"
       >
         {startButtonText}

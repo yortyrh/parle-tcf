@@ -5,6 +5,7 @@ Documentation de la logique de gestion des timers de préparation et d'examen.
 ## 📋 Vue d'ensemble
 
 Le système de timer gère automatiquement deux phases :
+
 1. **Phase de préparation** : L'étudiant prépare sa réponse (optionnel, selon la tâche)
 2. **Phase d'examen** : L'étudiant répond à l'exercice
 
@@ -61,33 +62,40 @@ startExamTimer() → envoie start_exam_timer
 ## 🎯 Comportement selon la Tâche
 
 ### Tâche 1 (Pas de préparation)
+
 ```
 Greeting → Attente entrée utilisateur → Timer examen (2 min)
 ```
 
 **Durées :**
+
 - Préparation : 0 secondes
 - Examen : 120 secondes (2 min)
 
 ### Tâche 2 (Avec préparation)
+
 ```
 Greeting → Timer préparation (2 min) → [Timeout OU Entrée utilisateur] → Timer examen (3.5 min)
 ```
 
 **Durées :**
+
 - Préparation : 120 secondes (2 min)
 - Examen : 210 secondes (3.5 min)
 
 **Comportements :**
+
 - Si l'utilisateur **attend** 2 minutes : Le timer de préparation se termine, puis le timer d'examen démarre lors de la première entrée utilisateur
 - Si l'utilisateur **parle pendant** la préparation : Le timer de préparation s'arrête immédiatement et le timer d'examen démarre
 
 ### Tâche 3 (Pas de préparation)
+
 ```
 Greeting → Attente entrée utilisateur → Timer examen (4.5 min)
 ```
 
 **Durées :**
+
 - Préparation : 0 secondes
 - Examen : 270 secondes (4.5 min)
 
@@ -95,16 +103,17 @@ Greeting → Attente entrée utilisateur → Timer examen (4.5 min)
 
 Le système utilise une machine à états pour gérer les transitions :
 
-| État | Description | Transitions possibles |
-|------|-------------|---------------------|
-| `idle` | État initial, en attente | → `preparation` (si durée > 0)<br>→ `exam` (si pas de préparation) |
-| `preparation` | Timer de préparation actif | → `exam` (entrée utilisateur)<br>→ `idle` (timeout) |
-| `exam` | Timer d'examen actif | → `finished` (timeout) |
-| `finished` | Session terminée | Aucune |
+| État          | Description                | Transitions possibles                                              |
+| ------------- | -------------------------- | ------------------------------------------------------------------ |
+| `idle`        | État initial, en attente   | → `preparation` (si durée > 0)<br>→ `exam` (si pas de préparation) |
+| `preparation` | Timer de préparation actif | → `exam` (entrée utilisateur)<br>→ `idle` (timeout)                |
+| `exam`        | Timer d'examen actif       | → `finished` (timeout)                                             |
+| `finished`    | Session terminée           | Aucune                                                             |
 
 ## 📡 Messages Envoyés
 
 ### Démarrage de la préparation
+
 ```json
 {
   "type": "start_preparation_timer",
@@ -114,6 +123,7 @@ Le système utilise une machine à états pour gérer les transitions :
 ```
 
 ### Fin de la préparation
+
 ```json
 {
   "type": "end_preparation_timer"
@@ -121,6 +131,7 @@ Le système utilise une machine à états pour gérer les transitions :
 ```
 
 ### Démarrage de l'examen
+
 ```json
 {
   "type": "start_exam_timer",
@@ -130,6 +141,7 @@ Le système utilise une machine à états pour gérer les transitions :
 ```
 
 ### Fin de l'examen
+
 ```json
 {
   "type": "end_exam_timer"
@@ -139,16 +151,19 @@ Le système utilise une machine à états pour gérer les transitions :
 ## 🎪 Événements Écoutés
 
 ### `UserInputTranscribed`
+
 Déclenché quand l'utilisateur parle et que sa parole est transcrite.
 
 **Actions selon l'état :**
+
 - **État `preparation`** : Arrête la préparation et démarre l'examen
 - **État `idle`** : Démarre l'examen (pour tâches sans préparation)
-- **État `exam`** ou `finished`** : Aucune action
+- **État `exam`** ou `finished`\*\* : Aucune action
 
 ## 🧹 Nettoyage
 
 La méthode `cleanup()` est appelée lors de l'arrêt de la session pour :
+
 - Annuler les timeouts en cours
 - Libérer les ressources
 
@@ -227,4 +242,3 @@ User          Agent          Timer System          Web Client
 
 **Dernière mise à jour** : 29 décembre 2024  
 **Version** : 1.0.0
-

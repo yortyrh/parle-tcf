@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import type { AgentConfig, TaskType, ServiceConfig } from './types.js';
+import type { AgentConfig, ServiceConfig, TaskType } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,21 +25,21 @@ export function loadAgentConfig(taskType: TaskType): AgentConfig {
   try {
     // Construire le chemin vers le fichier de configuration
     const configPath = join(__dirname, '..', '..', 'config', 'agents', `${taskType}.yml`);
-    
+
     // Lire le fichier YAML
     const fileContent = readFileSync(configPath, 'utf-8');
-    
+
     // Parser le contenu YAML
     const config = parse(fileContent) as AgentConfig;
-    
+
     // Valider la configuration
     validateConfig(config, taskType);
-    
+
     // Mettre en cache
     configCache.set(taskType, config);
-    
+
     console.log(`✓ Configuration loaded for ${taskType}: ${config.name}`);
-    
+
     return config;
   } catch (error) {
     console.error(`Error loading configuration for ${taskType}:`, error);
@@ -58,7 +58,7 @@ function validateConfig(config: AgentConfig, taskType: TaskType): void {
     'durations',
     'baseInstructions',
     'instructions',
-    'greeting'
+    'greeting',
   ];
 
   for (const field of requiredFields) {
@@ -96,21 +96,21 @@ export function loadServiceConfig(): ServiceConfig {
   try {
     // Construire le chemin vers le fichier de configuration
     const configPath = join(__dirname, '..', '..', 'config', 'service.yml');
-    
+
     // Lire le fichier YAML
     const fileContent = readFileSync(configPath, 'utf-8');
-    
+
     // Parser le contenu YAML
     const config = parse(fileContent) as ServiceConfig;
-    
+
     // Valider la configuration
     validateServiceConfig(config);
-    
+
     // Mettre en cache
     serviceConfigCache = config;
-    
+
     console.log(`✓ Service configuration loaded`);
-    
+
     return config;
   } catch (error) {
     console.error('Error loading service configuration:', error);
@@ -142,4 +142,3 @@ export function reloadServiceConfig(): ServiceConfig {
   serviceConfigCache = null;
   return loadServiceConfig();
 }
-

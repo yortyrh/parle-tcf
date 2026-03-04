@@ -105,11 +105,13 @@ Pour démarrer l'ensemble du projet avec Docker Compose, consultez le [README.md
 ## Configuration
 
 Les instructions des examinateurs sont définies dans les fichiers YAML :
+
 - `config/agents/tache1.yml` - Configuration pour la tâche 1 (Expression Orale)
 - `config/agents/tache2.yml` - Configuration pour la tâche 2 (Interaction)
 - `config/agents/tache3.yml` - Configuration pour la tâche 3 (Expression d'Opinion)
 
 Les exercices pour les tâches 2 et 3 sont stockés dans :
+
 - `config/tcf-exercises.csv`
 
 Pour plus de détails sur la configuration, consultez [docs/YAML_CONFIG.md](docs/YAML_CONFIG.md).

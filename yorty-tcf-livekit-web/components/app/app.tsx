@@ -27,10 +27,10 @@ interface AppProps {
 }
 
 export function App({ appConfig }: AppProps) {
-  const [taskId, setTaskId] = useState<number>(1);
+  const [taskType, setTaskType] = useState<string>(appConfig.tasks[0]?.taskType ?? 'tache1');
   const session = useSession(TokenSource.endpoint('/api/connection-details'), {
     participantMetadata: JSON.stringify({
-      taskType: `tache${taskId}`,
+      taskType,
     }),
   });
 
@@ -38,7 +38,7 @@ export function App({ appConfig }: AppProps) {
     <SessionProvider session={session}>
       <AppSetup />
       <main className="h-svh">
-        <ViewController appConfig={appConfig} onTaskSelect={setTaskId} />
+        <ViewController appConfig={appConfig} onTaskSelect={setTaskType} />
       </main>
       <StartAudio label="Démarrer l'audio" />
       <RoomAudioRenderer />

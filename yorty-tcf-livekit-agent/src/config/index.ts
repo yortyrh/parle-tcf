@@ -1,18 +1,11 @@
 // Exports centralisés pour la configuration
 
-export { 
-  loadAgentConfig, 
-  reloadAgentConfig, 
+export {
+  loadAgentConfig,
+  reloadAgentConfig,
   clearConfigCache,
   loadServiceConfig,
-  reloadServiceConfig 
+  reloadServiceConfig,
 } from './configLoader.js';
 
-export type { 
-  AgentConfig, 
-  TaskType, 
-  AgentSettings, 
-  Durations, 
-  ServiceConfig 
-} from './types.js';
-
+export type { AgentConfig, TaskType, AgentSettings, Durations, ServiceConfig } from './types.js';

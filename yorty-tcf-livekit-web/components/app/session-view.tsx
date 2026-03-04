@@ -9,9 +9,10 @@ import {
   AgentControlBar,
   type ControlBarControls,
 } from '@/components/livekit/agent-control-bar/agent-control-bar';
-import { useExerciseData, useReportData, useTimerControls } from '@/hooks';
+import { useExerciseData, useExerciseImage, useReportData, useTimerControls } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../livekit/scroll-area/scroll-area';
+import { ExerciseImageViewer } from './exercise-image-viewer';
 import { ReportButton, ReportViewer } from './report-viewer';
 
 function Fade({
@@ -46,6 +47,7 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { timerState } = useTimerControls();
   const exerciseData = useExerciseData();
+  const exerciseImage = useExerciseImage();
   const report = useReportData();
   const [isReportMinimized, setIsReportMinimized] = useState(true);
 
@@ -87,6 +89,12 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
                   'Description de la tâche'}
               </p>
             </div>
+
+            {/* Exercise Image (TEF only) */}
+            <ExerciseImageViewer
+              filename={exerciseImage?.filename ?? null}
+              section={exerciseImage?.section ?? null}
+            />
 
             {/* Task Labels/Badges - Below Description */}
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">

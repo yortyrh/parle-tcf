@@ -8,18 +8,18 @@ import { WelcomeView } from '@/components/app/welcome-view';
 
 interface ViewControllerProps {
   appConfig: AppConfig;
-  onTaskSelect: (taskId: number) => void;
+  onTaskSelect: (taskType: string) => void;
 }
 
 export function ViewController({ appConfig, onTaskSelect }: ViewControllerProps) {
   const { isConnected, start } = useSessionContext();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  const handleStartCall = (taskId: number) => {
-    const task = appConfig.tasks.find((t) => t.id === taskId);
+  const handleStartCall = (taskType: string) => {
+    const task = appConfig.tasks.find((t) => t.taskType === taskType);
     if (task) {
       setSelectedTask(task);
-      onTaskSelect(taskId);
+      onTaskSelect(taskType);
       start();
     }
   };

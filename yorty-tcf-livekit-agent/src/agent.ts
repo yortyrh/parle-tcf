@@ -1,16 +1,9 @@
-import {
-  type JobContext,
-  ServerOptions,
-  cli,
-  defineAgent,
-  metrics,
-  voice,
-} from '@livekit/agents';
+import { type JobContext, ServerOptions, cli, defineAgent, metrics, voice } from '@livekit/agents';
 import * as openai from '@livekit/agents-plugin-openai';
 import { BackgroundVoiceCancellation } from '@livekit/noise-cancellation-node';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
-import { TCFTache1, TCFTache2, TCFTache3 } from './agents/index.js';
+import { TCFTache1, TCFTache2, TCFTache3, TEFSectionA, TEFSectionB } from './agents/index.js';
 import { loadServiceConfig } from './config/index.js';
 import type { TaskType } from './config/index.js';
 
@@ -64,7 +57,7 @@ export default defineAgent({
 
     // Join the room and connect to the user first
     await ctx.connect();
-    
+
     // Wait for a participant to join and read their metadata to determine task type
     const getParticipantMetadata = (): TaskType => {
       const participants = Array.from(ctx.room.remoteParticipants.values());
@@ -84,7 +77,9 @@ export default defineAgent({
     };
 
     // Wait a moment for participant to join
-    await new Promise(resolve => setTimeout(resolve, serviceConfig.connection.participantWaitTime));
+    await new Promise((resolve) =>
+      setTimeout(resolve, serviceConfig.connection.participantWaitTime),
+    );
     const taskType = getParticipantMetadata();
     console.log(`TCF ${taskType} started in exam mode`);
 
@@ -97,6 +92,10 @@ export default defineAgent({
           return new TCFTache2(ctx);
         case 'tache3':
           return new TCFTache3(ctx);
+        case 'tef-section-a':
+          return new TEFSectionA(ctx);
+        case 'tef-section-b':
+          return new TEFSectionB(ctx);
         default:
           console.warn(`Unknown task type: ${taskType}, defaulting to tache1`);
           return new TCFTache1(ctx);
@@ -110,7 +109,9 @@ export default defineAgent({
       inputOptions: {
         // LiveKit Cloud enhanced noise cancellation
         // Configuration loaded from service.yml
-        noiseCancellation: getNoiseCancellation(serviceConfig.session.inputOptions.noiseCancellation),
+        noiseCancellation: getNoiseCancellation(
+          serviceConfig.session.inputOptions.noiseCancellation,
+        ),
       },
     });
 
@@ -118,7 +119,7 @@ export default defineAgent({
     ctx.addShutdownCallback(async () => {
       await agent.cleanup();
     });
-    
+
     // Initialiser le contexte et les écouteurs avant de démarrer la session
     agent.initializeExamTimer();
   },

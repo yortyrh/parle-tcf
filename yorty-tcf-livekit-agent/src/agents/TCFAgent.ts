@@ -1,7 +1,7 @@
-import { voice, llm, type JobContext } from '@livekit/agents';
+import { type JobContext, llm, voice } from '@livekit/agents';
 import { z } from 'zod';
 import { loadAgentConfig } from '../config/index.js';
-import type { TaskType, AgentConfig } from '../config/index.js';
+import type { AgentConfig, TaskType } from '../config/index.js';
 import type { TCFExercise } from '../exercises/exerciseLoader.js';
 
 /**
@@ -16,7 +16,11 @@ export class TCFAgent extends voice.Agent {
   private preparationTimerTimeout: NodeJS.Timeout | null = null;
   private examTimerTimeout: NodeJS.Timeout | null = null;
 
-  constructor(taskType: TaskType, exercise: TCFExercise | null = null, private readonly context: JobContext | null = null) {
+  constructor(
+    taskType: TaskType,
+    exercise: TCFExercise | null = null,
+    private readonly context: JobContext | null = null,
+  ) {
     // Charger la configuration depuis le fichier YAML
     const config = loadAgentConfig(taskType);
 
@@ -36,13 +40,13 @@ export class TCFAgent extends voice.Agent {
         envoiRapport: llm.tool({
           description: 'Envoie le rapport en format markdown à la fin de la session',
           parameters: z.object({
-            report: z.string().describe("Le rapport à envoyer")
+            report: z.string().describe('Le rapport à envoyer'),
           }),
           execute: async ({ report }) => {
             console.log('[envoiRapport] Envoi du rapport:', report);
             await this.sendDataMessage({
               type: 'report',
-              report
+              report,
             });
           },
         }),
@@ -68,10 +72,10 @@ export class TCFAgent extends voice.Agent {
     if (this.exercise && this.exercise.content) {
       greetingMessage += `\n\n${this.exercise.content}`;
     }
-    
+
     const handleGreeting = this.session.generateReply({
       allowInterruptions: false,
-      instructions: greetingMessage
+      instructions: greetingMessage,
     });
     await handleGreeting.waitForPlayout();
 
@@ -131,16 +135,28 @@ export class TCFAgent extends voice.Agent {
 
     if (this.taskType === 'tache1') {
       title = 'Tâche 1 - Entretien dirigé';
-      description = 'Présentation de soi, puis un entretien dirigé, exercice de conversation sur des sujets quotidiens';
+      description =
+        'Présentation de soi, puis un entretien dirigé, exercice de conversation sur des sujets quotidiens';
     } else if (this.taskType === 'tache2') {
       title = 'Tâche 2 - Exercice en interaction';
-      description = this.exercise?.content || 'Jeux de rôles, où on pose des questions pour obtenir des informations sur une situation quotidienne';
+      description =
+        this.exercise?.content ||
+        'Jeux de rôles, où on pose des questions pour obtenir des informations sur une situation quotidienne';
     } else if (this.taskType === 'tache3') {
-      title = 'Tâche 3 - Expression d\'un point de vue';
-      description = this.exercise?.content || 'Présentation d\'un sujet, souvent lié à la vie quotidienne ou des débats de société';
+      title = "Tâche 3 - Expression d'un point de vue";
+      description =
+        this.exercise?.content ||
+        "Présentation d'un sujet, souvent lié à la vie quotidienne ou des débats de société";
+    } else if (this.taskType === 'tef-section-a') {
+      title = "TEF Section A - Demande d'informations";
+      description = 'Vous avez lu une annonce. Téléphonez pour obtenir des informations (~5 min)';
+    } else if (this.taskType === 'tef-section-b') {
+      title = 'TEF Section B - Argumentation';
+      description =
+        'Vous avez lu une annonce. Présentez-la à un(e) ami(e) et essayez de le/la convaincre (~10 min)';
     } else {
-      title = 'TCF Expression Orale';
-      description = 'Exercise TCF';
+      title = 'Expression Orale';
+      description = "Exercice d'expression orale";
     }
 
     const exerciseData = {
@@ -149,7 +165,7 @@ export class TCFAgent extends voice.Agent {
         title,
         description,
         content: this.exercise?.content || '',
-      }
+      },
     };
 
     console.log('[Exercise] Envoi des données:', exerciseData.data);
@@ -166,11 +182,11 @@ export class TCFAgent extends voice.Agent {
     const duration = this.config.durations.preparation;
 
     console.log(`[Timer] Démarrage du timer de préparation (${duration}s)`);
-    
+
     await this.sendDataMessage({
       type: 'start_preparation_timer',
       duration: duration,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Programmer la fin automatique de la préparation
@@ -186,9 +202,9 @@ export class TCFAgent extends voice.Agent {
     if (this.timerState !== 'preparation' || !this.context) return;
 
     console.log('[Timer] Temps de préparation écoulé');
-    
+
     await this.sendDataMessage({
-      type: 'end_preparation_timer'
+      type: 'end_preparation_timer',
     });
 
     this.timerState = 'idle';
@@ -208,7 +224,7 @@ export class TCFAgent extends voice.Agent {
       this.preparationTimerTimeout = null;
 
       await this.sendDataMessage({
-        type: 'end_preparation_timer'
+        type: 'end_preparation_timer',
       });
     }
 
@@ -226,11 +242,11 @@ export class TCFAgent extends voice.Agent {
     const duration = this.config.durations.exam;
 
     console.log(`[Timer] Démarrage du timer d'examen (${duration}s)`);
-    
+
     await this.sendDataMessage({
       type: 'start_exam_timer',
       duration: duration,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Programmer la fin automatique de l'examen
@@ -245,10 +261,10 @@ export class TCFAgent extends voice.Agent {
   private async onExamTimeExpired(): Promise<void> {
     if (this.timerState !== 'exam' || !this.context) return;
 
-    console.log('[Timer] Temps d\'examen écoulé');
-    
+    console.log("[Timer] Temps d'examen écoulé");
+
     await this.sendDataMessage({
-      type: 'end_exam_timer'
+      type: 'end_exam_timer',
     });
 
     this.timerState = 'finished';

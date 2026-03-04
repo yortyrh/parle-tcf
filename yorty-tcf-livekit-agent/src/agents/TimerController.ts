@@ -2,7 +2,6 @@
  * Contrôleur de timer pour les exercices TCF
  * Utilise la méthode sendDataMessage de TCFAgent pour envoyer les commandes
  */
-
 import type { JobContext } from '@livekit/agents';
 import type { TCFAgent } from './TCFAgent.js';
 
@@ -36,7 +35,7 @@ export const TCF_DURATIONS = {
 export class TimerController {
   constructor(
     private context: JobContext,
-    private agent: TCFAgent
+    private agent: TCFAgent,
   ) {}
 
   /**
@@ -45,9 +44,13 @@ export class TimerController {
   private async sendTimerControl(message: TimerControlMessage): Promise<void> {
     try {
       await this.agent.sendDataMessage(message);
-      console.log('[Timer] Message envoyé:', message.type, message.duration ? `(${message.duration}s)` : '');
+      console.log(
+        '[Timer] Message envoyé:',
+        message.type,
+        message.duration ? `(${message.duration}s)` : '',
+      );
     } catch (error) {
-      console.error('[Timer] Erreur lors de l\'envoi du message:', error);
+      console.error("[Timer] Erreur lors de l'envoi du message:", error);
     }
   }
 
@@ -122,7 +125,7 @@ export class TimerController {
     await this.startExamTimer(duration);
     await this.delay(duration * 1000);
     await this.endExamTimer();
-    console.log('[Timer] Fin de l\'examen');
+    console.log("[Timer] Fin de l'examen");
   }
 
   /**
@@ -132,24 +135,24 @@ export class TimerController {
    */
   async runExamPhaseWithWarnings(
     duration: number,
-    onWarning?: (timeLeft: number) => Promise<void>
+    onWarning?: (timeLeft: number) => Promise<void>,
   ): Promise<void> {
     console.log(`[Timer] Début de l'examen avec avertissements (${duration}s)`);
     await this.startExamTimer(duration);
 
     // Calcul des points d'avertissement
     const warnings: number[] = [];
-    
+
     // Avertissement à mi-parcours si > 2 minutes
     if (duration >= 120) {
       warnings.push(Math.floor(duration / 2));
     }
-    
+
     // Avertissement à 1 minute
     if (duration > 60) {
       warnings.push(60);
     }
-    
+
     // Avertissement à 30 secondes
     if (duration > 30) {
       warnings.push(30);
@@ -166,7 +169,7 @@ export class TimerController {
       if (timeUntilWarning > 0) {
         await this.delay(timeUntilWarning);
         elapsed += timeUntilWarning;
-        
+
         if (onWarning) {
           await onWarning(warning);
         }
@@ -180,7 +183,6 @@ export class TimerController {
     }
 
     await this.endExamTimer();
-    console.log('[Timer] Fin de l\'examen');
+    console.log("[Timer] Fin de l'examen");
   }
 }
-

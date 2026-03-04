@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -68,21 +68,21 @@ function loadAllExercises(): TCFExercise[] {
     return exercisesCache.all;
   }
 
-    try {
-      const csvPath = join(__dirname, '../../config/tcf-exercises.csv');
-      const csvContent = readFileSync(csvPath, 'utf-8');
-      const lines = csvContent.split('\n').filter((line) => line.trim().length > 0);
+  try {
+    const csvPath = join(__dirname, '../../config/tcf-exercises.csv');
+    const csvContent = readFileSync(csvPath, 'utf-8');
+    const lines = csvContent.split('\n').filter((line) => line.trim().length > 0);
 
-      if (lines.length < 2) {
-        throw new Error('CSV file is empty or invalid');
-      }
+    if (lines.length < 2) {
+      throw new Error('CSV file is empty or invalid');
+    }
 
-      // Parse header
-      const firstLine = lines[0];
-      if (!firstLine) {
-        throw new Error('CSV file has no header');
-      }
-      const headers = parseCSVLine(firstLine);
+    // Parse header
+    const firstLine = lines[0];
+    if (!firstLine) {
+      throw new Error('CSV file has no header');
+    }
+    const headers = parseCSVLine(firstLine);
     const idIndex = headers.indexOf('id');
     const taskTypeIndex = headers.indexOf('taskType');
     const contentIndex = headers.indexOf('content');
@@ -91,11 +91,7 @@ function loadAllExercises(): TCFExercise[] {
     const imagePathIndex = headers.indexOf('imagePath');
     const isImageBasedIndex = headers.indexOf('isImageBased');
 
-    if (
-      idIndex === -1 ||
-      taskTypeIndex === -1 ||
-      contentIndex === -1
-    ) {
+    if (idIndex === -1 || taskTypeIndex === -1 || contentIndex === -1) {
       throw new Error('CSV file is missing required columns');
     }
 
@@ -148,11 +144,11 @@ function loadAllExercises(): TCFExercise[] {
     }
 
     exercisesCache.all = exercises;
-    
+
     // Remplir les caches spécifiques à chaque tâche
     exercisesCache.tache2 = exercises.filter((ex) => ex.taskType === 'Tâche 2');
     exercisesCache.tache3 = exercises.filter((ex) => ex.taskType === 'Tâche 3');
-    
+
     return exercises;
   } catch (error) {
     console.error('Error loading exercises CSV:', error);
@@ -167,17 +163,17 @@ function loadAllExercises(): TCFExercise[] {
  */
 function loadExercisesForTask(taskType: 'tache2' | 'tache3'): TCFExercise[] {
   const cacheKey = taskType === 'tache2' ? 'tache2' : 'tache3';
-  
+
   // Vérifier le cache spécifique
   if (exercisesCache[cacheKey]) {
     return exercisesCache[cacheKey]!;
   }
-  
+
   // Charger tous les exercices si pas encore fait
   if (!exercisesCache.all) {
     loadAllExercises();
   }
-  
+
   // Retourner le cache spécifique (doit être rempli par loadAllExercises)
   return exercisesCache[cacheKey] || [];
 }
@@ -208,4 +204,3 @@ export function getRandomExercise(taskType: 'tache2' | 'tache3'): TCFExercise | 
 export function getAllExercises(taskType: 'tache2' | 'tache3'): TCFExercise[] {
   return loadExercisesForTask(taskType);
 }
-

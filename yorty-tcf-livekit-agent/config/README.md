@@ -17,97 +17,105 @@ config/
 Chaque fichier YAML contient :
 
 ### 1. Informations générales
+
 ```yaml
-name: "Nom de la tâche"
-description: "Description courte"
+name: 'Nom de la tâche'
+description: 'Description courte'
 ```
 
 ### 2. Paramètres
+
 ```yaml
 settings:
   allowInterruptions: true
-  voice: "alloy"
+  voice: 'alloy'
 
 durations:
-  exam: 120          # Durée en secondes pour le mode examen
-  preparation: 0     # 0 = pas de limite pour le mode préparation
+  exam: 120 # Durée en secondes pour le mode examen
+  preparation: 0 # 0 = pas de limite pour le mode préparation
 ```
 
 ### 3. Instructions de base
+
 ```yaml
 baseInstructions: |
   Instructions communes à tous les modes...
 ```
 
 ### 4. Configuration du mode examen
+
 ```yaml
 examMode:
   instructions: |
     Instructions spécifiques au mode examen...
-  
+
   greeting: |
     Message d'accueil pour le mode examen...
 ```
 
 ### 5. Configuration du mode préparation
+
 ```yaml
 preparationMode:
   instructions: |
     Instructions spécifiques au mode préparation (professeur)...
-  
+
   greeting: |
     Message d'accueil pour le mode préparation...
-  
+
   feedbackTechniques:
-    - "Technique 1"
-    - "Technique 2"
+    - 'Technique 1'
+    - 'Technique 2'
 ```
 
 ### 6. Données spécifiques à chaque tâche
 
 **Pour Tâche 1 (Expression Orale)** :
+
 ```yaml
 sampleQuestions:
   theme1:
-    - "Question 1"
-    - "Question 2"
+    - 'Question 1'
+    - 'Question 2'
   theme2:
-    - "Question 3"
+    - 'Question 3'
 ```
 
 **Pour Tâche 2 (Interaction)** :
+
 ```yaml
 scenarios:
   scenario_name:
-    title: "Titre du scénario"
+    title: 'Titre du scénario'
     role: "Rôle de l'agent"
-    situation: "Description de la situation"
+    situation: 'Description de la situation'
     phrases_utiles:
-      - "Phrase utile 1"
-      - "Phrase utile 2"
+      - 'Phrase utile 1'
+      - 'Phrase utile 2'
 
 usefulPhrases:
   categorie1:
-    - "Expression 1"
-    - "Expression 2"
+    - 'Expression 1'
+    - 'Expression 2'
 ```
 
 **Pour Tâche 3 (Expression d'Opinion)** :
+
 ```yaml
 topics:
   categorie1:
-    - "Sujet 1"
-    - "Sujet 2"
+    - 'Sujet 1'
+    - 'Sujet 2'
 
 argumentStructure:
   introduction:
-    - "Étape 1"
-    - "Étape 2"
+    - 'Étape 1'
+    - 'Étape 2'
 
 argumentationVocabulary:
   type1:
-    - "Expression 1"
-    - "Expression 2"
+    - 'Expression 1'
+    - 'Expression 2'
 ```
 
 ## Utilisation dans le code
@@ -142,6 +150,7 @@ const config = reloadAgentConfig('tache1');
 ## Validation
 
 Les fichiers YAML sont validés automatiquement au chargement. Les champs requis sont :
+
 - `name`
 - `description`
 - `settings`
@@ -163,14 +172,16 @@ Si un champ requis manque, une erreur sera levée au démarrage de l'agent.
 ## Dépannage
 
 ### Erreur "Failed to load configuration"
+
 - Vérifiez que le fichier YAML existe dans `config/agents/`
 - Vérifiez la syntaxe YAML (indentation, guillemets)
 
 ### Erreur "Missing required field"
+
 - Assurez-vous que tous les champs requis sont présents
 - Consultez les exemples de fichiers existants
 
 ### L'agent ne parle pas correctement
+
 - Vérifiez les instructions dans `baseInstructions` et `examMode/preparationMode`
 - Assurez-vous que les instructions sont en anglais (pour le LLM) et mentionnent de parler en français
-
