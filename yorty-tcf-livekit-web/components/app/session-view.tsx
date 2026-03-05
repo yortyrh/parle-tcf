@@ -91,10 +91,7 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
             </div>
 
             {/* Exercise Image (TEF only) */}
-            <ExerciseImageViewer
-              filename={exerciseImage?.filename ?? null}
-              section={exerciseImage?.section ?? null}
-            />
+            <ExerciseImageViewer exerciseImage={exerciseImage} />
 
             {/* Task Labels/Badges - Below Description */}
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">

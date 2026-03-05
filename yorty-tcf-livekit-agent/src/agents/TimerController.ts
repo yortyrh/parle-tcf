@@ -162,7 +162,6 @@ export class TimerController {
     warnings.sort((a, b) => b - a);
 
     let elapsed = 0;
-    const interval = 1000; // Vérifier chaque seconde
 
     for (const warning of warnings) {
       const timeUntilWarning = (duration - warning) * 1000 - elapsed;

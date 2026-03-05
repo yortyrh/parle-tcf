@@ -149,10 +149,13 @@ export class TCFAgent extends voice.Agent {
         "Présentation d'un sujet, souvent lié à la vie quotidienne ou des débats de société";
     } else if (this.taskType === 'tef-section-a') {
       title = "TEF Section A - Demande d'informations";
-      description = 'Vous avez lu une annonce. Téléphonez pour obtenir des informations (~5 min)';
+      description =
+        this.exercise?.consigne ||
+        'Vous avez lu une annonce. Téléphonez pour obtenir des informations (~5 min)';
     } else if (this.taskType === 'tef-section-b') {
       title = 'TEF Section B - Argumentation';
       description =
+        this.exercise?.consigne ||
         'Vous avez lu une annonce. Présentez-la à un(e) ami(e) et essayez de le/la convaincre (~10 min)';
     } else {
       title = 'Expression Orale';

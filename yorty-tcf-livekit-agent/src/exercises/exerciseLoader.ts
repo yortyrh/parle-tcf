@@ -9,6 +9,7 @@ export interface TCFExercise {
   id: string;
   taskType: 'Tâche 2' | 'Tâche 3';
   content: string;
+  consigne?: string;
   url?: string;
   imageUrl?: string;
   imagePath?: string;

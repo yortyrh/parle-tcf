@@ -8,36 +8,38 @@ import { TCFAgent } from './TCFAgent.js';
  * Configuration chargée depuis config/agents/tef-section-a.yml
  */
 export class TEFSectionA extends TCFAgent {
-  private tefExerciseFilename: string;
-  private tefSection: 'A';
+  private tefExercise: ReturnType<typeof getTEFExercise>;
 
   constructor(context: JobContext) {
     const exercise = getTEFExercise('A');
     console.log(`[TEF-A] Exercice sélectionné: ${exercise.id} - ${exercise.title}`);
 
-    // Injecter l'annonce dans le format attendu par TCFAgent
     super(
       'tef-section-a',
       {
         id: exercise.id,
-        taskType: 'Tâche 2', // satisfait le type TCFExercise
+        taskType: 'Tâche 2',
         content: `TITRE: ${exercise.title}\n\nANNONCE:\n${exercise.annonce}\n\nCONSIGNE DU CANDIDAT:\n${exercise.consigne}`,
+        consigne: exercise.consigne,
         isImageBased: true,
         imagePath: exercise.filename,
       },
       context,
     );
 
-    this.tefExerciseFilename = exercise.filename;
-    this.tefSection = 'A';
+    this.tefExercise = exercise;
   }
 
   override async onEnter(): Promise<void> {
-    // Envoyer l'image au client web avant le greeting
+    // Envoyer les données de l'annonce au client web avant le greeting
     await this.sendDataMessage({
       type: 'exerciseImage',
-      filename: this.tefExerciseFilename,
-      section: this.tefSection,
+      filename: this.tefExercise.filename,
+      section: 'A' as const,
+      annonce: this.tefExercise.annonce,
+      title: this.tefExercise.title,
+      consigne: this.tefExercise.consigne,
+      generatedImagePath: this.tefExercise.generatedImagePath ?? null,
     });
 
     await super.onEnter();

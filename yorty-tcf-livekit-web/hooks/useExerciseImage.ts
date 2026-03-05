@@ -4,12 +4,20 @@ import { useRemoteParticipants } from '@livekit/components-react';
 export interface ExerciseImageData {
   filename: string;
   section: 'A' | 'B';
+  annonce: string | null;
+  title: string | null;
+  consigne: string | null;
+  generatedImagePath: string | null;
 }
 
 export interface ExerciseImageMessage {
   type: 'exerciseImage';
   filename: string;
   section: 'A' | 'B';
+  annonce?: string;
+  title?: string;
+  consigne?: string;
+  generatedImagePath?: string | null;
 }
 
 /**
@@ -21,7 +29,14 @@ export function useExerciseImage() {
 
   const handleMessage = useCallback((message: ExerciseImageMessage) => {
     console.log('[ExerciseImage] Image reçue:', message.filename, 'section:', message.section);
-    setImageData({ filename: message.filename, section: message.section });
+    setImageData({
+      filename: message.filename,
+      section: message.section,
+      annonce: message.annonce ?? null,
+      title: message.title ?? null,
+      consigne: message.consigne ?? null,
+      generatedImagePath: message.generatedImagePath ?? null,
+    });
   }, []);
 
   useEffect(() => {

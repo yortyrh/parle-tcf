@@ -12,6 +12,7 @@ export interface TEFExercise {
   title: string;
   annonce: string;
   consigne: string;
+  generatedImagePath?: string;
 }
 
 let exercisesCache: TEFExercise[] | null = null;
