@@ -80,12 +80,17 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
         {/* Card Header with Task Info — flex-1 pour TEF (sans transcription) */}
         <div
           className={cn(
-            'border-border flex items-start gap-3 border-b border-solid p-4 sm:flex-row sm:gap-4',
-            exerciseImage && 'min-h-0 flex-1 overflow-y-auto'
+            'border-border flex gap-3 border-b border-solid p-4 sm:flex-row sm:gap-4',
+            exerciseImage ? 'min-h-0 flex-1 items-stretch overflow-y-auto' : 'items-start'
           )}
         >
           {/* Task Information */}
-          <div className="mx-auto flex max-w-[860px] min-w-0 flex-1 flex-col gap-4">
+          <div
+            className={cn(
+              'mx-auto flex max-w-[860px] min-w-0 flex-1 flex-col gap-4',
+              exerciseImage && 'min-h-0'
+            )}
+          >
             {/* Description — masquée pour TEF (la consigne est dans ExerciseImageViewer) */}
             {!exerciseImage && (
               <div className="flex min-h-[90px] items-center rounded-lg border-l-4 border-blue-500 bg-blue-50/50 px-4 py-3 shadow-md sm:px-5 sm:py-4">
@@ -97,36 +102,61 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
               </div>
             )}
 
-            {/* Exercise Image (TEF only) */}
-            <ExerciseImageViewer exerciseImage={exerciseImage} />
+            {/* Exercise Image (TEF only) — badges passés pour overlay sur l'image */}
+            <ExerciseImageViewer
+              exerciseImage={exerciseImage}
+              badges={
+                exerciseImage
+                  ? (() => {
+                      const title = exerciseData?.title || selectedTask?.title || 'Tâche';
+                      const parts = title.split(' - ');
+                      const section =
+                        parts[0] ||
+                        (exerciseImage.section === 'A' ? 'TEF Section A' : 'TEF Section B');
+                      const type =
+                        parts[1] ||
+                        (exerciseImage.section === 'A'
+                          ? "Demande d'informations"
+                          : 'Argumentation');
+                      return { section, type };
+                    })()
+                  : undefined
+              }
+            />
 
-            {/* Task Labels/Badges - Below Description */}
-            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              {/* Bouton du rapport à gauche */}
+            {/* ReportButton pour TEF — visible quand rapport disponible */}
+            {exerciseImage && (
               <ReportButton report={report} onExpand={() => setIsReportMinimized(false)} />
+            )}
 
-              {/* Badges à droite */}
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                {(() => {
-                  const title = exerciseData?.title || selectedTask?.title || 'Tâche';
-                  // Split title by " - " to separate task number from exercise type
-                  const parts = title.split(' - ');
-                  const taskNumber = parts[0] || 'Tâche';
-                  const exerciseType = parts[1] || 'Jeu de rôle';
+            {/* Task Labels/Badges — uniquement pour non-TEF (TEF: badges dans ExerciseImageViewer) */}
+            {!exerciseImage && (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                {/* Bouton du rapport à gauche */}
+                <ReportButton report={report} onExpand={() => setIsReportMinimized(false)} />
 
-                  return (
-                    <>
-                      <span className="inline-flex items-center rounded bg-cyan-700 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-600/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
-                        {taskNumber}
-                      </span>
-                      <span className="inline-flex items-center rounded bg-cyan-600 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-500/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
-                        {exerciseType}
-                      </span>
-                    </>
-                  );
-                })()}
+                {/* Badges à droite */}
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  {(() => {
+                    const title = exerciseData?.title || selectedTask?.title || 'Tâche';
+                    const parts = title.split(' - ');
+                    const taskNumber = parts[0] || 'Tâche';
+                    const exerciseType = parts[1] || 'Jeu de rôle';
+
+                    return (
+                      <>
+                        <span className="inline-flex items-center rounded bg-cyan-700 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-600/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
+                          {taskNumber}
+                        </span>
+                        <span className="inline-flex items-center rounded bg-cyan-600 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-500/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
+                          {exerciseType}
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
-            </div>
+            )}
           </div>
           {/* Timer Display - Top Right */}
           {timerState.type && timerState.isRunning && (
