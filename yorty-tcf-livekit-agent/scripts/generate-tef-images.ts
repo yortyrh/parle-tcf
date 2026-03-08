@@ -156,13 +156,22 @@ Réponds en français avec une description fluide et précise, suffisamment dét
 // ─────────────────────────────────────────────
 
 function buildGenerationPrompt(exercise: TEFExercise, visualDescription: string): string {
-  return `Crée une affiche publicitaire professionnelle en français. Il s'agit d'une annonce autonome et réaliste, telle qu'on en trouve dans les journaux ou sur internet en France ou au Canada francophone.
+  return `Crée une image visuelle d'affiche publicitaire, format portrait, professionnelle et réaliste.
 
-Le titre de l'annonce est "${exercise.title}". Voici le contenu à inclure dans la publicité : ${exercise.annonce}
+RÈGLE ABSOLUE : N'inclus AUCUN TEXTE sur l'image. Pas de titre, pas de liste, pas de numéro, pas de mot écrit. Uniquement des éléments visuels. La raison : l'annonce sera affichée au-dessus de l'image dans l'interface, donc le texte ne doit pas figurer sur l'image elle-même.
 
-Voici une description visuelle détaillée de l'annonce originale à utiliser comme inspiration graphique : ${visualDescription}
+Thème de l'annonce : "${exercise.title}". Contenu évoqué (pour l'ambiance uniquement, NE PAS l'écrire) : ${exercise.annonce}
 
-L'affiche doit être au format portrait avec un design graphique moderne et professionnel correspondant au style français ou québécois. Elle doit inclure toutes les informations importantes mentionnées dans le contenu, avec une typographie propre et lisible, et des couleurs et visuels cohérents avec le thème de l'annonce. L'image finale doit ressembler à une vraie publicité imprimée ou numérique, sans texte parasite, sans numéro d'exercice, sans mention d'examen, sans bordure de page de livre, sans artefact de numérisation.`;
+Description visuelle de référence : ${visualDescription}
+
+L'image doit :
+- Reproduire l'ambiance et le style graphique (monuments, illustrations, couleurs, textures)
+- Pouvoir inclure des pictogrammes ou icônes minimalistes (calendrier, valise, bâtiment...) pour évoquer le thème
+- Rester purement visuelle : aucun mot, aucun chiffre
+- Être propre, sans bordure de page, sans artefact de numérisation
+- Ressembler à une publicité stylée dont le texte sera affiché séparément en HTML
+
+Style : graphisme français ou québécois, moderne, professionnel.`;
 }
 
 async function generateImage(
@@ -234,11 +243,10 @@ async function validateGeneratedImage(
 L'annonce concerne : "${exercise.title}"
 
 Évalue la qualité de l'image générée selon ces critères :
-- Les informations essentielles du contenu sont présentes et lisibles
-- Le style visuel est cohérent avec une vraie publicité française/québécoise
-- Aucun texte parasite (numéro d'examen, instructions de prompt, artefacts)
-- La mise en page est propre et professionnelle
-- Les visuels correspondent au thème de l'annonce
+- L'image est purement visuelle : AUCUN texte écrit (titres, listes, numéros) — les infos seront en HTML
+- Le style visuel correspond au thème de l'annonce (monuments, ambiance, pictogrammes éventuels)
+- Aucun artefact parasite (numéro d'examen, bordure, artefact de scan)
+- Mise en page propre et professionnelle
 
 Réponds UNIQUEMENT avec un objet JSON valide : {"score": <entier entre 1 et 10>, "reason": "<explication courte en français>"}`,
             },
@@ -281,14 +289,16 @@ async function processExercise(
   client: OpenAI,
   exercise: TEFExercise,
   exercises: TEFExercise[],
+  forceRegenerate: boolean,
 ): Promise<'skipped' | 'success' | 'failed'> {
   const outputFilename = `${exercise.id}.jpg`;
   const outputPath = join(WEB_PUBLIC_DIR, outputFilename);
   const generatedImageRelPath = `generated/${outputFilename}`;
   const originalImagePath = join(TEF_IMAGES_DIR, `TEF-${exercise.section}`, exercise.filename);
 
-  // Ignorer si déjà validé avec un bon score
+  // Ignorer si déjà validé (sauf si --force)
   if (
+    !forceRegenerate &&
     existsSync(outputPath) &&
     exercise.generatedImagePath &&
     (exercise.qualityScore ?? 0) >= QUALITY_THRESHOLD
@@ -388,11 +398,19 @@ async function main() {
 
   const exercises: TEFExercise[] = JSON.parse(readFileSync(EXERCISES_PATH, 'utf-8'));
 
+  const forceIds = process.argv.filter((a) => a.startsWith('TEF-'));
+  const forceRegenerate = forceIds.length > 0;
+  const filtered =
+    forceIds.length > 0 ? exercises.filter((e) => forceIds.includes(e.id)) : exercises;
+
   console.log(`\n🎨 Génération d'images TEF`);
+  if (forceRegenerate) {
+    console.log(`   Mode --force pour : ${forceIds.join(', ')}`);
+  }
   console.log(`   Vision     : ${VISION_MODEL}`);
   console.log(`   Génération : ${GENERATION_MODEL}`);
   console.log(`   Seuil qualité : ${QUALITY_THRESHOLD}/10 (max ${MAX_RETRIES} tentatives)`);
-  console.log(`   ${exercises.length} exercices chargés\n`);
+  console.log(`   ${filtered.length} exercice(s) à traiter\n`);
 
   if (!existsSync(WEB_PUBLIC_DIR)) {
     mkdirSync(WEB_PUBLIC_DIR, { recursive: true });
@@ -402,8 +420,8 @@ async function main() {
   let skipped = 0;
   let failed = 0;
 
-  for (const exercise of exercises) {
-    const result = await processExercise(client, exercise, exercises);
+  for (const exercise of filtered) {
+    const result = await processExercise(client, exercise, exercises, forceRegenerate);
     if (result === 'skipped') skipped++;
     else if (result === 'success') generated++;
     else failed++;

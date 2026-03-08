@@ -34,6 +34,7 @@ export class TEFSectionA extends TCFAgent {
     // Envoyer les données de l'annonce au client web avant le greeting
     await this.sendDataMessage({
       type: 'exerciseImage',
+      id: this.tefExercise.id,
       filename: this.tefExercise.filename,
       section: 'A' as const,
       annonce: this.tefExercise.annonce,

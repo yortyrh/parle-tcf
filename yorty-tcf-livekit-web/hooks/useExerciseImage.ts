@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRemoteParticipants } from '@livekit/components-react';
 
 export interface ExerciseImageData {
+  id: string | null;
   filename: string;
   section: 'A' | 'B';
   annonce: string | null;
@@ -12,6 +13,7 @@ export interface ExerciseImageData {
 
 export interface ExerciseImageMessage {
   type: 'exerciseImage';
+  id?: string;
   filename: string;
   section: 'A' | 'B';
   annonce?: string;
@@ -30,6 +32,7 @@ export function useExerciseImage() {
   const handleMessage = useCallback((message: ExerciseImageMessage) => {
     console.log('[ExerciseImage] Image reçue:', message.filename, 'section:', message.section);
     setImageData({
+      id: message.id ?? null,
       filename: message.filename,
       section: message.section,
       annonce: message.annonce ?? null,

@@ -77,18 +77,25 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-4">
       {/* Card Container */}
       <div className="border-border bg-card flex h-full w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-solid shadow-lg transition-all duration-500 sm:rounded-2xl">
-        {/* Card Header with Task Info */}
-        <div className="border-border flex items-start gap-3 border-b border-solid p-4 sm:flex-row sm:gap-4">
+        {/* Card Header with Task Info — flex-1 pour TEF (sans transcription) */}
+        <div
+          className={cn(
+            'border-border flex items-start gap-3 border-b border-solid p-4 sm:flex-row sm:gap-4',
+            exerciseImage && 'min-h-0 flex-1 overflow-y-auto'
+          )}
+        >
           {/* Task Information */}
           <div className="mx-auto flex max-w-[860px] min-w-0 flex-1 flex-col gap-4">
-            {/* Description */}
-            <div className="flex min-h-[90px] items-center rounded-lg border-l-4 border-blue-500 bg-blue-50/50 px-4 py-3 shadow-md sm:px-5 sm:py-4">
-              <p className="line-clamp-10 text-base leading-relaxed font-semibold text-cyan-600 sm:text-lg sm:leading-relaxed">
-                {exerciseData?.description ||
-                  selectedTask?.description ||
-                  'Description de la tâche'}
-              </p>
-            </div>
+            {/* Description — masquée pour TEF (la consigne est dans ExerciseImageViewer) */}
+            {!exerciseImage && (
+              <div className="flex min-h-[90px] items-center rounded-lg border-l-4 border-blue-500 bg-blue-50/50 px-4 py-3 shadow-md sm:px-5 sm:py-4">
+                <p className="line-clamp-10 text-base leading-relaxed font-semibold text-cyan-600 sm:text-lg sm:leading-relaxed">
+                  {exerciseData?.description ||
+                    selectedTask?.description ||
+                    'Description de la tâche'}
+                </p>
+              </div>
+            )}
 
             {/* Exercise Image (TEF only) */}
             <ExerciseImageViewer exerciseImage={exerciseImage} />
@@ -129,20 +136,22 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
           )}
         </div>
 
-        {/* Chat Transcript Area */}
-        <div className="relative flex-1 overflow-hidden bg-gray-50">
-          <Fade top className="absolute inset-x-2 top-0 z-10 h-6 sm:inset-x-4 sm:h-8" />
-          <ScrollArea
-            ref={scrollAreaRef}
-            className="h-full px-3 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4 xl:px-8"
-          >
-            <ChatTranscript
-              hidden={false}
-              messages={messages}
-              className="mx-auto space-y-2 sm:space-y-3"
-            />
-          </ScrollArea>
-        </div>
+        {/* Chat Transcript Area — masqué pour TEF (seulement pour TCF) */}
+        {!exerciseImage && (
+          <div className="relative flex-1 overflow-hidden bg-gray-50">
+            <Fade top className="absolute inset-x-2 top-0 z-10 h-6 sm:inset-x-4 sm:h-8" />
+            <ScrollArea
+              ref={scrollAreaRef}
+              className="h-full px-3 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4 xl:px-8"
+            >
+              <ChatTranscript
+                hidden={false}
+                messages={messages}
+                className="mx-auto space-y-2 sm:space-y-3"
+              />
+            </ScrollArea>
+          </div>
+        )}
 
         {/* Bottom Controls */}
         <div className="border-border border-t border-solid bg-white p-2 sm:p-4 xl:p-6">
