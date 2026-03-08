@@ -18,6 +18,7 @@
     "start": "node dist/agent.js start",
     "extract-tef": "tsx scripts/extract-tef-exercises.ts",
     "generate-tef-images": "tsx scripts/generate-tef-images.ts",
+    "generate-tef-images:multi-size": "tsx scripts/generate-tef-images.ts --multi-size",
     "reset-tef-images": "tsx scripts/reset-tef-images.ts"
   },
   "engines": {

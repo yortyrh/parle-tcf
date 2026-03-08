@@ -9,9 +9,10 @@ import { WelcomeView } from '@/components/app/welcome-view';
 interface ViewControllerProps {
   appConfig: AppConfig;
   onTaskSelect: (taskType: string) => void;
+  homeHref?: string;
 }
 
-export function ViewController({ appConfig, onTaskSelect }: ViewControllerProps) {
+export function ViewController({ appConfig, onTaskSelect, homeHref }: ViewControllerProps) {
   const { isConnected, start } = useSessionContext();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -30,6 +31,7 @@ export function ViewController({ appConfig, onTaskSelect }: ViewControllerProps)
         startButtonText={appConfig.startButtonText}
         onStartCall={handleStartCall}
         tasks={appConfig.tasks}
+        homeHref={homeHref}
       />
     );
   }

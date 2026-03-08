@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import type { Task } from '@/app-config';
 import { Button } from '@/components/livekit/button';
 import { cn } from '@/lib/utils';
@@ -10,9 +11,10 @@ interface WelcomeViewProps {
   startButtonText: string;
   onStartCall: (taskType: string) => void;
   tasks: Task[];
+  homeHref?: string;
 }
 
-export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeViewProps) {
+export function WelcomeView({ startButtonText, onStartCall, tasks, homeHref }: WelcomeViewProps) {
   const [selectedTaskType, setSelectedTaskType] = useState<string | null>(null);
 
   const handleStartCall = () => {
@@ -22,7 +24,15 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
   };
 
   return (
-    <section className="flex w-full flex-col items-center justify-center overflow-y-auto p-3 text-center sm:p-6">
+    <section className="relative flex w-full flex-col items-center justify-center overflow-y-auto p-3 text-center sm:p-6">
+      {homeHref && (
+        <Link
+          href={homeHref}
+          className="text-muted-foreground hover:text-foreground absolute top-4 left-4 z-10 text-sm underline transition-colors"
+        >
+          ← Retour à la page principale
+        </Link>
+      )}
       <Image
         src="/logo.png"
         alt="TCF AI Logo"
@@ -37,8 +47,13 @@ export function WelcomeView({ startButtonText, onStartCall, tasks }: WelcomeView
         Sélectionnez une tâche pour commencer
       </p>
 
-      {/* Task Selection Cards */}
-      <div className="mb-6 grid w-full max-w-2xl grid-cols-1 gap-3 px-2 sm:mb-8 sm:gap-4 sm:px-0 md:grid-cols-3">
+      {/* Task Selection Cards — 2 colonnes pour TEF, 3 pour TCF */}
+      <div
+        className={cn(
+          'mb-6 grid w-full max-w-2xl grid-cols-1 gap-3 px-2 sm:mb-8 sm:gap-4 sm:px-0',
+          tasks.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'
+        )}
+      >
         {tasks.map((task) => (
           <button
             key={task.taskType}

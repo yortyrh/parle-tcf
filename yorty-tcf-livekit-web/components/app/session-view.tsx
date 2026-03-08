@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useSessionContext, useSessionMessages } from '@livekit/components-react';
+import {
+  BarVisualizer,
+  useSessionContext,
+  useSessionMessages,
+  useVoiceAssistant,
+} from '@livekit/components-react';
 import type { AppConfig, Task } from '@/app-config';
 import { ChatTranscript } from '@/components/app/chat-transcript';
 import { TimerDisplay } from '@/components/app/timer-display';
@@ -44,6 +49,7 @@ interface SessionViewProps {
 export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
+  const { state: agentState, audioTrack: agentAudioTrack } = useVoiceAssistant();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { timerState } = useTimerControls();
   const exerciseData = useExerciseData();
@@ -76,7 +82,56 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
   return (
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-4">
       {/* Card Container */}
-      <div className="border-border bg-card flex h-full w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-solid shadow-lg transition-all duration-500 sm:rounded-2xl">
+      <div className="border-border bg-card relative flex h-full w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-solid shadow-lg transition-all duration-500 sm:rounded-2xl">
+        {/* Indicateur de ton TEF — petit, toujours visible, en haut à gauche */}
+        {exerciseImage && (
+          <div
+            className="absolute top-1.5 left-1.5 z-20 flex items-center justify-center sm:top-2 sm:left-2"
+            aria-label="Indicateur de ton"
+          >
+            <div
+              className={cn(
+                'bg-background aspect-square rounded border transition-all duration-300',
+                'border-input/50 h-7 w-7 drop-shadow-sm sm:h-8 sm:w-8'
+              )}
+            >
+              <BarVisualizer
+                barCount={4}
+                state={agentState}
+                options={{ minHeight: 3 }}
+                trackRef={agentAudioTrack}
+                className="flex h-full items-center justify-center gap-0.5"
+              >
+                <span
+                  className={cn(
+                    'bg-muted min-h-1.5 w-1.5 rounded-full sm:min-h-2 sm:w-2',
+                    'origin-center transition-colors duration-250 ease-linear',
+                    'data-[lk-highlighted=true]:bg-foreground data-[lk-muted=true]:bg-muted'
+                  )}
+                />
+              </BarVisualizer>
+            </div>
+          </div>
+        )}
+
+        {/* Indicateur de temps TEF — en haut à droite, toujours visible */}
+        {exerciseImage && (
+          <div
+            className="absolute top-1.5 right-1.5 z-20 sm:top-2 sm:right-2"
+            aria-label="Temps restant"
+          >
+            {timerState.type && timerState.isRunning ? (
+              <TimerDisplay timerState={timerState} compact hideLabel />
+            ) : (
+              <div className="border-primary/20 rounded border bg-white/90 px-2 py-1 shadow-sm sm:px-2.5 sm:py-1.5">
+                <span className="text-muted-foreground font-mono text-sm font-bold tabular-nums sm:text-base">
+                  --:--
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Card Header with Task Info — flex-1 pour TEF (sans transcription) */}
         <div
           className={cn(
@@ -158,8 +213,8 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
               </div>
             )}
           </div>
-          {/* Timer Display - Top Right */}
-          {timerState.type && timerState.isRunning && (
+          {/* Timer Display - Top Right (TCF uniquement ; TEF : affiché en position absolue) */}
+          {!exerciseImage && timerState.type && timerState.isRunning && (
             <div className="ml-auto flex items-center">
               <TimerDisplay timerState={timerState} />
             </div>

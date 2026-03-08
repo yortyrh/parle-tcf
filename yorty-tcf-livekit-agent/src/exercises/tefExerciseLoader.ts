@@ -13,6 +13,8 @@ export interface TEFExercise {
   annonce: string;
   consigne: string;
   generatedImagePath?: string;
+  /** Map taille → chemin (ex: {"1024x1536": "generated/TEF-A-01.jpg"}) */
+  generatedImagePaths?: Record<string, string>;
 }
 
 let exercisesCache: TEFExercise[] | null = null;
@@ -40,12 +42,28 @@ function loadTEFExercises(): TEFExercise[] {
   }
 }
 
+/** TEMPORAIRE : true = toujours retourner la même annonce (TEF-A-01) pour tests multi-tailles */
+const ALWAYS_SAME_EXERCISE = false;
+
+/** ID de l'exercice fixe utilisé quand ALWAYS_SAME_EXERCISE est true */
+const FIXED_EXERCISE_ID = 'TEF-A-01';
+
 /**
  * Returns a random TEF exercise for the given section.
  * Falls back to a placeholder if no exercises are loaded.
+ * TEMPORAIRE : si ALWAYS_SAME_EXERCISE, retourne toujours la même annonce pour tester les tailles d'écran.
  */
 export function getTEFExercise(section: 'A' | 'B'): TEFExercise {
   const all = loadTEFExercises();
+
+  if (ALWAYS_SAME_EXERCISE) {
+    const fixed = all.find((ex) => ex.id === FIXED_EXERCISE_ID);
+    if (fixed) {
+      console.log(`[TEF] Mode test : annonce fixe ${FIXED_EXERCISE_ID} (${fixed.title})`);
+      return { ...fixed, section };
+    }
+  }
+
   const filtered = all.filter((ex) => ex.section === section);
 
   if (filtered.length === 0) {

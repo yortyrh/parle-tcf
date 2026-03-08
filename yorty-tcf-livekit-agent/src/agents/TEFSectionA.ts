@@ -41,6 +41,7 @@ export class TEFSectionA extends TCFAgent {
       title: this.tefExercise.title,
       consigne: this.tefExercise.consigne,
       generatedImagePath: this.tefExercise.generatedImagePath ?? null,
+      generatedImagePaths: this.tefExercise.generatedImagePaths ?? null,
     });
 
     await super.onEnter();

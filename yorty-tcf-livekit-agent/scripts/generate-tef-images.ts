@@ -11,7 +11,9 @@
  * des versions plus récentes (gpt-5.4, gpt-image-1.5, etc.) sont vérifiées disponibles
  * via ton compte OpenAI (https://platform.openai.com/docs/models).
  *
- * Usage: pnpm generate-tef-images
+ * Usage:
+ *   pnpm generate-tef-images          — toutes les images (une taille)
+ *   pnpm generate-tef-images --multi-size  — TEF-A-01 uniquement, 3 tailles (1024x1536, 1536x1024, 1024x1024)
  *
  * Prérequis: OPENAI_API_KEY dans .env.local
  * Résultat:
@@ -58,6 +60,13 @@ const WEB_PUBLIC_DIR = join(
   '../../yorty-tcf-livekit-web/public/tef-exercices/generated',
 );
 
+/** Tailles supportées par gpt-image-1.5 : 1024x1024, 1024x1536, 1536x1024 */
+const MULTI_SIZE_SPECS = [
+  { key: '1024x1536', w: 1024, h: 1536 }, // portrait (défaut)
+  { key: '1536x1024', w: 1536, h: 1024 }, // paysage desktop
+  { key: '1024x1024', w: 1024, h: 1024 }, // carré
+] as const;
+
 interface TEFExercise {
   id: string;
   section: 'A' | 'B';
@@ -66,6 +75,8 @@ interface TEFExercise {
   annonce: string;
   consigne: string;
   generatedImagePath?: string;
+  /** Map taille → chemin (ex: {"1024x1536": "generated/TEF-A-01.jpg", "1536x1024": "generated/TEF-A-01-1536x1024.jpg"}) */
+  generatedImagePaths?: Record<string, string>;
   visualDescription?: string;
   qualityScore?: number;
 }
@@ -126,18 +137,16 @@ Texte déjà extrait de cette annonce :
 Titre : ${exercise.title}
 Contenu : ${exercise.annonce}
 
-Fournis une description visuelle complète et détaillée pour qu'un graphiste puisse recréer une publicité similaire sans voir l'original. Décris précisément :
+Fournis une description visuelle UNIQUEMENT des éléments PICTURAUX (sans aucun texte). L'image recréée sera purement illustrative — le texte sera affiché séparément. Décris :
 
-1. Le type d'annonce (offre d'emploi, activité de loisir, service, produit, événement, documentation officielle, etc.)
-2. La palette de couleurs dominante (fond, titres, texte, accents, éléments graphiques)
-3. La mise en page et la structure (disposition des blocs, hiérarchie visuelle, colonnes, encadrés)
-4. Les éléments visuels (photos, illustrations, icônes, formes graphiques — décrire leur contenu et position)
-5. La typographie (style des titres, taille relative, graisse)
-6. Le logo ou identité visuelle (si présent : forme, couleurs, nom, position)
-7. Toutes les informations clés à faire apparaître (prix, contacts, adresses, dates, horaires, numéros de téléphone, sites web, caractéristiques)
-8. L'ambiance générale et le ton visuel (dynamique, sérieux, ludique, officiel, élégant, etc.)
+1. Le thème visuel (offre d'emploi, activité loisir, service, produit, événement — pour l'ambiance)
+2. La palette de couleurs (fond, accents, éléments graphiques)
+3. Les éléments visuels : photos, illustrations, icônes, pictogrammes, formes (contenu et position)
+4. La mise en page des zones (où sont les blocs, colonnes — sans décrire le contenu textuel)
+5. Logo ou symbole visuel si présent (formes, couleurs uniquement — pas le nom)
+6. L'ambiance (dynamique, sérieux, ludique, professionnel)
 
-Réponds en français avec une description fluide et précise, suffisamment détaillée pour guider la création d'une vraie publicité.`,
+IMPORTANT : Ne décris PAS la typographie, les mots, chiffres, numéros, adresses. Uniquement des éléments qu'un illustrateur peut dessiner sans écrire.`,
             },
           ],
         },
@@ -156,22 +165,15 @@ Réponds en français avec une description fluide et précise, suffisamment dét
 // ─────────────────────────────────────────────
 
 function buildGenerationPrompt(exercise: TEFExercise, visualDescription: string): string {
-  return `Crée une image visuelle d'affiche publicitaire, format portrait, professionnelle et réaliste.
+  return `IMAGE SANS AUCUN TEXTE. Aucun mot, chiffre, lettre, nom de marque, nom de produit, prix, slogan. Uniquement des éléments visuels (objets, scènes, illustrations, couleurs). Le texte sera affiché séparément dans l'interface.
 
-RÈGLE ABSOLUE : N'inclus AUCUN TEXTE sur l'image. Pas de titre, pas de liste, pas de numéro, pas de mot écrit. Uniquement des éléments visuels. La raison : l'annonce sera affichée au-dessus de l'image dans l'interface, donc le texte ne doit pas figurer sur l'image elle-même.
+Thème à évoquer visuellement (ne pas l'écrire) : ${exercise.title}. Ambiance : ${exercise.annonce.substring(0, 150)}...
 
-Thème de l'annonce : "${exercise.title}". Contenu évoqué (pour l'ambiance uniquement, NE PAS l'écrire) : ${exercise.annonce}
+Référence visuelle (éléments picturaux uniquement, ignorer tout texte) : ${visualDescription}
 
-Description visuelle de référence : ${visualDescription}
+À inclure : scènes, photos, pictogrammes minimalistes, formes, couleurs. Composition propre et professionnelle.
 
-L'image doit :
-- Reproduire l'ambiance et le style graphique (monuments, illustrations, couleurs, textures)
-- Pouvoir inclure des pictogrammes ou icônes minimalistes (calendrier, valise, bâtiment...) pour évoquer le thème
-- Rester purement visuelle : aucun mot, aucun chiffre
-- Être propre, sans bordure de page, sans artefact de numérisation
-- Ressembler à une publicité stylée dont le texte sera affiché séparément en HTML
-
-Style : graphisme français ou québécois, moderne, professionnel.`;
+Style : graphisme français ou québécois, moderne, purement visuel.`;
 }
 
 async function generateImage(
@@ -179,26 +181,29 @@ async function generateImage(
   exercise: TEFExercise,
   visualDescription: string,
   outputPath: string,
+  size: string,
 ): Promise<boolean> {
   const prompt = buildGenerationPrompt(exercise, visualDescription);
 
   try {
-    // gpt-image-1 retourne b64_json sans response_format explicite
-    // dall-e-3 nécessite response_format: 'b64_json'
-    const isDalle3 = GENERATION_MODEL === 'dall-e-3';
+    // gpt-image-1 : 1024x1024, 1024x1536, 1536x1024
+    // dall-e-3 : 1024x1024, 1792x1024, 1024x1792
+    const modelStr = String(GENERATION_MODEL);
+    const isDalle3 = modelStr === 'dall-e-3';
+    const apiSize = isDalle3 && size === '1536x1024' ? '1792x1024' : size;
 
     const params: Parameters<typeof client.images.generate>[0] = {
       model: GENERATION_MODEL,
       prompt,
       n: 1,
-      size: isDalle3 ? '1024x1792' : '1024x1536',
+      size: apiSize as '1024x1024' | '1024x1536' | '1536x1024' | '1792x1024' | '1024x1792',
       quality: isDalle3 ? 'standard' : 'medium',
       ...(isDalle3 ? { response_format: 'b64_json' } : {}),
     };
 
     const response = await client.images.generate(params);
-
-    const b64 = response.data[0]?.b64_json;
+    const data = 'data' in response ? response.data : undefined;
+    const b64 = data?.[0]?.b64_json;
     if (!b64) {
       console.error(`    ✗ Aucune donnée image retournée`);
       return false;
@@ -333,7 +338,13 @@ async function processExercise(
     // Supprimer l'ancienne image si elle existe
     if (existsSync(outputPath)) unlinkSync(outputPath);
 
-    const generated = await generateImage(client, exercise, exercise.visualDescription, outputPath);
+    const generated = await generateImage(
+      client,
+      exercise,
+      exercise.visualDescription,
+      outputPath,
+      '1024x1536',
+    );
 
     if (!generated) {
       console.error(`    ✗ Génération échouée (tentative ${attempt})`);
@@ -379,6 +390,59 @@ async function processExercise(
 }
 
 // ─────────────────────────────────────────────
+// Mode multi-tailles : génère plusieurs formats pour un exercice (TEF-A-01)
+// ─────────────────────────────────────────────
+
+async function processExerciseMultiSize(
+  client: OpenAI,
+  exercise: TEFExercise,
+  exercises: TEFExercise[],
+): Promise<'success' | 'failed'> {
+  if (!exercise.visualDescription) {
+    console.log(`    → Analyse vision (${VISION_MODEL})...`);
+    const desc = await analyzeOriginalImage(client, exercise);
+    if (desc) {
+      exercise.visualDescription = desc;
+      saveExercises(exercises);
+    } else {
+      exercise.visualDescription = `Annonce "${exercise.title}". Contenu : ${exercise.annonce}`;
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  const paths: Record<string, string> = {};
+  const baseName = exercise.id;
+
+  for (const spec of MULTI_SIZE_SPECS) {
+    const filename = spec.key === '1024x1536' ? `${baseName}.jpg` : `${baseName}-${spec.key}.jpg`;
+    const outputPath = join(WEB_PUBLIC_DIR, filename);
+    const relPath = `generated/${filename}`;
+
+    console.log(`    → ${spec.key} (${spec.w}×${spec.h})...`);
+    const ok = await generateImage(
+      client,
+      exercise,
+      exercise.visualDescription!,
+      outputPath,
+      spec.key,
+    );
+    if (ok) {
+      paths[spec.key] = relPath;
+    }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+
+  if (Object.keys(paths).length > 0) {
+    exercise.generatedImagePath = paths['1024x1536'] ?? Object.values(paths)[0];
+    exercise.generatedImagePaths = paths;
+    saveExercises(exercises);
+    console.log(`    ✓ ${Object.keys(paths).length} variante(s) générée(s)`);
+    return 'success';
+  }
+  return 'failed';
+}
+
+// ─────────────────────────────────────────────
 // Main
 // ─────────────────────────────────────────────
 
@@ -399,17 +463,51 @@ async function main() {
   const exercises: TEFExercise[] = JSON.parse(readFileSync(EXERCISES_PATH, 'utf-8'));
 
   const forceIds = process.argv.filter((a) => a.startsWith('TEF-'));
-  const forceRegenerate = forceIds.length > 0;
-  const filtered =
-    forceIds.length > 0 ? exercises.filter((e) => forceIds.includes(e.id)) : exercises;
+  const multiSize = process.argv.includes('--multi-size');
+  const forceAll = process.argv.includes('--force');
+  const sectionIdx = process.argv.findIndex((a) => a.startsWith('--section'));
+  const section =
+    sectionIdx >= 0
+      ? process.argv[sectionIdx].includes('=')
+        ? process.argv[sectionIdx].replace('--section=', '')
+        : process.argv[sectionIdx + 1]
+      : undefined;
+  const forceRegenerate = forceIds.length > 0 || forceAll;
+
+  let filtered = forceIds.length > 0 ? exercises.filter((e) => forceIds.includes(e.id)) : exercises;
+
+  if (section === 'A' || section === 'B') {
+    filtered = filtered.filter((e) => e.section === section);
+  }
+
+  if (multiSize) {
+    const fixed = exercises.find((e) => e.id === 'TEF-A-01');
+    if (fixed) {
+      filtered = [fixed];
+      console.log(`\n🎨 Mode multi-tailles : génération des variantes pour TEF-A-01`);
+    } else {
+      console.error('TEF-A-01 introuvable dans tef-exercises.json');
+      process.exit(1);
+    }
+  }
 
   console.log(`\n🎨 Génération d'images TEF`);
+  if (multiSize) {
+    console.log(`   Tailles : ${MULTI_SIZE_SPECS.map((s) => s.key).join(', ')}`);
+  }
   if (forceRegenerate) {
-    console.log(`   Mode --force pour : ${forceIds.join(', ')}`);
+    console.log(
+      `   Mode --force : régénération forcée${forceIds.length > 0 ? ` pour ${forceIds.join(', ')}` : ' (tous)'}`,
+    );
+  }
+  if (section === 'A' || section === 'B') {
+    console.log(`   Section : ${section} uniquement (${filtered.length} exercices)`);
   }
   console.log(`   Vision     : ${VISION_MODEL}`);
   console.log(`   Génération : ${GENERATION_MODEL}`);
-  console.log(`   Seuil qualité : ${QUALITY_THRESHOLD}/10 (max ${MAX_RETRIES} tentatives)`);
+  if (!multiSize) {
+    console.log(`   Seuil qualité : ${QUALITY_THRESHOLD}/10 (max ${MAX_RETRIES} tentatives)`);
+  }
   console.log(`   ${filtered.length} exercice(s) à traiter\n`);
 
   if (!existsSync(WEB_PUBLIC_DIR)) {
@@ -421,7 +519,9 @@ async function main() {
   let failed = 0;
 
   for (const exercise of filtered) {
-    const result = await processExercise(client, exercise, exercises, forceRegenerate);
+    const result = multiSize
+      ? await processExerciseMultiSize(client, exercise, exercises)
+      : await processExercise(client, exercise, exercises, forceRegenerate);
     if (result === 'skipped') skipped++;
     else if (result === 'success') generated++;
     else failed++;
@@ -434,12 +534,14 @@ async function main() {
   console.log(`   Ignorées  : ${skipped}`);
   console.log(`   Échouées  : ${failed}`);
 
-  const lowScore = exercises.filter(
-    (e) => e.generatedImagePath && (e.qualityScore ?? 0) < QUALITY_THRESHOLD,
-  );
-  if (lowScore.length > 0) {
-    console.log(`\n⚠  ${lowScore.length} image(s) avec score insuffisant :`);
-    lowScore.forEach((e) => console.log(`   - ${e.id} (score ${e.qualityScore ?? '?'}/10)`));
+  if (!multiSize) {
+    const lowScore = exercises.filter(
+      (e) => e.generatedImagePath && (e.qualityScore ?? 0) < QUALITY_THRESHOLD,
+    );
+    if (lowScore.length > 0) {
+      console.log(`\n⚠  ${lowScore.length} image(s) avec score insuffisant :`);
+      lowScore.forEach((e) => console.log(`   - ${e.id} (score ${e.qualityScore ?? '?'}/10)`));
+    }
   }
 
   console.log(`\nImages : ${WEB_PUBLIC_DIR}`);

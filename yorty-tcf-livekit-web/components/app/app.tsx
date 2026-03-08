@@ -24,9 +24,11 @@ function AppSetup() {
 
 interface AppProps {
   appConfig: AppConfig;
+  /** URL de la page principale (affiche le lien "Retour" lorsque défini) */
+  homeHref?: string;
 }
 
-export function App({ appConfig }: AppProps) {
+export function App({ appConfig, homeHref }: AppProps) {
   const [taskType, setTaskType] = useState<string>(appConfig.tasks[0]?.taskType ?? 'tache1');
   const session = useSession(TokenSource.endpoint('/api/connection-details'), {
     participantMetadata: JSON.stringify({
@@ -38,7 +40,7 @@ export function App({ appConfig }: AppProps) {
     <SessionProvider session={session}>
       <AppSetup />
       <main className="h-svh">
-        <ViewController appConfig={appConfig} onTaskSelect={setTaskType} />
+        <ViewController appConfig={appConfig} onTaskSelect={setTaskType} homeHref={homeHref} />
       </main>
       <StartAudio label="Démarrer l'audio" />
       <RoomAudioRenderer />

@@ -9,6 +9,8 @@ export interface ExerciseImageData {
   title: string | null;
   consigne: string | null;
   generatedImagePath: string | null;
+  /** Map taille → chemin (ex: {"1024x1536": "generated/TEF-A-01.jpg"}) */
+  generatedImagePaths: Record<string, string> | null;
 }
 
 export interface ExerciseImageMessage {
@@ -20,6 +22,7 @@ export interface ExerciseImageMessage {
   title?: string;
   consigne?: string;
   generatedImagePath?: string | null;
+  generatedImagePaths?: Record<string, string> | null;
 }
 
 /**
@@ -39,6 +42,7 @@ export function useExerciseImage() {
       title: message.title ?? null,
       consigne: message.consigne ?? null,
       generatedImagePath: message.generatedImagePath ?? null,
+      generatedImagePaths: message.generatedImagePaths ?? null,
     });
   }, []);
 
