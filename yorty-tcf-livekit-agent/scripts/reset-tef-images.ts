@@ -22,6 +22,7 @@ const WEB_PUBLIC_DIR = join(
 interface TEFExercise {
   id: string;
   generatedImagePath?: string;
+  generatedImagePaths?: Record<string, string>;
   qualityScore?: number;
   visualDescription?: string;
 }
@@ -41,8 +42,9 @@ function main() {
   const exercises: TEFExercise[] = JSON.parse(readFileSync(EXERCISES_PATH, 'utf-8'));
   let resetCount = 0;
   for (const ex of exercises) {
-    if (ex.generatedImagePath || ex.qualityScore !== undefined) {
+    if (ex.generatedImagePath || ex.generatedImagePaths || ex.qualityScore !== undefined) {
       delete ex.generatedImagePath;
+      delete ex.generatedImagePaths;
       delete ex.qualityScore;
       resetCount++;
     }

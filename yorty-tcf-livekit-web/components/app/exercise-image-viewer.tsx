@@ -1,22 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import type { ExerciseImageData } from '@/hooks/useExerciseImage';
-
-/**
- * Sélectionne la variante d'image adaptée à la largeur de la fenêtre.
- * Breakpoints alignés avec Tailwind : sm 640px, md 768px, lg 1024px.
- * - < 640px : portrait (1024x1536) pour mobile
- * - 640–1024px : carré (1024x1024) pour tablette
- * - >= 1024px : paysage (1536x1024) pour desktop
- */
-function selectImageSizeForViewport(width: number, paths: Record<string, string>): string | null {
-  if (width < 640 && paths['1024x1536']) return '1024x1536';
-  if (width < 1024 && paths['1024x1024']) return '1024x1024';
-  if (paths['1536x1024']) return '1536x1024';
-  return paths['1024x1536'] ? '1024x1536' : (Object.keys(paths)[0] ?? null);
-}
 
 interface ExerciseImageViewerProps {
   exerciseImage: ExerciseImageData | null;
@@ -25,37 +10,15 @@ interface ExerciseImageViewerProps {
 }
 
 export function ExerciseImageViewer({ exerciseImage, badges }: ExerciseImageViewerProps) {
-  const [viewportWidth, setViewportWidth] = useState(0);
-
-  useEffect(() => {
-    const update = () => setViewportWidth(typeof window !== 'undefined' ? window.innerWidth : 0);
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-
   if (!exerciseImage) return null;
 
-  const { filename, section, annonce, title, consigne, generatedImagePath, generatedImagePaths } =
-    exerciseImage;
+  const { filename, section, annonce, title, consigne, generatedImagePath } = exerciseImage;
 
   const folder = section === 'A' ? 'TEF-A' : 'TEF-B';
-  const hasMultipleSizes = generatedImagePaths && Object.keys(generatedImagePaths).length > 1;
-
-  let imageSrc: string;
-  if (hasMultipleSizes && generatedImagePaths) {
-    const sizeKey = selectImageSizeForViewport(viewportWidth, generatedImagePaths);
-    const path = sizeKey ? generatedImagePaths[sizeKey] : null;
-    imageSrc = path
-      ? `/tef-exercices/${path}`
-      : generatedImagePath != null
-        ? `/tef-exercices/${generatedImagePath}`
-        : `/tef-exercices/${folder}/${filename}`;
-  } else if (generatedImagePath != null) {
-    imageSrc = `/tef-exercices/${generatedImagePath}`;
-  } else {
-    imageSrc = `/tef-exercices/${folder}/${filename}`;
-  }
+  const imageSrc =
+    generatedImagePath != null
+      ? `/tef-exercices/${generatedImagePath}`
+      : `/tef-exercices/${folder}/${filename}`;
 
   const hasAnnonce = title || annonce;
   const hasBadges = badges && (badges.section || badges.type);
@@ -69,7 +32,7 @@ export function ExerciseImageViewer({ exerciseImage, badges }: ExerciseImageView
         </div>
       )}
 
-      {/* 2. Image + cadre annonce — variante auto-sélectionnée selon la largeur d'écran */}
+      {/* 2. Image carrée 1024×1024 (mobile + desktop) */}
       <div className="border-border bg-card relative flex min-h-[200px] min-w-0 flex-1 overflow-hidden rounded-xl border shadow-sm">
         <div className="relative size-full">
           <Image
@@ -77,7 +40,7 @@ export function ExerciseImageViewer({ exerciseImage, badges }: ExerciseImageView
             alt={title ? `Annonce: ${title}` : 'Annonce TEF'}
             fill
             className="object-cover"
-            sizes="(max-width: 640px) 100vw, 860px"
+            sizes="(max-width: 1024px) 100vw, 1024px"
             unoptimized
           />
           {/* Badges overlay — top-left, ~80% opacity */}

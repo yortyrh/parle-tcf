@@ -12,8 +12,7 @@
  * via ton compte OpenAI (https://platform.openai.com/docs/models).
  *
  * Usage:
- *   pnpm generate-tef-images          — toutes les images (une taille)
- *   pnpm generate-tef-images --multi-size  — TEF-A-01 uniquement, 3 tailles (1024x1536, 1536x1024, 1024x1024)
+ *   pnpm generate-tef-images — toutes les images carrées 1024×1024 (mobile + desktop)
  *
  * Prérequis: OPENAI_API_KEY dans .env.local
  * Résultat:
@@ -60,13 +59,6 @@ const WEB_PUBLIC_DIR = join(
   '../../yorty-tcf-livekit-web/public/tef-exercices/generated',
 );
 
-/** Tailles supportées par gpt-image-1.5 : 1024x1024, 1024x1536, 1536x1024 */
-const MULTI_SIZE_SPECS = [
-  { key: '1024x1536', w: 1024, h: 1536 }, // portrait (défaut)
-  { key: '1536x1024', w: 1536, h: 1024 }, // paysage desktop
-  { key: '1024x1024', w: 1024, h: 1024 }, // carré
-] as const;
-
 interface TEFExercise {
   id: string;
   section: 'A' | 'B';
@@ -75,8 +67,6 @@ interface TEFExercise {
   annonce: string;
   consigne: string;
   generatedImagePath?: string;
-  /** Map taille → chemin (ex: {"1024x1536": "generated/TEF-A-01.jpg", "1536x1024": "generated/TEF-A-01-1536x1024.jpg"}) */
-  generatedImagePaths?: Record<string, string>;
   visualDescription?: string;
   qualityScore?: number;
 }
@@ -287,7 +277,7 @@ Réponds UNIQUEMENT avec un objet JSON valide : {"score": <entier entre 1 et 10>
 }
 
 // ─────────────────────────────────────────────
-// Traitement principal d'un exercice
+// Traitement principal : 1 image carrée 1024×1024 par exercice (mobile + desktop)
 // ─────────────────────────────────────────────
 
 async function processExercise(
@@ -301,7 +291,6 @@ async function processExercise(
   const generatedImageRelPath = `generated/${outputFilename}`;
   const originalImagePath = join(TEF_IMAGES_DIR, `TEF-${exercise.section}`, exercise.filename);
 
-  // Ignorer si déjà validé (sauf si --force)
   if (
     !forceRegenerate &&
     existsSync(outputPath) &&
@@ -314,7 +303,6 @@ async function processExercise(
 
   console.log(`  ${exercise.id}: ${exercise.title}`);
 
-  // ── Étape 1 : description visuelle ──────────────────
   if (!exercise.visualDescription) {
     console.log(`    → Analyse vision (${VISION_MODEL})...`);
     const desc = await analyzeOriginalImage(client, exercise);
@@ -324,26 +312,24 @@ async function processExercise(
       saveExercises(exercises);
       console.log(`    ✓ Description visuelle extraite`);
     } else {
-      console.warn(`    ⚠ Vision échouée, utilisation du texte extrait`);
       exercise.visualDescription = `Annonce "${exercise.title}". Contenu : ${exercise.annonce}`;
     }
-
     await new Promise((r) => setTimeout(r, 300));
   }
 
-  // ── Étapes 2+3 : génération + validation avec retries ──
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    console.log(`    → Génération (${GENERATION_MODEL}) — tentative ${attempt}/${MAX_RETRIES}...`);
+    console.log(
+      `    → Génération carrée 1024×1024 (${GENERATION_MODEL}) — tentative ${attempt}/${MAX_RETRIES}...`,
+    );
 
-    // Supprimer l'ancienne image si elle existe
     if (existsSync(outputPath)) unlinkSync(outputPath);
 
     const generated = await generateImage(
       client,
       exercise,
-      exercise.visualDescription,
+      exercise.visualDescription!,
       outputPath,
-      '1024x1536',
+      '1024x1024',
     );
 
     if (!generated) {
@@ -351,7 +337,6 @@ async function processExercise(
       continue;
     }
 
-    // Validation
     console.log(`    → Validation (${VISION_MODEL})...`);
     const validation = await validateGeneratedImage(
       client,
@@ -366,7 +351,7 @@ async function processExercise(
       exercise.generatedImagePath = generatedImageRelPath;
       exercise.qualityScore = validation.score;
       saveExercises(exercises);
-      console.log(`    ✓ Acceptée (score ${validation.score}/10)`);
+      console.log(`    ✓ Accepté`);
       return 'success';
     }
 
@@ -376,69 +361,15 @@ async function processExercise(
     await new Promise((r) => setTimeout(r, 500));
   }
 
-  // Toutes les tentatives ont échoué → garder la dernière image si elle existe
   if (existsSync(outputPath)) {
     exercise.generatedImagePath = generatedImageRelPath;
-    exercise.qualityScore = 0; // marqué comme "à vérifier"
+    exercise.qualityScore = 0;
     saveExercises(exercises);
     console.error(
-      `    ✗ Score insuffisant après ${MAX_RETRIES} tentatives — image gardée mais marquée qualityScore=0`,
+      `    ✗ Score insuffisant après ${MAX_RETRIES} tentatives — image gardée (qualityScore=0)`,
     );
   }
 
-  return 'failed';
-}
-
-// ─────────────────────────────────────────────
-// Mode multi-tailles : génère plusieurs formats pour un exercice (TEF-A-01)
-// ─────────────────────────────────────────────
-
-async function processExerciseMultiSize(
-  client: OpenAI,
-  exercise: TEFExercise,
-  exercises: TEFExercise[],
-): Promise<'success' | 'failed'> {
-  if (!exercise.visualDescription) {
-    console.log(`    → Analyse vision (${VISION_MODEL})...`);
-    const desc = await analyzeOriginalImage(client, exercise);
-    if (desc) {
-      exercise.visualDescription = desc;
-      saveExercises(exercises);
-    } else {
-      exercise.visualDescription = `Annonce "${exercise.title}". Contenu : ${exercise.annonce}`;
-    }
-    await new Promise((r) => setTimeout(r, 300));
-  }
-
-  const paths: Record<string, string> = {};
-  const baseName = exercise.id;
-
-  for (const spec of MULTI_SIZE_SPECS) {
-    const filename = spec.key === '1024x1536' ? `${baseName}.jpg` : `${baseName}-${spec.key}.jpg`;
-    const outputPath = join(WEB_PUBLIC_DIR, filename);
-    const relPath = `generated/${filename}`;
-
-    console.log(`    → ${spec.key} (${spec.w}×${spec.h})...`);
-    const ok = await generateImage(
-      client,
-      exercise,
-      exercise.visualDescription!,
-      outputPath,
-      spec.key,
-    );
-    if (ok) {
-      paths[spec.key] = relPath;
-    }
-    await new Promise((r) => setTimeout(r, 400));
-  }
-
-  if (Object.keys(paths).length > 0) {
-    exercise.generatedImagePath = paths['1024x1536'] ?? Object.values(paths)[0];
-    exercise.generatedImagePaths = paths;
-    saveExercises(exercises);
-    console.log(`    ✓ ${Object.keys(paths).length} variante(s) générée(s)`);
-    return 'success';
-  }
   return 'failed';
 }
 
@@ -463,7 +394,6 @@ async function main() {
   const exercises: TEFExercise[] = JSON.parse(readFileSync(EXERCISES_PATH, 'utf-8'));
 
   const forceIds = process.argv.filter((a) => a.startsWith('TEF-'));
-  const multiSize = process.argv.includes('--multi-size');
   const forceAll = process.argv.includes('--force');
   const sectionIdx = process.argv.findIndex((a) => a.startsWith('--section'));
   const section =
@@ -480,21 +410,7 @@ async function main() {
     filtered = filtered.filter((e) => e.section === section);
   }
 
-  if (multiSize) {
-    const fixed = exercises.find((e) => e.id === 'TEF-A-01');
-    if (fixed) {
-      filtered = [fixed];
-      console.log(`\n🎨 Mode multi-tailles : génération des variantes pour TEF-A-01`);
-    } else {
-      console.error('TEF-A-01 introuvable dans tef-exercises.json');
-      process.exit(1);
-    }
-  }
-
-  console.log(`\n🎨 Génération d'images TEF`);
-  if (multiSize) {
-    console.log(`   Tailles : ${MULTI_SIZE_SPECS.map((s) => s.key).join(', ')}`);
-  }
+  console.log(`\n🎨 Génération d'images TEF (1024×1024, mobile + desktop)`);
   if (forceRegenerate) {
     console.log(
       `   Mode --force : régénération forcée${forceIds.length > 0 ? ` pour ${forceIds.join(', ')}` : ' (tous)'}`,
@@ -505,9 +421,7 @@ async function main() {
   }
   console.log(`   Vision     : ${VISION_MODEL}`);
   console.log(`   Génération : ${GENERATION_MODEL}`);
-  if (!multiSize) {
-    console.log(`   Seuil qualité : ${QUALITY_THRESHOLD}/10 (max ${MAX_RETRIES} tentatives)`);
-  }
+  console.log(`   Seuil qualité : ${QUALITY_THRESHOLD}/10 (max ${MAX_RETRIES} tentatives)`);
   console.log(`   ${filtered.length} exercice(s) à traiter\n`);
 
   if (!existsSync(WEB_PUBLIC_DIR)) {
@@ -519,9 +433,7 @@ async function main() {
   let failed = 0;
 
   for (const exercise of filtered) {
-    const result = multiSize
-      ? await processExerciseMultiSize(client, exercise, exercises)
-      : await processExercise(client, exercise, exercises, forceRegenerate);
+    const result = await processExercise(client, exercise, exercises, forceRegenerate);
     if (result === 'skipped') skipped++;
     else if (result === 'success') generated++;
     else failed++;
@@ -534,7 +446,7 @@ async function main() {
   console.log(`   Ignorées  : ${skipped}`);
   console.log(`   Échouées  : ${failed}`);
 
-  if (!multiSize) {
+  {
     const lowScore = exercises.filter(
       (e) => e.generatedImagePath && (e.qualityScore ?? 0) < QUALITY_THRESHOLD,
     );
