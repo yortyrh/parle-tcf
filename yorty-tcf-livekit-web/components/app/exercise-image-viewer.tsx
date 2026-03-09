@@ -1,6 +1,9 @@
 'use client';
 
+import ReactMarkdown from 'react-markdown';
 import Image from 'next/image';
+import remarkGfm from 'remark-gfm';
+import { useExerciseAnnonceMarkdown } from '@/hooks/useExerciseAnnonceMarkdown';
 import type { ExerciseImageData } from '@/hooks/useExerciseImage';
 
 interface ExerciseImageViewerProps {
@@ -10,6 +13,8 @@ interface ExerciseImageViewerProps {
 }
 
 export function ExerciseImageViewer({ exerciseImage, badges }: ExerciseImageViewerProps) {
+  const { markdown, loading } = useExerciseAnnonceMarkdown(exerciseImage?.id ?? null);
+
   if (!exerciseImage) return null;
 
   const { filename, section, annonce, title, consigne, generatedImagePath } = exerciseImage;
@@ -20,8 +25,21 @@ export function ExerciseImageViewer({ exerciseImage, badges }: ExerciseImageView
       ? `/tef-exercices/${generatedImagePath}`
       : `/tef-exercices/${folder}/${filename}`;
 
-  const hasAnnonce = title || annonce;
   const hasBadges = badges && (badges.section || badges.type);
+
+  const overlayContent =
+    markdown && !loading ? (
+      <div className="prose prose-sm prose-foreground prose-headings:font-bold prose-headings:text-foreground prose-p:my-0.5 prose-p:text-muted-foreground prose-ul:my-1 prose-li:leading-snug max-w-none [&_h1]:mb-1 [&_h1]:text-base">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
+      </div>
+    ) : title || annonce ? (
+      <>
+        {title && <p className="text-foreground font-bold">{title}</p>}
+        {annonce && (
+          <p className="text-muted-foreground mt-0.5 leading-snug whitespace-pre-wrap">{annonce}</p>
+        )}
+      </>
+    ) : null;
 
   return (
     <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
@@ -58,14 +76,9 @@ export function ExerciseImageViewer({ exerciseImage, badges }: ExerciseImageView
               )}
             </div>
           )}
-          {hasAnnonce && (
-            <div className="border-border/80 absolute right-2 bottom-2 left-2 z-10 w-[calc(100%-1rem)] rounded-md border bg-white/85 px-3 py-2.5 text-sm shadow-md backdrop-blur-sm sm:right-2 sm:left-auto sm:w-auto sm:max-w-[60%]">
-              {title && <p className="text-foreground font-bold">{title}</p>}
-              {annonce && (
-                <p className="text-muted-foreground mt-0.5 leading-snug whitespace-pre-wrap">
-                  {annonce}
-                </p>
-              )}
+          {overlayContent && (
+            <div className="border-border/80 absolute right-2 bottom-2 left-2 z-10 max-h-full w-[calc(100%-1rem)] overflow-y-auto rounded-md border bg-white/85 px-3 py-2.5 text-sm shadow-md backdrop-blur-sm sm:right-2 sm:left-auto sm:w-auto sm:max-w-[60%]">
+              {overlayContent}
             </div>
           )}
         </div>
