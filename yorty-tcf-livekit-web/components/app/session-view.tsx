@@ -1,14 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  BarVisualizer,
-  useSessionContext,
-  useSessionMessages,
-  useVoiceAssistant,
-} from '@livekit/components-react';
+import React, { useEffect, useState } from 'react';
+import { BarVisualizer, useSessionContext, useVoiceAssistant } from '@livekit/components-react';
 import type { AppConfig, Task } from '@/app-config';
-import { ChatTranscript } from '@/components/app/chat-transcript';
 import { TimerDisplay } from '@/components/app/timer-display';
 import {
   AgentControlBar,
@@ -16,61 +10,48 @@ import {
 } from '@/components/livekit/agent-control-bar/agent-control-bar';
 import { useExerciseData, useExerciseImage, useReportData, useTimerControls } from '@/hooks';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '../livekit/scroll-area/scroll-area';
 import { ExerciseImageViewer } from './exercise-image-viewer';
 import { ReportButton, ReportViewer } from './report-viewer';
-
-function Fade({
-  top = false,
-  bottom = false,
-  className = '',
-}: {
-  top?: boolean;
-  bottom?: boolean;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        'from-background pointer-events-none h-4 to-transparent',
-        top && 'bg-gradient-to-b',
-        bottom && 'bg-gradient-to-t',
-        className
-      )}
-    />
-  );
-}
 
 interface SessionViewProps {
   appConfig: AppConfig;
   selectedTask: Task | null;
 }
 
-export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
+export function SessionView({ selectedTask }: SessionViewProps) {
   const session = useSessionContext();
-  const { messages } = useSessionMessages(session);
   const { state: agentState, audioTrack: agentAudioTrack } = useVoiceAssistant();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { timerState } = useTimerControls();
   const exerciseData = useExerciseData();
   const exerciseImage = useExerciseImage();
   const report = useReportData();
   const [isReportMinimized, setIsReportMinimized] = useState(true);
+  const [tefTransitionReady, setTefTransitionReady] = useState(false);
+  const title = exerciseData?.title || selectedTask?.title || 'Tâche';
+  const titleParts = title.split(' - ');
+  const taskSectionLabel = titleParts[0] || 'Tâche';
+  const taskTypeLabel = titleParts[1] || 'Exercice oral';
+  const announcementText =
+    exerciseData?.description || selectedTask?.description || 'Description de la tâche';
+  const isTefTask = selectedTask?.taskType?.startsWith('tef') ?? false;
+  const tefShortAnnouncement =
+    exerciseImage?.section === 'B' || selectedTask?.taskType === 'tef-section-b'
+      ? 'Section B: présentez l’annonce et défendez votre point de vue (~10 min).'
+      : 'Section A: téléphonez pour demander des informations (~5 min).';
+  const sessionAnnouncementText = isTefTask ? tefShortAnnouncement : announcementText;
+  const showTefSkeleton = isTefTask && (!exerciseImage || !tefTransitionReady);
+  const tefBadgeSection =
+    taskSectionLabel || (exerciseImage?.section === 'A' ? 'TEF Section A' : 'TEF Section B');
+  const tefBadgeType =
+    taskTypeLabel || (exerciseImage?.section === 'A' ? "Demande d'informations" : 'Argumentation');
 
   const controls: ControlBarControls = {
     leave: true,
     microphone: true,
-    chat: appConfig.supportsChatInput,
+    chat: false,
     camera: false,
     screenShare: false,
   };
-
-  useEffect(() => {
-    const lastMessage = messages.at(-1);
-    if (scrollAreaRef.current && lastMessage?.from?.isLocal) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-    }
-  }, [messages]);
 
   // Afficher automatiquement le rapport quand il arrive
   useEffect(() => {
@@ -79,105 +60,80 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
     }
   }, [report]);
 
+  // Garantit un état de transition visible avant l'affichage complet TEF
+  useEffect(() => {
+    if (!isTefTask) {
+      setTefTransitionReady(true);
+      return;
+    }
+
+    setTefTransitionReady(false);
+    const timeout = setTimeout(() => {
+      setTefTransitionReady(true);
+    }, 900);
+
+    return () => clearTimeout(timeout);
+  }, [isTefTask, selectedTask?.taskType]);
+
   return (
-    <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-4">
+    <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-b from-slate-100/70 via-slate-50/40 to-white p-2 sm:p-4">
       {/* Card Container */}
-      <div className="border-border bg-card relative flex h-full w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-solid shadow-lg transition-all duration-500 sm:rounded-2xl">
-        {/* Indicateur de ton TEF — petit, toujours visible, en haut à gauche */}
-        {exerciseImage && (
-          <div
-            className="absolute top-1.5 left-1.5 z-20 flex items-center justify-center sm:top-2 sm:left-2"
-            aria-label="Indicateur de ton"
-          >
-            <div
-              className={cn(
-                'bg-background aspect-square rounded border transition-all duration-300',
-                'border-input/50 h-7 w-7 drop-shadow-sm sm:h-8 sm:w-8'
-              )}
-            >
-              <BarVisualizer
-                barCount={4}
-                state={agentState}
-                options={{ minHeight: 3 }}
-                trackRef={agentAudioTrack}
-                className="flex h-full items-center justify-center gap-0.5"
-              >
-                <span
-                  className={cn(
-                    'bg-muted min-h-1.5 w-1.5 rounded-full sm:min-h-2 sm:w-2',
-                    'origin-center transition-colors duration-250 ease-linear',
-                    'data-[lk-highlighted=true]:bg-foreground data-[lk-muted=true]:bg-muted'
-                  )}
-                />
-              </BarVisualizer>
-            </div>
-          </div>
-        )}
-
-        {/* Indicateur de temps TEF — en haut à droite, toujours visible */}
-        {exerciseImage && (
-          <div
-            className="absolute top-1.5 right-1.5 z-20 sm:top-2 sm:right-2"
-            aria-label="Temps restant"
-          >
-            {timerState.type && timerState.isRunning ? (
-              <TimerDisplay timerState={timerState} compact hideLabel />
-            ) : (
-              <div className="border-primary/20 rounded border bg-white/90 px-2 py-1 shadow-sm sm:px-2.5 sm:py-1.5">
-                <span className="text-muted-foreground font-mono text-sm font-bold tabular-nums sm:text-base">
-                  --:--
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
+      <div className="border-border/70 bg-card/95 relative flex h-full w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-solid shadow-xl ring-1 ring-black/5 backdrop-blur transition-all duration-500 sm:rounded-2xl">
         {/* Card Header with Task Info — flex-1 pour TEF (sans transcription) */}
         <div
           className={cn(
-            'border-border flex gap-3 border-b border-solid p-4 sm:flex-row sm:gap-4',
-            exerciseImage ? 'min-h-0 flex-1 items-stretch overflow-y-auto' : 'items-start'
+            'border-border/70 from-card via-card to-muted/20 flex gap-3 border-b border-solid bg-gradient-to-b p-4 sm:flex-row sm:gap-4 sm:p-5',
+            isTefTask ? 'min-h-0 flex-1 items-stretch overflow-y-auto' : 'items-start'
           )}
         >
           {/* Task Information */}
           <div
             className={cn(
-              'mx-auto flex max-w-[860px] min-w-0 flex-1 flex-col gap-4',
-              exerciseImage && 'min-h-0'
+              'mx-auto flex max-w-[860px] min-w-0 flex-1 flex-col',
+              isTefTask ? 'gap-2.5' : 'gap-4',
+              isTefTask && 'min-h-0'
             )}
           >
-            {/* Description — masquée pour TEF (la consigne est dans ExerciseImageViewer) */}
-            {!exerciseImage && (
-              <div className="flex min-h-[90px] items-center rounded-lg border-l-4 border-blue-500 bg-blue-50/50 px-4 py-3 shadow-md sm:px-5 sm:py-4">
-                <p className="line-clamp-10 text-base leading-relaxed font-semibold text-cyan-600 sm:text-lg sm:leading-relaxed">
-                  {exerciseData?.description ||
-                    selectedTask?.description ||
-                    'Description de la tâche'}
+            {/* Annonce de tâche: visible avant ET pendant l'exercice TEF */}
+            {(isTefTask || !exerciseImage) && (
+              <div
+                className={cn(
+                  'relative flex items-center rounded-xl border border-cyan-300/40 bg-cyan-50/70 shadow-sm',
+                  isTefTask
+                    ? 'min-h-[72px] px-3 py-2 sm:px-4 sm:py-2.5'
+                    : 'min-h-[96px] px-4 py-3 sm:px-5 sm:py-4'
+                )}
+              >
+                <p
+                  className={cn(
+                    'pr-1 font-semibold text-cyan-700',
+                    isTefTask
+                      ? 'line-clamp-2 text-sm leading-snug sm:text-base'
+                      : 'line-clamp-10 text-base leading-relaxed sm:text-lg sm:leading-relaxed'
+                  )}
+                >
+                  {sessionAnnouncementText}
                 </p>
               </div>
             )}
 
+            {/* Etat transitoire TEF: squelette pendant chargement de l'exercice */}
+            {showTefSkeleton && (
+              <div className="border-border/70 bg-card relative flex min-h-[180px] flex-1 animate-pulse flex-col gap-2 overflow-hidden rounded-2xl border p-3 shadow-sm sm:min-h-[240px] sm:p-4">
+                <div className="bg-muted h-5 w-36 rounded-md" />
+                <div className="bg-muted h-3.5 w-56 rounded-md" />
+                <div className="bg-muted/70 mt-1 h-full min-h-[96px] rounded-xl sm:min-h-[132px]" />
+                <div className="bg-muted h-4 w-44 rounded-md" />
+              </div>
+            )}
+
             {/* Exercise Image (TEF only) — badges passés pour overlay sur l'image */}
-            <ExerciseImageViewer
-              exerciseImage={exerciseImage}
-              badges={
-                exerciseImage
-                  ? (() => {
-                      const title = exerciseData?.title || selectedTask?.title || 'Tâche';
-                      const parts = title.split(' - ');
-                      const section =
-                        parts[0] ||
-                        (exerciseImage.section === 'A' ? 'TEF Section A' : 'TEF Section B');
-                      const type =
-                        parts[1] ||
-                        (exerciseImage.section === 'A'
-                          ? "Demande d'informations"
-                          : 'Argumentation');
-                      return { section, type };
-                    })()
-                  : undefined
-              }
-            />
+            {exerciseImage && !showTefSkeleton && (
+              <ExerciseImageViewer
+                exerciseImage={exerciseImage}
+                badges={{ section: tefBadgeSection, type: tefBadgeType }}
+              />
+            )}
 
             {/* ReportButton pour TEF — visible quand rapport disponible */}
             {exerciseImage && (
@@ -192,23 +148,12 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
 
                 {/* Badges à droite */}
                 <div className="ml-auto flex flex-wrap items-center gap-2">
-                  {(() => {
-                    const title = exerciseData?.title || selectedTask?.title || 'Tâche';
-                    const parts = title.split(' - ');
-                    const taskNumber = parts[0] || 'Tâche';
-                    const exerciseType = parts[1] || 'Jeu de rôle';
-
-                    return (
-                      <>
-                        <span className="inline-flex items-center rounded bg-cyan-700 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-600/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
-                          {taskNumber}
-                        </span>
-                        <span className="inline-flex items-center rounded bg-cyan-600 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-500/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
-                          {exerciseType}
-                        </span>
-                      </>
-                    );
-                  })()}
+                  <span className="inline-flex items-center rounded-md bg-cyan-700 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-600/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
+                    {taskSectionLabel}
+                  </span>
+                  <span className="inline-flex items-center rounded-md bg-cyan-600 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-cyan-500/30 ring-inset sm:px-2 sm:py-1 sm:text-xs">
+                    {taskTypeLabel}
+                  </span>
                 </div>
               </div>
             )}
@@ -221,26 +166,55 @@ export function SessionView({ appConfig, selectedTask }: SessionViewProps) {
           )}
         </div>
 
-        {/* Chat Transcript Area — masqué pour TEF (seulement pour TCF) */}
-        {!exerciseImage && (
-          <div className="relative flex-1 overflow-hidden bg-gray-50">
-            <Fade top className="absolute inset-x-2 top-0 z-10 h-6 sm:inset-x-4 sm:h-8" />
-            <ScrollArea
-              ref={scrollAreaRef}
-              className="h-full px-3 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4 xl:px-8"
-            >
-              <ChatTranscript
-                hidden={false}
-                messages={messages}
-                className="mx-auto space-y-2 sm:space-y-3"
-              />
-            </ScrollArea>
+        {/* Zone centrale TCF: pas de chat écrit, examen uniquement vocal */}
+        {!exerciseImage && !isTefTask && (
+          <div className="flex-1 bg-gradient-to-b from-slate-50 to-slate-100/60" />
+        )}
+
+        {/* Statut TEF déplacé proche des contrôles pour lecture + suivi en même temps */}
+        {isTefTask && (
+          <div className="border-border/60 border-t bg-slate-50/80 px-3 py-2 sm:px-4">
+            <div className="mx-auto flex max-w-5xl items-center justify-between">
+              <div aria-label="Indicateur de ton" className="flex items-center gap-2">
+                <div className="bg-background/90 border-input/60 h-8 w-8 rounded-md border shadow-sm sm:h-9 sm:w-9">
+                  <BarVisualizer
+                    barCount={4}
+                    state={agentState}
+                    options={{ minHeight: 3 }}
+                    trackRef={agentAudioTrack}
+                    className="flex h-full items-center justify-center gap-0.5"
+                  >
+                    <span
+                      className={cn(
+                        'bg-muted min-h-1.5 w-1.5 rounded-full sm:min-h-2 sm:w-2',
+                        'origin-center transition-colors duration-250 ease-linear',
+                        'data-[lk-highlighted=true]:bg-foreground data-[lk-muted=true]:bg-muted'
+                      )}
+                    />
+                  </BarVisualizer>
+                </div>
+                <span className="text-muted-foreground text-xs font-medium sm:text-sm">
+                  État vocal
+                </span>
+              </div>
+              <div aria-label="Temps restant">
+                {timerState.type && timerState.isRunning ? (
+                  <TimerDisplay timerState={timerState} compact hideLabel />
+                ) : (
+                  <div className="border-primary/20 rounded-md border bg-white/90 px-2 py-1 shadow-sm sm:px-2.5 sm:py-1.5">
+                    <span className="text-muted-foreground font-mono text-sm font-bold tracking-wide tabular-nums sm:text-base">
+                      --:--
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
         {/* Bottom Controls */}
-        <div className="border-border border-t border-solid bg-white p-2 sm:p-4 xl:p-6">
-          <div className="relative mx-auto">
+        <div className="border-border/70 border-t border-solid bg-white/95 p-2 sm:p-4 xl:p-6">
+          <div className="relative mx-auto max-w-5xl rounded-xl bg-transparent">
             <AgentControlBar
               controls={controls}
               isConnected={session.isConnected}

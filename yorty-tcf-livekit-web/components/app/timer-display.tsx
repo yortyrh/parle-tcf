@@ -54,13 +54,13 @@ export function TimerDisplay({ timerState, className, compact, hideLabel }: Time
   return (
     <div
       className={cn(
-        'flex flex-col items-end rounded-lg border-2 bg-white/95 shadow-lg backdrop-blur-sm transition-all duration-300',
+        'flex flex-col items-end rounded-lg border-2 bg-white/90 shadow-md backdrop-blur transition-all duration-300',
         compact
           ? 'gap-0.5 border px-2 py-1 sm:px-2.5 sm:py-1.5'
           : 'gap-1.5 px-4 py-2.5 sm:gap-2 sm:px-5 sm:py-3',
         isDanger && 'animate-pulse border-red-500 bg-red-50',
         isWarning && !isDanger && 'border-orange-400 bg-orange-50',
-        !isWarning && !isDanger && 'border-primary/30 bg-primary/5',
+        !isWarning && !isDanger && 'border-primary/30 bg-primary/10',
         className
       )}
     >
