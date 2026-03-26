@@ -22,7 +22,7 @@ import {
 } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { ExerciseImageViewer } from './exercise-image-viewer';
-import { ReportButton, ReportViewer } from './report-viewer';
+import { ReportButton, ReportPreparingBanner, ReportViewer } from './report-viewer';
 
 interface SessionViewProps {
   appConfig: AppConfig;
@@ -58,9 +58,11 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const tefBadgeType =
     taskTypeLabel || (exerciseImage?.section === 'A' ? "Demande d'informations" : 'Argumentation');
 
+  const isPreparingReport = sessionEnded && !report;
+
   const controls: ControlBarControls = {
     leave: true,
-    microphone: true,
+    microphone: !sessionEnded,
     chat: false,
     camera: false,
     screenShare: false,
@@ -155,16 +157,23 @@ export function SessionView({ selectedTask }: SessionViewProps) {
               />
             )}
 
-            {/* ReportButton pour TEF — visible quand rapport disponible */}
-            {exerciseImage && (
-              <ReportButton report={report} onExpand={() => setIsReportMinimized(false)} />
-            )}
+            {/* ReportButton / preparing banner pour TEF */}
+            {exerciseImage &&
+              (isPreparingReport ? (
+                <ReportPreparingBanner />
+              ) : (
+                <ReportButton report={report} onExpand={() => setIsReportMinimized(false)} />
+              ))}
 
             {/* Task Labels/Badges — uniquement pour non-TEF (TEF: badges dans ExerciseImageViewer) */}
             {!exerciseImage && (
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                {/* Bouton du rapport à gauche */}
-                <ReportButton report={report} onExpand={() => setIsReportMinimized(false)} />
+                {/* Bouton du rapport / état de préparation */}
+                <ReportButton
+                  report={report}
+                  isPreparing={isPreparingReport}
+                  onExpand={() => setIsReportMinimized(false)}
+                />
 
                 {/* Badges à droite */}
                 <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -186,9 +195,11 @@ export function SessionView({ selectedTask }: SessionViewProps) {
           )}
         </div>
 
-        {/* Zone centrale TCF: pas de chat écrit, examen uniquement vocal */}
+        {/* Zone centrale TCF */}
         {!exerciseImage && !isTefTask && (
-          <div className="flex-1 bg-gradient-to-b from-slate-50 to-slate-100/60" />
+          <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/60">
+            {isPreparingReport && <ReportPreparingBanner />}
+          </div>
         )}
 
         {/* Statut TEF déplacé proche des contrôles pour lecture + suivi en même temps */}

@@ -3,7 +3,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { X } from '@phosphor-icons/react';
+import { CircleNotch, X } from '@phosphor-icons/react';
 
 interface ReportViewerProps {
   report: string | null;
@@ -73,15 +73,45 @@ export function ReportViewer({
 }
 
 /**
- * Bouton pour afficher le rapport minimisé
+ * Bannière affichée pendant la génération du rapport
+ */
+export function ReportPreparingBanner() {
+  return (
+    <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4 rounded-2xl border border-amber-200/60 bg-gradient-to-b from-amber-50 to-orange-50/60 px-6 py-8 shadow-sm">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 ring-4 ring-amber-100/50">
+        <CircleNotch size={28} weight="bold" className="animate-spin text-amber-600" />
+      </div>
+      <div className="text-center">
+        <p className="text-base font-semibold text-amber-900">Rapport en cours de préparation</p>
+        <p className="mt-1 text-sm text-amber-700/80">
+          Veuillez patienter, votre rapport détaillé arrive dans quelques instants.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Bouton pour afficher le rapport minimisé ou l'état de préparation
  */
 export function ReportButton({
   report,
+  isPreparing,
   onExpand,
 }: {
   report: string | null;
+  isPreparing?: boolean;
   onExpand: () => void;
 }) {
+  if (isPreparing) {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-1.5 text-sm text-white shadow-md">
+        <CircleNotch size={16} weight="bold" className="animate-spin" />
+        <span className="font-medium">Rapport en préparation...</span>
+      </span>
+    );
+  }
+
   if (!report) {
     return null;
   }
