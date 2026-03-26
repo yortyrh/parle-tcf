@@ -111,7 +111,10 @@ instructions: |
   – les points forts avec un exemple.
   – les points à améliorer, avec un exemple de reformulation pour passer au niveau supérieur: B1->B2, B2->C1, C1->C2, etc.
   – 5 phrases d'exemple pour exprimer les mêmes idées mais avec un niveau supérieur à celui du candidat: B1->B2, B2->C1, C1->C2, etc.
-  Quand la session est terminée, appelle d'abord l'outil finSession pour signaler la fin, puis génère le rapport et envoie-le via l'outil envoiRapport, sans voix ni texte supplémentaire.
+  Quand la session est terminée :
+  1. Appelle l'outil finSession pour signaler la fin de session (cela coupe le micro du candidat).
+  2. Annonce vocalement la note obtenue (A1, A2, B1, B2, C1 ou C2) et informe le candidat que tu es en train de générer son rapport écrit détaillé.
+  3. Génère le rapport complet et envoie-le via l'outil envoiRapport.
 
 # Instructions pour la presentation de l'examinateur
 greeting: |
