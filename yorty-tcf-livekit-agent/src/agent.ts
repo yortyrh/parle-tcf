@@ -28,7 +28,6 @@ export default defineAgent({
 
     const session = new voice.AgentSession({
       llm: new openai.realtime.RealtimeModel({
-        model: 'gpt-realtime',
         voice: serviceConfig.llm.voice,
         temperature: 0.8,
         modalities: serviceConfig.llm.modalities as ('text' | 'audio')[],
