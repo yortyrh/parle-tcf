@@ -21,7 +21,7 @@ export function ViewController({ appConfig, onTaskSelect, homeHref }: ViewContro
     if (task) {
       setSelectedTask(task);
       onTaskSelect(taskType);
-      start();
+      start({ tracks: { microphone: { enabled: false } } });
     }
   };
 
