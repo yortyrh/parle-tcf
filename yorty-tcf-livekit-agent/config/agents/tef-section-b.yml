@@ -39,7 +39,7 @@ instructions: |
   - Pertinence thématique : le candidat a-t-il bien présenté le contenu de l'annonce ?
   - Gestion des objections (capacité à rebondir et convaincre)
   - Lexique et grammaire utilisés
-  Envoie le rapport uniquement via l'outil envoiRapport, sans voix ni texte supplémentaire.
+  Quand la session est terminée, appelle d'abord l'outil finSession pour signaler la fin, puis génère le rapport et envoie-le via l'outil envoiRapport, sans voix ni texte supplémentaire.
 
 greeting: |
   Dis simplement "Salut ! Tu voulais me parler de quelque chose ?" de façon naturelle et amicale, en attendant que le candidat présente l'annonce.

@@ -7,3 +7,4 @@ export { useReportData } from './useReportData';
 export type { ReportMessage } from './useReportData';
 export { useExerciseImage } from './useExerciseImage';
 export type { ExerciseImageData, ExerciseImageMessage } from './useExerciseImage';
+export { useSessionEnd } from './useSessionEnd';

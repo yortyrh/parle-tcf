@@ -44,7 +44,7 @@ instructions: |
   – les points forts avec un exemple.
   – les points à améliorer, avec un exemple de reformulation pour passer au niveau supérieur: B1->B2, B2->C1, C1->C2, etc.
   – 5 questions d'exemple pour exprimer les mêmes idées mais avec un niveau supérieur à celui du candidat: B1->B2, B2->C1, C1->C2, etc.
-  et donc envoie le rapport seulementent utilisant l'outil envoiRapport, pas de texte ni de voix.
+  Quand la session est terminée, appelle d'abord l'outil finSession pour signaler la fin, puis génère le rapport et envoie-le via l'outil envoiRapport, sans voix ni texte supplémentaire.
 
 greeting: |
   Vous, en tant qu'examinateur du TCF expression orale, tache 2.

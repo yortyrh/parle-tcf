@@ -33,6 +33,15 @@ export class TCFAgent extends voice.Agent {
       allowInterruptions: config.settings.allowInterruptions,
       instructions: fullInstructions,
       tools: {
+        finSession: llm.tool({
+          description:
+            "Signale la fin de la session d'examen. Doit être appelé AVANT envoiRapport pour couper le micro du candidat pendant la génération du rapport.",
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('[finSession] Fin de session signalée');
+            await this.sendDataMessage({ type: 'session_end' });
+          },
+        }),
         envoiRapport: llm.tool({
           description: 'Envoie le rapport en format markdown à la fin de la session',
           parameters: z.object({

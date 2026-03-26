@@ -1,14 +1,25 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { BarVisualizer, useSessionContext, useVoiceAssistant } from '@livekit/components-react';
+import {
+  BarVisualizer,
+  useLocalParticipant,
+  useSessionContext,
+  useVoiceAssistant,
+} from '@livekit/components-react';
 import type { AppConfig, Task } from '@/app-config';
 import { TimerDisplay } from '@/components/app/timer-display';
 import {
   AgentControlBar,
   type ControlBarControls,
 } from '@/components/livekit/agent-control-bar/agent-control-bar';
-import { useExerciseData, useExerciseImage, useReportData, useSessionTimer } from '@/hooks';
+import {
+  useExerciseData,
+  useExerciseImage,
+  useReportData,
+  useSessionEnd,
+  useSessionTimer,
+} from '@/hooks';
 import { cn } from '@/lib/utils';
 import { ExerciseImageViewer } from './exercise-image-viewer';
 import { ReportButton, ReportViewer } from './report-viewer';
@@ -20,11 +31,13 @@ interface SessionViewProps {
 
 export function SessionView({ selectedTask }: SessionViewProps) {
   const session = useSessionContext();
+  const { localParticipant } = useLocalParticipant();
   const { state: agentState, audioTrack: agentAudioTrack } = useVoiceAssistant();
   const { elapsedSeconds } = useSessionTimer();
   const exerciseData = useExerciseData();
   const exerciseImage = useExerciseImage();
   const report = useReportData();
+  const sessionEnded = useSessionEnd();
   const [isReportMinimized, setIsReportMinimized] = useState(true);
   const [tefTransitionReady, setTefTransitionReady] = useState(false);
   const title = exerciseData?.title || selectedTask?.title || 'Tâche';
@@ -52,6 +65,13 @@ export function SessionView({ selectedTask }: SessionViewProps) {
     camera: false,
     screenShare: false,
   };
+
+  // Couper le micro dès que l'agent signale la fin de session
+  useEffect(() => {
+    if (sessionEnded) {
+      localParticipant.setMicrophoneEnabled(false);
+    }
+  }, [sessionEnded, localParticipant]);
 
   // Afficher automatiquement le rapport quand il arrive
   useEffect(() => {
