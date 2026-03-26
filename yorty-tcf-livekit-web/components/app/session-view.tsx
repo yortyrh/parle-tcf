@@ -8,7 +8,7 @@ import {
   AgentControlBar,
   type ControlBarControls,
 } from '@/components/livekit/agent-control-bar/agent-control-bar';
-import { useExerciseData, useExerciseImage, useReportData, useTimerControls } from '@/hooks';
+import { useExerciseData, useExerciseImage, useReportData, useSessionTimer } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { ExerciseImageViewer } from './exercise-image-viewer';
 import { ReportButton, ReportViewer } from './report-viewer';
@@ -21,7 +21,7 @@ interface SessionViewProps {
 export function SessionView({ selectedTask }: SessionViewProps) {
   const session = useSessionContext();
   const { state: agentState, audioTrack: agentAudioTrack } = useVoiceAssistant();
-  const { timerState } = useTimerControls();
+  const { elapsedSeconds } = useSessionTimer();
   const exerciseData = useExerciseData();
   const exerciseImage = useExerciseImage();
   const report = useReportData();
@@ -158,10 +158,10 @@ export function SessionView({ selectedTask }: SessionViewProps) {
               </div>
             )}
           </div>
-          {/* Timer Display - Top Right (TCF uniquement ; TEF : affiché en position absolue) */}
-          {!exerciseImage && timerState.type && timerState.isRunning && (
+          {/* Timer Display - Top Right (TCF only; TEF uses footer) */}
+          {!exerciseImage && (
             <div className="ml-auto flex items-center">
-              <TimerDisplay timerState={timerState} />
+              <TimerDisplay elapsedSeconds={elapsedSeconds} />
             </div>
           )}
         </div>
@@ -197,16 +197,8 @@ export function SessionView({ selectedTask }: SessionViewProps) {
                   État vocal
                 </span>
               </div>
-              <div aria-label="Temps restant">
-                {timerState.type && timerState.isRunning ? (
-                  <TimerDisplay timerState={timerState} compact hideLabel />
-                ) : (
-                  <div className="border-primary/20 rounded-md border bg-white/90 px-2 py-1 shadow-sm sm:px-2.5 sm:py-1.5">
-                    <span className="text-muted-foreground font-mono text-sm font-bold tracking-wide tabular-nums sm:text-base">
-                      --:--
-                    </span>
-                  </div>
-                )}
+              <div aria-label="Durée de session">
+                <TimerDisplay elapsedSeconds={elapsedSeconds} compact />
               </div>
             </div>
           </div>

@@ -8,4 +8,4 @@ export {
   reloadServiceConfig,
 } from './configLoader.js';
 
-export type { AgentConfig, TaskType, AgentSettings, Durations, ServiceConfig } from './types.js';
+export type { AgentConfig, TaskType, AgentSettings, ServiceConfig } from './types.js';

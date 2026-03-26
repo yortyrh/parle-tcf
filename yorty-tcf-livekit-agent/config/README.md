@@ -29,10 +29,6 @@ description: 'Description courte'
 settings:
   allowInterruptions: true
   voice: 'alloy'
-
-durations:
-  exam: 120 # Durée en secondes pour le mode examen
-  preparation: 0 # 0 = pas de limite pour le mode préparation
 ```
 
 ### 3. Instructions de base
@@ -154,7 +150,6 @@ Les fichiers YAML sont validés automatiquement au chargement. Les champs requis
 - `name`
 - `description`
 - `settings`
-- `durations`
 - `baseInstructions`
 - `examMode` (avec `instructions` et `greeting`)
 - `preparationMode` (avec `instructions` et `greeting`)

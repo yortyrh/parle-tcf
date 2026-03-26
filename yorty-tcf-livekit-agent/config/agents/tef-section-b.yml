@@ -8,11 +8,6 @@ settings:
   allowInterruptions: true
   voice: "alloy"
 
-# Durées en secondes
-durations:
-  preparation: 0
-  exam: 600  # 10 minutes
-
 # Instructions de base communes
 baseInstructions: |
   Tu es un agent du TEF Canada (Test d'Évaluation de Français) - Expression Orale, Section B.

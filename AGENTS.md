@@ -26,8 +26,7 @@ If you are working inside `yorty-tcf-livekit-agent/`, also read `yorty-tcf-livek
 
 - The agent reads participant metadata to determine `taskType` (`tache1`, `tache2`, `tache3`).
 - Task-specific logic lives in `src/agents/TCFTache1.ts`, `src/agents/TCFTache2.ts`, and `src/agents/TCFTache3.ts`.
-- Shared timing logic lives in `src/agents/TimerController.ts`.
-- The agent sends data messages to the web client for timer updates, reports, and exercise data.
+- The agent sends data messages to the web client for reports and exercise data.
 
 ### Web
 

@@ -55,7 +55,6 @@ function validateConfig(config: AgentConfig, taskType: TaskType): void {
     'name',
     'description',
     'settings',
-    'durations',
     'baseInstructions',
     'instructions',
     'greeting',

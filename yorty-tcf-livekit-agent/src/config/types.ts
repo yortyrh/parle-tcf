@@ -30,16 +30,10 @@ export interface AgentSettings {
   voice: string;
 }
 
-export interface Durations {
-  preparation: number;
-  exam: number;
-}
-
 export interface AgentConfig {
   name: string;
   description: string;
   settings: AgentSettings;
-  durations: Durations;
   baseInstructions: string;
   instructions: string;
   greeting: string;

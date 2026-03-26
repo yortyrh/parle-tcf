@@ -6,5 +6,3 @@ export { TCFTache3 } from './TCFTache3.js';
 export { TEFSectionA } from './TEFSectionA.js';
 export { TEFSectionB } from './TEFSectionB.js';
 export { TCFAgent } from './TCFAgent.js';
-export { TimerController, TCF_DURATIONS } from './TimerController.js';
-export type { TimerControlMessage } from './TimerController.js';

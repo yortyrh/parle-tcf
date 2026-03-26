@@ -11,10 +11,6 @@ export class TCFAgent extends voice.Agent {
   private config: AgentConfig;
   private taskType: TaskType;
   private exercise: TCFExercise | null;
-  // États pour la gestion des timers
-  private timerState: 'idle' | 'preparation' | 'exam' | 'finished' = 'idle';
-  private preparationTimerTimeout: NodeJS.Timeout | null = null;
-  private examTimerTimeout: NodeJS.Timeout | null = null;
 
   constructor(
     taskType: TaskType,
@@ -78,21 +74,6 @@ export class TCFAgent extends voice.Agent {
       instructions: greetingMessage,
     });
     await handleGreeting.waitForPlayout();
-
-    console.error('[Timer] Greeting terminé');
-
-    // Démarrer le timer de préparation si nécessaire après le greeting
-    if (this.config.durations.preparation > 0 && this.context) {
-      console.log('[Timer] Greeting terminé, démarrage de la préparation');
-      await this.startPreparationTimer();
-    }
-  }
-
-  /**
-   * Obtient la durée de l'examen pour cette tâche
-   */
-  getDuration(): number {
-    return this.config.durations.exam;
   }
 
   /**
@@ -173,136 +154,5 @@ export class TCFAgent extends voice.Agent {
 
     console.log('[Exercise] Envoi des données:', exerciseData.data);
     await this.sendDataMessage(exerciseData);
-  }
-
-  /**
-   * Démarre le timer de préparation
-   */
-  private async startPreparationTimer(): Promise<void> {
-    if (!this.context || this.timerState !== 'idle') return;
-
-    this.timerState = 'preparation';
-    const duration = this.config.durations.preparation;
-
-    console.log(`[Timer] Démarrage du timer de préparation (${duration}s)`);
-
-    await this.sendDataMessage({
-      type: 'start_preparation_timer',
-      duration: duration,
-      timestamp: Date.now(),
-    });
-
-    // Programmer la fin automatique de la préparation
-    this.preparationTimerTimeout = setTimeout(() => {
-      this.onPreparationTimeExpired();
-    }, duration * 1000);
-  }
-
-  /**
-   * Appelé quand le temps de préparation est écoulé
-   */
-  private async onPreparationTimeExpired(): Promise<void> {
-    if (this.timerState !== 'preparation' || !this.context) return;
-
-    console.log('[Timer] Temps de préparation écoulé');
-
-    await this.sendDataMessage({
-      type: 'end_preparation_timer',
-    });
-
-    this.timerState = 'idle';
-    this.preparationTimerTimeout = null;
-  }
-
-  /**
-   * Arrête le timer de préparation et démarre le timer d'examen
-   */
-  private async stopPreparationAndStartExam(): Promise<void> {
-    if (!this.context) return;
-
-    // Arrêter le timer de préparation si actif
-    if (this.timerState === 'preparation' && this.preparationTimerTimeout) {
-      console.log('[Timer] Préparation interrompue par entrée utilisateur');
-      clearTimeout(this.preparationTimerTimeout);
-      this.preparationTimerTimeout = null;
-
-      await this.sendDataMessage({
-        type: 'end_preparation_timer',
-      });
-    }
-
-    // Démarrer le timer d'examen
-    await this.startExamTimer();
-  }
-
-  /**
-   * Démarre le timer d'examen
-   */
-  private async startExamTimer(): Promise<void> {
-    if (!this.context || this.timerState === 'exam' || this.timerState === 'finished') return;
-
-    this.timerState = 'exam';
-    const duration = this.config.durations.exam;
-
-    console.log(`[Timer] Démarrage du timer d'examen (${duration}s)`);
-
-    await this.sendDataMessage({
-      type: 'start_exam_timer',
-      duration: duration,
-      timestamp: Date.now(),
-    });
-
-    // Programmer la fin automatique de l'examen
-    this.examTimerTimeout = setTimeout(() => {
-      this.onExamTimeExpired();
-    }, duration * 1000);
-  }
-
-  /**
-   * Appelé quand le temps d'examen est écoulé
-   */
-  private async onExamTimeExpired(): Promise<void> {
-    if (this.timerState !== 'exam' || !this.context) return;
-
-    console.log("[Timer] Temps d'examen écoulé");
-
-    await this.sendDataMessage({
-      type: 'end_exam_timer',
-    });
-
-    this.timerState = 'finished';
-    this.examTimerTimeout = null;
-  }
-
-  /**
-   * Initialise l'écoute des événements utilisateur pour gérer les timers
-   * @param ctx Le contexte de la job LiveKit
-   */
-  initializeExamTimer(): void {
-    // Écouter les entrées utilisateur pour gérer les transitions de timer
-    this.session.on(voice.AgentSessionEventTypes.UserInputTranscribed, async () => {
-      // Si on est en préparation, l'entrée utilisateur arrête la préparation et démarre l'examen
-      if (this.timerState === 'preparation') {
-        await this.stopPreparationAndStartExam();
-      }
-      // Si on est idle (pas de préparation), démarrer directement l'examen
-      else if (this.timerState === 'idle' && this.config.durations.exam > 0) {
-        await this.startExamTimer();
-      }
-    });
-  }
-
-  /**
-   * Nettoie les timers en cours
-   */
-  cleanup(): void {
-    if (this.preparationTimerTimeout) {
-      clearTimeout(this.preparationTimerTimeout);
-      this.preparationTimerTimeout = null;
-    }
-    if (this.examTimerTimeout) {
-      clearTimeout(this.examTimerTimeout);
-      this.examTimerTimeout = null;
-    }
   }
 }

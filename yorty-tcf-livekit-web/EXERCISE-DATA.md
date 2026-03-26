@@ -9,7 +9,7 @@ Au lieu de passer les informations de tâche statiquement en props, le système 
 ## 🎯 Avantages
 
 - ✅ **Dynamique** : Les informations sont envoyées en temps réel par l'agent
-- ✅ **Cohérent** : Utilise la même infrastructure que les messages de timer
+- ✅ **Cohérent** : Utilise la même infrastructure de messages data
 - ✅ **Flexible** : Permet de personnaliser le titre et la description selon l'exercice
 - ✅ **Fiable** : Messages envoyés avec `reliable: true`
 
@@ -272,7 +272,6 @@ Ouvrez la console et cherchez les logs préfixés par `[Exercise]`.
 
 ## 🔗 Voir Aussi
 
-- [TIMER-SYSTEM.md](./TIMER-SYSTEM.md) - Système de timer (utilise la même infrastructure)
 - [TCFAgent.ts](../yorty-tcf-livekit-agent/src/agents/TCFAgent.ts) - Implémentation backend
 - [useExerciseData.ts](./hooks/useExerciseData.ts) - Hook frontend
 

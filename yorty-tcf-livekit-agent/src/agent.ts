@@ -114,14 +114,6 @@ export default defineAgent({
         ),
       },
     });
-
-    // Ajouter un callback de nettoyage pour les timers
-    ctx.addShutdownCallback(async () => {
-      await agent.cleanup();
-    });
-
-    // Initialiser le contexte et les écouteurs avant de démarrer la session
-    agent.initializeExamTimer();
   },
 });
 

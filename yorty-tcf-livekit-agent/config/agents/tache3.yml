@@ -7,11 +7,6 @@ description: "Analyse et argumentation sur un sujet"
 settings:
   allowInterruptions: true
   voice: "alloy"
-  
-# Durées en secondes
-durations:
-  preparation: 0   # no preparation time
-  exam: 270        # 4.5 minutes
 
 # Instructions de base communes
 baseInstructions: |
