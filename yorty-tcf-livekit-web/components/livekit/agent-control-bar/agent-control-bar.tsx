@@ -1,6 +1,6 @@
 'use client';
 
-import { type HTMLAttributes } from 'react';
+import { type HTMLAttributes, useEffect } from 'react';
 import { Track } from 'livekit-client';
 import { useChat, useRemoteParticipants } from '@livekit/components-react';
 import { PhoneDisconnectIcon } from '@phosphor-icons/react/dist/ssr';
@@ -60,6 +60,46 @@ export function AgentControlBar({
   };
 
   const isAgentAvailable = participants.some((p) => p.isAgent);
+  const canUseMicShortcut = visibleControls.microphone && isConnected && !microphoneToggle.pending;
+
+  useEffect(() => {
+    if (!canUseMicShortcut) {
+      return;
+    }
+
+    const shouldIgnoreTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      const tagName = target.tagName.toLowerCase();
+      return tagName === 'input' || tagName === 'textarea' || target.isContentEditable;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.code !== 'Space' ||
+        event.repeat ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey
+      ) {
+        return;
+      }
+
+      if (shouldIgnoreTarget(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      void microphoneToggle.toggle();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [canUseMicShortcut, microphoneToggle]);
 
   return (
     <div
