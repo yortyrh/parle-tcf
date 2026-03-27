@@ -19,6 +19,7 @@ If you are working inside `yorty-tcf-livekit-agent/`, also read `yorty-tcf-livek
 - Keep JavaScript and TypeScript unit tests beside the tested file.
 - When running unit tests, always append `-- --run`.
 - Use a git commit title plus description body when creating commits.
+- Never create git commits autonomously. Always let the user trigger commits explicitly using the `/commit` command.
 
 ## Architecture Summary
 
