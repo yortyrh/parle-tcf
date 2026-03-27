@@ -117,4 +117,10 @@ export default defineAgent({
   },
 });
 
-cli.runApp(new ServerOptions({ agent: fileURLToPath(import.meta.url) }));
+cli.runApp(
+  new ServerOptions({
+    agent: fileURLToPath(import.meta.url),
+    // Default 500 MB warns on typical OpenAI Realtime + audio stack RSS (~520–600 MB).
+    jobMemoryWarnMB: 1024,
+  }),
+);
