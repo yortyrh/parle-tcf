@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useRemoteParticipants } from '@livekit/components-react';
+import { useState } from 'react';
+import { useAgentDataMessage } from './useAgentDataMessage';
 
 export interface ExerciseImageData {
   id: string | null;
@@ -25,14 +25,10 @@ export interface ExerciseImageMessage {
   generatedImagePaths?: Record<string, string> | null;
 }
 
-/**
- * Hook pour recevoir les données d'image d'exercice TEF depuis l'agent
- */
 export function useExerciseImage() {
   const [imageData, setImageData] = useState<ExerciseImageData | null>(null);
-  const remoteParticipants = useRemoteParticipants();
 
-  const handleMessage = useCallback((message: ExerciseImageMessage) => {
+  useAgentDataMessage<ExerciseImageMessage>('exerciseImage', (message) => {
     console.log('[ExerciseImage] Image reçue:', message.filename, 'section:', message.section);
     setImageData({
       id: message.id ?? null,
@@ -44,32 +40,7 @@ export function useExerciseImage() {
       generatedImagePath: message.generatedImagePath ?? null,
       generatedImagePaths: message.generatedImagePaths ?? null,
     });
-  }, []);
-
-  useEffect(() => {
-    const handleDataReceived = (payload: Uint8Array) => {
-      const decoder = new TextDecoder();
-      const text = decoder.decode(payload);
-      try {
-        const data = JSON.parse(text);
-        if (data.type === 'exerciseImage') {
-          handleMessage(data as ExerciseImageMessage);
-        }
-      } catch {
-        // not a JSON message, ignore
-      }
-    };
-
-    const unsubscribeFns: Array<() => void> = [];
-    remoteParticipants.forEach((participant) => {
-      participant.on('dataReceived', handleDataReceived);
-      unsubscribeFns.push(() => participant.off('dataReceived', handleDataReceived));
-    });
-
-    return () => {
-      unsubscribeFns.forEach((fn) => fn());
-    };
-  }, [remoteParticipants, handleMessage]);
+  });
 
   return imageData;
 }
