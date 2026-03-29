@@ -86,13 +86,14 @@ Deploy as **two services** from this repository (same GitHub repo, isolated root
 
 | Service | Root directory | Config as code |
 | --- | --- | --- |
-| Next.js (candidates) | `yorty-tcf-livekit-web` | `yorty-tcf-livekit-web/railway.toml` |
-| LiveKit agent (worker) | `yorty-tcf-livekit-agent` | `yorty-tcf-livekit-agent/railway.toml` |
+| Next.js (candidates) | `yorty-tcf-livekit-web` | `yorty-tcf-livekit-web/railway.json` |
+| LiveKit agent (worker) | `yorty-tcf-livekit-agent` | `yorty-tcf-livekit-agent/railway.json` |
 
 1. `railway login`, create a project, then add two services and attach the repo (or use the dashboard).
-2. For each service, set **Root directory** as above. If the dashboard does not pick up config automatically, set the **config file path** to the matching `railway.toml` (Railway: path from repo root, e.g. `yorty-tcf-livekit-web/railway.toml`).
-3. Set variables on each service: web needs `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`; the agent also needs `OPENAI_API_KEY`. Use the same LiveKit project as locally.
-4. Expose a **public domain** only on the web service. The agent is a background worker (Dockerfile `CMD`); avoid attaching an HTTP healthcheck if the platform allows.
+2. For each service, set **Root directory** as above. If the build uses **Railpack** and errors like `start.sh not found` / no start command, the root is almost certainly still the repo root: Railway then ignores the subfolder `Dockerfile` and falls back to Railpack. Fix the root directory first, then under **Build** set **Builder** to **Dockerfile** if needed.
+3. If the dashboard does not pick up config automatically, set the **config file path** to the matching `railway.json` (path from repo root, e.g. `yorty-tcf-livekit-web/railway.json`).
+4. Set variables on each service: web needs `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`; the agent also needs `OPENAI_API_KEY`. Use the same LiveKit project as locally.
+5. Expose a **public domain** only on the web service. The agent is a background worker (Dockerfile `CMD`); avoid attaching an HTTP healthcheck if the platform allows.
 
 Builds use the existing **Dockerfiles**; `watchPatterns` limit redeploys to the relevant subtree.
 
