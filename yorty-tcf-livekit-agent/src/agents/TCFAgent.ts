@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { loadAgentConfig } from '../config/index.js';
 import type { AgentConfig, TaskType } from '../config/index.js';
 import type { TCFExercise } from '../exercises/exerciseLoader.js';
+import { buildReportDataMessages } from '../utils/reportDataPayload.js';
 
 /**
  * Agent TCF générique qui charge sa configuration depuis des fichiers YAML
@@ -40,6 +41,13 @@ export class TCFAgent extends voice.Agent {
           execute: async () => {
             console.log('[finSession] Fin de session signalée');
             await this.sendDataMessage({ type: 'session_end' });
+            // LiveKit Agents: a tool that returns `undefined` sets replyRequired=false on the tool
+            // result, so the runtime does not schedule a follow-up LLM turn. Without that turn,
+            // envoiRapport is never called. Return a defined payload so the model must continue.
+            return {
+              client_notified: true,
+              next: "Obligatoire maintenant : appelez l'outil envoiRapport avec le rapport markdown complet (points forts, points à améliorer, exemples).",
+            };
           },
         }),
         envoiRapport: llm.tool({
@@ -48,11 +56,13 @@ export class TCFAgent extends voice.Agent {
             report: z.string().describe('Le rapport à envoyer'),
           }),
           execute: async ({ report }) => {
-            console.log('[envoiRapport] Envoi du rapport:', report);
-            await this.sendDataMessage({
-              type: 'report',
-              report,
-            });
+            const messages = buildReportDataMessages(report);
+            console.log(
+              `[envoiRapport] Envoi du rapport (${messages.length} paquet(s), ${report.length} caractères)`,
+            );
+            for (const msg of messages) {
+              await this.sendDataMessage(msg);
+            }
           },
         }),
       },
@@ -108,9 +118,19 @@ export class TCFAgent extends voice.Agent {
 
   async sendDataMessage(message: unknown): Promise<void> {
     if (!this.context) return;
+    const lp = this.context.room.localParticipant;
+    if (!lp) {
+      console.error('[sendDataMessage] missing localParticipant');
+      return;
+    }
     const encoder = new TextEncoder();
     const data = encoder.encode(JSON.stringify(message));
-    await this.context?.room.localParticipant?.publishData(data, { reliable: true });
+    try {
+      await lp.publishData(data, { reliable: true });
+    } catch (err) {
+      console.error('[sendDataMessage] publishData failed:', err);
+      throw err;
+    }
   }
 
   /**

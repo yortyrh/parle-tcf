@@ -59,6 +59,14 @@ export function SessionView({ selectedTask }: SessionViewProps) {
     taskTypeLabel || (exerciseImage?.section === 'A' ? "Demande d'informations" : 'Argumentation');
 
   const isPreparingReport = sessionEnded && !report;
+  const isTache2 = selectedTask?.taskType === 'tache2';
+  const showTache2AgentConnecting =
+    isTache2 &&
+    !sessionEnded &&
+    !isPreparingReport &&
+    (agentState === 'connecting' || agentState === 'pre-connect-buffering');
+  const showTache2MicHint =
+    isTache2 && !sessionEnded && !isPreparingReport && !localParticipant.isMicrophoneEnabled;
 
   const controls: ControlBarControls = {
     leave: true,
@@ -197,8 +205,34 @@ export function SessionView({ selectedTask }: SessionViewProps) {
 
         {/* Zone centrale TCF */}
         {!exerciseImage && !isTefTask && (
-          <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100/60">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-gradient-to-b from-slate-50 to-slate-100/60 px-4 py-6">
             {isPreparingReport && <ReportPreparingBanner />}
+            {showTache2AgentConnecting && (
+              <div
+                role="status"
+                className="max-w-md rounded-xl border border-sky-200/90 bg-sky-50/95 px-4 py-3 text-center text-sky-950 shadow-sm"
+              >
+                <p className="text-sm font-semibold">Connexion de l&apos;examinateur</p>
+                <p className="mt-1 text-sm text-sky-900/90">
+                  L&apos;assistant se connecte : dans quelques instants il vous présentera la
+                  consigne à l&apos;oral. Si vous n&apos;entendez rien ensuite, vérifiez le volume
+                  et le bouton « Démarrer l&apos;audio » du navigateur.
+                </p>
+              </div>
+            )}
+            {showTache2MicHint && (
+              <div
+                role="status"
+                className="max-w-md rounded-xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 text-center text-amber-950 shadow-sm"
+              >
+                <p className="text-sm font-semibold">Micro désactivé</p>
+                <p className="mt-1 text-sm text-amber-900/90">
+                  L&apos;examinateur parle en premier pour expliquer l&apos;exercice ; le micro sert
+                  uniquement à ce qu&apos;il vous entende quand vous répondez. Activez-le dans la
+                  barre du bas lorsque vous êtes prêt·e à prendre la parole.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

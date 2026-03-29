@@ -26,8 +26,12 @@ session:
 
 # Configuration de la connexion
 connection:
-  # Délai d'attente pour la connexion du participant (ms)
-  participantWaitTime: 1000
+  # Temps max (ms) pour attendre qu'au moins un participant (candidat) soit dans la salle
+  # avant de lire les métadonnées (taskType). Un délai trop court faisait lire le jeton
+  # avant l'arrivée du client → mauvaise tâche / greeting retardé.
+  participantWaitTime: 15000
+  # Intervalle entre deux vérifications de présence du participant (ms)
+  participantJoinPollIntervalMs: 200
   
   # Délai avant déconnexion après fin d'examen (ms)
   disconnectDelay: 3000

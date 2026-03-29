@@ -18,6 +18,7 @@ export interface ServiceConfig {
   };
   connection: {
     participantWaitTime: number;
+    participantJoinPollIntervalMs?: number;
     disconnectDelay: number;
   };
   endExamMessage: {

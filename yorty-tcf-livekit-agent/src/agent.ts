@@ -76,11 +76,22 @@ export default defineAgent({
       return 'tache1';
     };
 
-    // Wait a moment for participant to join
-    await new Promise((resolve) =>
-      setTimeout(resolve, serviceConfig.connection.participantWaitTime),
-    );
+    // Wait until the candidate is in the room so participant metadata (taskType) is present.
+    // A fixed short sleep used to run before the client finished joining, yielding wrong taskType
+    // and delaying or derailing the first examiner turn.
+    const joinDeadlineMs = Date.now() + serviceConfig.connection.participantWaitTime;
+    const pollMs = serviceConfig.connection.participantJoinPollIntervalMs ?? 200;
+    while (ctx.room.remoteParticipants.size === 0 && Date.now() < joinDeadlineMs) {
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
+    }
+    if (ctx.room.remoteParticipants.size === 0) {
+      console.warn(
+        '[agent] No remote participant before timeout; taskType may default to tache1. Check LiveKit connectivity and participantWaitTime.',
+      );
+    }
     const taskType = getParticipantMetadata();
+    const rawMetadata = Array.from(ctx.room.remoteParticipants.values())[0]?.metadata;
+    console.log(`[agent] participant raw metadata: ${rawMetadata}`);
     console.log(`TCF ${taskType} started in exam mode`);
 
     // Create the appropriate agent instance based on task type

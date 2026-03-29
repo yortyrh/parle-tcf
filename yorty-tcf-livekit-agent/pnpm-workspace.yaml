@@ -4,3 +4,6 @@ onlyBuiltDependencies:
   - onnxruntime-node
   - protobufjs
   - sharp
+
+patchedDependencies:
+  '@livekit/agents@1.0.27': patches/@livekit__agents@1.0.27.patch

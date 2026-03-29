@@ -45,7 +45,9 @@ session:
 
 ```yaml
 connection:
-  participantWaitTime: 1000 # Temps d'attente pour la connexion du participant (ms)
+  # Temps max (ms) pour attendre qu'au moins un participant soit dans la salle avant de lire taskType
+  participantWaitTime: 15000
+  participantJoinPollIntervalMs: 200 # Optionnel, intervalle de poll (ms)
   disconnectDelay: 3000 # Délai avant déconnexion après fin d'examen (ms)
 ```
 
@@ -98,7 +100,7 @@ Les champs suivants sont validés au chargement :
 
 - ✅ `llm.voice` et `llm.modalities` doivent être présents
 - ✅ `session.metricsEnabled` doit être défini (boolean)
-- ✅ `connection.participantWaitTime` doit être présent
+- ✅ `connection.participantWaitTime` doit être présent (timeout d’attente du participant, ms)
 
 Si un champ requis manque, une erreur sera levée au démarrage.
 

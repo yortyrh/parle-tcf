@@ -1,0 +1,39 @@
+diff --git a/dist/voice/generation.cjs b/dist/voice/generation.cjs
+index 1db479895eab03d3ea9ff56fa7e950d31b198ca8..bf4fc212fee1f63ef7af463a1c19f76cd3a2a6ab 100644
+--- a/dist/voice/generation.cjs
++++ b/dist/voice/generation.cjs
+@@ -44,6 +44,25 @@ var import_telemetry = require("../telemetry/index.cjs");
+ var import_utils = require("../utils.cjs");
+ var import_agent = require("./agent.cjs");
+ var import_run_context = require("./run_context.cjs");
++function sanitizeJsonControlChars(json) {
++  var result = "";
++  var inString = false;
++  for (var i = 0; i < json.length; i++) {
++    var c = json[i];
++    if (c === '"') {
++      var bs = 0;
++      for (var j = i - 1; j >= 0 && json[j] === "\\"; j--) bs++;
++      if (bs % 2 === 0) inString = !inString;
++      result += c;
++    } else if (inString && c.charCodeAt(0) < 32) {
++      var esc = { "\n": "\\n", "\r": "\\r", "\t": "\\t", "\b": "\\b", "\f": "\\f" };
++      result += esc[c] || "\\u" + ("000" + c.charCodeAt(0).toString(16)).slice(-4);
++    } else {
++      result += c;
++    }
++  }
++  return result;
++}
+ class _LLMGenerationData {
+   constructor(textStream, toolCallStream) {
+     this.textStream = textStream;
+@@ -582,7 +601,7 @@ function performToolExecutions({
+       }
+       let parsedArgs;
+       try {
+-        const jsonArgs = JSON.parse(toolCall.args);
++        const jsonArgs = JSON.parse(sanitizeJsonControlChars(toolCall.args));
+         if ((0, import_zod_utils.isZodSchema)(tool.parameters)) {
+           const result = await (0, import_zod_utils.parseZodSchema)(tool.parameters, jsonArgs);
+           if (result.success) {
