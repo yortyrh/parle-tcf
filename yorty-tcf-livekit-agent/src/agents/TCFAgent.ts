@@ -62,22 +62,7 @@ export class TCFAgent extends voice.Agent {
             }
             return {
               report_sent: true,
-              next: "Le rapport a été envoyé. Le micro du candidat sera réactivé automatiquement. Restez disponible pour répondre aux questions du candidat sur le rapport et son évaluation. Si le candidat demande de recommencer le test, appelez l'outil recommencerTest.",
-            };
-          },
-        }),
-        recommencerTest: llm.tool({
-          description:
-            'Recommence le test depuis le début. Réinitialise la session pour un nouvel essai. À appeler quand le candidat demande de recommencer ou quand il clique sur le bouton de redémarrage.',
-          parameters: z.object({}),
-          execute: async () => {
-            console.log('[recommencerTest] Redémarrage du test');
-            await this.sendDataMessage({ type: 'session_restart' });
-            await this.sendExerciseData();
-            return {
-              session_restarted: true,
-              instructions:
-                "La session a été redémarrée. Le candidat dispose du rapport précédent pour s'améliorer. Recommencez l'examen depuis le début : présentez-vous comme examinateur, expliquez l'épreuve et commencez. Tenez compte des points faibles identifiés dans le rapport précédent pour guider votre évaluation.",
+              next: "Le rapport a été envoyé. Le micro du candidat sera réactivé automatiquement. Restez disponible pour répondre aux questions du candidat sur le rapport et son évaluation.",
             };
           },
         }),
@@ -111,26 +96,52 @@ export class TCFAgent extends voice.Agent {
   }
 
   /**
-   * Listens for `restart_test` data messages from the web client (button click)
-   * and triggers the restart flow via the LLM.
+   * Listens for `restart_test` data messages from the web client (button click).
+   * Resets the conversation history and re-delivers the initial greeting directly,
+   * without routing through the LLM tool chain.
    */
   private listenForRestartRequests(): void {
     if (!this.context) return;
 
     this.context.room.on('dataReceived', (payload: Uint8Array) => {
-      try {
-        const data = JSON.parse(new TextDecoder().decode(payload));
-        if (data.type === 'restart_test') {
-          console.log('[TCFAgent] Restart requested by web client');
-          this.session.generateReply({
-            instructions:
-              "Le candidat a cliqué le bouton pour recommencer le test. Appelez immédiatement l'outil recommencerTest, puis recommencez l'examen depuis le début.",
-          });
-        }
-      } catch {
-        // Not a valid JSON payload, ignore
-      }
+      void this.handleRestartRequest(payload);
     });
+  }
+
+  private async handleRestartRequest(payload: Uint8Array): Promise<void> {
+    try {
+      const data = JSON.parse(new TextDecoder().decode(payload)) as { type?: string };
+      if (data.type !== 'restart_test') return;
+
+      console.log('[TCFAgent] Restart requested — resetting conversation and re-delivering greeting');
+
+      // 1. Interrupt any current speech immediately.
+      await this.session.interrupt().await;
+
+      // 2. Clear the conversation history on the active Realtime session.
+      //    Agent.updateChatCtx propagates to AgentActivity.realtimeSession,
+      //    which sends conversation.item.delete events to the OpenAI API.
+      await this.updateChatCtx(new llm.ChatContext());
+      console.log('[TCFAgent] Conversation history cleared');
+
+      // 3. Notify the web client and resend exercise metadata.
+      await this.sendDataMessage({ type: 'session_restart' });
+      await this.sendExerciseData();
+
+      // 4. Re-deliver the initial greeting exactly as in onEnter.
+      let greetingMessage = this.config.greeting;
+      if (this.exercise && this.exercise.content) {
+        greetingMessage += `\n\n${this.exercise.content}`;
+      }
+
+      const handle = this.session.generateReply({
+        allowInterruptions: false,
+        instructions: greetingMessage,
+      });
+      await handle.waitForPlayout();
+    } catch (err) {
+      console.error('[TCFAgent] Error handling restart request:', err);
+    }
   }
 
   /**
