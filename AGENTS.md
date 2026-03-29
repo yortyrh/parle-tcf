@@ -99,5 +99,5 @@ Builds use the existing **Dockerfiles**; `watchPatterns` limit redeploys to the 
 
 ## Version Notes
 
-- The project uses Node.js `v24.14.0` in `yorty-tcf-livekit-agent/.nvmrc`.
+- The project uses Node.js `v22.18.0` in `yorty-tcf-livekit-agent/.nvmrc`.
 - The agent uses the LiveKit Agents Node.js SDK, so verify Node SDK feature support before copying patterns from Python examples.
