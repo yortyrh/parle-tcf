@@ -80,6 +80,22 @@ Required for the agent:
 
 Use `.env.local` for local package development when appropriate.
 
+## Railway
+
+Deploy as **two services** from this repository (same GitHub repo, isolated roots):
+
+| Service | Root directory | Config as code |
+| --- | --- | --- |
+| Next.js (candidates) | `yorty-tcf-livekit-web` | `yorty-tcf-livekit-web/railway.toml` |
+| LiveKit agent (worker) | `yorty-tcf-livekit-agent` | `yorty-tcf-livekit-agent/railway.toml` |
+
+1. `railway login`, create a project, then add two services and attach the repo (or use the dashboard).
+2. For each service, set **Root directory** as above. If the dashboard does not pick up config automatically, set the **config file path** to the matching `railway.toml` (Railway: path from repo root, e.g. `yorty-tcf-livekit-web/railway.toml`).
+3. Set variables on each service: web needs `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`; the agent also needs `OPENAI_API_KEY`. Use the same LiveKit project as locally.
+4. Expose a **public domain** only on the web service. The agent is a background worker (Dockerfile `CMD`); avoid attaching an HTTP healthcheck if the platform allows.
+
+Builds use the existing **Dockerfiles**; `watchPatterns` limit redeploys to the relevant subtree.
+
 ## Version Notes
 
 - The project uses Node.js `v24.14.0` in `yorty-tcf-livekit-agent/.nvmrc`.

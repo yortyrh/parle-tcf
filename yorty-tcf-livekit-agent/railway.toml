@@ -1,0 +1,12 @@
+# Railway: set service root directory to this folder (yorty-tcf-livekit-agent) and,
+# if needed, point "Config as code" to this file: yorty-tcf-livekit-agent/railway.toml
+#
+# Long-running LiveKit worker (no HTTP). Prefer no public domain on this service.
+# If Railway still expects an HTTP healthcheck, clear healthcheck in the dashboard.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["yorty-tcf-livekit-agent/**"]
+
+[deploy]
+restartPolicyType = "ON_FAILURE"

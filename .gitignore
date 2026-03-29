@@ -59,6 +59,9 @@ ehthumbs.db
 # Vercel
 .vercel
 
+# Railway CLI (local project link)
+.railway/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
