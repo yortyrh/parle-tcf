@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RoomEvent } from 'livekit-client';
 import { useRoomContext } from '@livekit/components-react';
 
@@ -15,15 +15,29 @@ function isRecord(v: unknown): v is Record<string, unknown> {
  * Receives the examiner report. Handles single-packet messages and multipart
  * payloads when the agent splits large markdown across LiveKit data packets
  * (~15 KiB reliable limit per packet).
+ *
+ * Supports archiving the current report into `previousReports` when the
+ * candidate restarts the test (via `session_restart` message or manual call).
  */
 export function useReportData() {
   const [report, setReport] = useState<string | null>(null);
+  const [previousReports, setPreviousReports] = useState<string[]>([]);
   const room = useRoomContext();
   const multipartRef = useRef<{
     id: string;
     total: number;
     parts: Map<number, string>;
   } | null>(null);
+
+  const archiveAndReset = useCallback(() => {
+    setReport((current) => {
+      if (current) {
+        setPreviousReports((prev) => [...prev, current]);
+      }
+      return null;
+    });
+    multipartRef.current = null;
+  }, []);
 
   useEffect(() => {
     const handleDataReceived = (payload: Uint8Array) => {
@@ -80,6 +94,11 @@ export function useReportData() {
             multipartRef.current = null;
           }
         }
+
+        if (data.type === 'session_restart') {
+          console.log('[Report] Session restart — archiving current report');
+          archiveAndReset();
+        }
       } catch {
         // ignore non-JSON or malformed payloads
       }
@@ -89,7 +108,7 @@ export function useReportData() {
     return () => {
       room.off(RoomEvent.DataReceived, handleDataReceived);
     };
-  }, [room]);
+  }, [room, archiveAndReset]);
 
-  return report;
+  return { report, previousReports, archiveAndReset };
 }

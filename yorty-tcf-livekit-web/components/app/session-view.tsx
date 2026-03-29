@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   BarVisualizer,
   useLocalParticipant,
+  useRoomContext,
   useSessionContext,
   useVoiceAssistant,
 } from '@livekit/components-react';
@@ -31,13 +32,14 @@ interface SessionViewProps {
 
 export function SessionView({ selectedTask }: SessionViewProps) {
   const session = useSessionContext();
+  const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
   const { state: agentState, audioTrack: agentAudioTrack } = useVoiceAssistant();
-  const { elapsedSeconds } = useSessionTimer();
+  const { elapsedSeconds, resetTimer } = useSessionTimer();
   const exerciseData = useExerciseData();
   const exerciseImage = useExerciseImage();
-  const report = useReportData();
-  const sessionEnded = useSessionEnd();
+  const { report, previousReports, archiveAndReset } = useReportData();
+  const { sessionEnded, resetSessionEnd } = useSessionEnd();
   const [isReportMinimized, setIsReportMinimized] = useState(true);
   const [tefTransitionReady, setTefTransitionReady] = useState(false);
   const title = exerciseData?.title || selectedTask?.title || 'Tâche';
@@ -49,8 +51,8 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const isTefTask = selectedTask?.taskType?.startsWith('tef') ?? false;
   const tefShortAnnouncement =
     exerciseImage?.section === 'B' || selectedTask?.taskType === 'tef-section-b'
-      ? 'Section B: présentez l’annonce et défendez votre point de vue (~10 min).'
-      : 'Section A: téléphonez pour demander des informations (~5 min).';
+      ? 'Section B\u00a0: présentez l\u2019annonce et défendez votre point de vue (~10 min).'
+      : 'Section A\u00a0: téléphonez pour demander des informations (~5 min).';
   const sessionAnnouncementText = isTefTask ? tefShortAnnouncement : announcementText;
   const showTefSkeleton = isTefTask && (!exerciseImage || !tefTransitionReady);
   const tefBadgeSection =
@@ -58,6 +60,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const tefBadgeType =
     taskTypeLabel || (exerciseImage?.section === 'A' ? "Demande d'informations" : 'Argumentation');
 
+  const isReviewPhase = sessionEnded && !!report;
   const isPreparingReport = sessionEnded && !report;
   const isTache2 = selectedTask?.taskType === 'tache2';
   const showTache2AgentConnecting =
@@ -70,18 +73,37 @@ export function SessionView({ selectedTask }: SessionViewProps) {
 
   const controls: ControlBarControls = {
     leave: true,
-    microphone: !sessionEnded,
+    microphone: !sessionEnded || isReviewPhase,
     chat: false,
     camera: false,
     screenShare: false,
   };
 
-  // Couper le micro dès que l'agent signale la fin de session
+  const handleRestart = useCallback(() => {
+    archiveAndReset();
+    resetSessionEnd();
+    resetTimer();
+    setIsReportMinimized(true);
+    localParticipant.setMicrophoneEnabled(false);
+
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify({ type: 'restart_test' }));
+    room.localParticipant.publishData(data, { reliable: true });
+  }, [archiveAndReset, resetSessionEnd, resetTimer, localParticipant, room]);
+
+  // Mute mic when session ends (report is being generated)
   useEffect(() => {
-    if (sessionEnded) {
+    if (sessionEnded && !report) {
       localParticipant.setMicrophoneEnabled(false);
     }
-  }, [sessionEnded, localParticipant]);
+  }, [sessionEnded, report, localParticipant]);
+
+  // Re-enable mic when the report arrives (review phase)
+  useEffect(() => {
+    if (isReviewPhase) {
+      localParticipant.setMicrophoneEnabled(true);
+    }
+  }, [isReviewPhase, localParticipant]);
 
   // Afficher automatiquement le rapport quand il arrive
   useEffect(() => {
@@ -207,6 +229,18 @@ export function SessionView({ selectedTask }: SessionViewProps) {
         {!exerciseImage && !isTefTask && (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-gradient-to-b from-slate-50 to-slate-100/60 px-4 py-6">
             {isPreparingReport && <ReportPreparingBanner />}
+            {isReviewPhase && (
+              <div
+                role="status"
+                className="max-w-md rounded-xl border border-emerald-200/80 bg-emerald-50/95 px-4 py-3 text-center text-emerald-950 shadow-sm"
+              >
+                <p className="text-sm font-semibold">Phase de discussion</p>
+                <p className="mt-1 text-sm text-emerald-900/90">
+                  Votre micro est activé. Posez vos questions à l&apos;examinateur pour éclaircir
+                  vos doutes sur le rapport et votre évaluation.
+                </p>
+              </div>
+            )}
             {showTache2AgentConnecting && (
               <div
                 role="status"
@@ -284,8 +318,10 @@ export function SessionView({ selectedTask }: SessionViewProps) {
       {/* Report Viewer */}
       <ReportViewer
         report={report}
+        previousReports={previousReports}
         isMinimized={isReportMinimized}
         onToggleMinimize={() => setIsReportMinimized(!isReportMinimized)}
+        onRestart={handleRestart}
       />
     </section>
   );

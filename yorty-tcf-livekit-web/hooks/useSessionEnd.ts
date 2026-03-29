@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAgentDataMessage } from './useAgentDataMessage';
 
 interface SessionEndMessage {
   type: 'session_end';
 }
 
+interface SessionRestartMessage {
+  type: 'session_restart';
+}
+
 /**
  * Hook to detect end-of-session signal from the agent (`session_end` message).
- * Used to mute the candidate microphone before the report is generated.
+ * Supports reset via `session_restart` from the agent or manual `resetSessionEnd()`.
  */
 export function useSessionEnd() {
   const [sessionEnded, setSessionEnded] = useState(false);
@@ -17,5 +21,12 @@ export function useSessionEnd() {
     setSessionEnded(true);
   });
 
-  return sessionEnded;
+  useAgentDataMessage<SessionRestartMessage>('session_restart', () => {
+    console.log('[SessionEnd] Session restarted by agent');
+    setSessionEnded(false);
+  });
+
+  const resetSessionEnd = useCallback(() => setSessionEnded(false), []);
+
+  return { sessionEnded, resetSessionEnd };
 }

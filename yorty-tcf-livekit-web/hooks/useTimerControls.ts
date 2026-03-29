@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * Hook that tracks session elapsed time.
  * Starts counting as soon as the hook mounts (session begins).
+ * Call `resetTimer()` to restart the counter from zero.
  */
 export function useSessionTimer() {
   const startTimeRef = useRef(Date.now());
@@ -16,5 +17,10 @@ export function useSessionTimer() {
     return () => clearInterval(interval);
   }, []);
 
-  return { elapsedSeconds };
+  const resetTimer = useCallback(() => {
+    startTimeRef.current = Date.now();
+    setElapsedSeconds(0);
+  }, []);
+
+  return { elapsedSeconds, resetTimer };
 }
