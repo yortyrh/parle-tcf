@@ -40,8 +40,13 @@ If you are working inside `yorty-tcf-livekit-agent/`, also read `yorty-tcf-livek
 
 - Agent configuration: `yorty-tcf-livekit-agent/config/agents/`
 - Service configuration: `yorty-tcf-livekit-agent/config/service.yml`
-- TCF exercises: `yorty-tcf-livekit-agent/config/tcf-exercises.csv`
+- TCF exercises source of truth: `yorty-tcf-livekit-agent/config/tcf-exercises.csv` (committed)
+- TCF exercises runtime database: `yorty-tcf-livekit-agent/config/tcf-exercises.db` (generated, not committed)
 - Agent reference content: `yorty-tcf-livekit-agent/config/info/`
+
+The SQLite database is generated from the CSV at build time (`pnpm generate-db`) and is included in the
+`pnpm build` step. Only one row is loaded into memory per session, which keeps agent memory usage low.
+To update exercises, edit the CSV and run `pnpm generate-db` (or `pnpm build`).
 
 ## Development Commands
 
@@ -50,9 +55,10 @@ Run commands from the relevant package directory.
 ### Agent
 
 - Install: `pnpm install`
+- Generate SQLite DB from CSV: `pnpm generate-db`
 - Download required model files: `pnpm run download-files`
 - Dev: `pnpm dev`
-- Build: `pnpm build`
+- Build: `pnpm build` (runs `generate-db` automatically before compiling TypeScript)
 - Start: `pnpm start`
 - Test: `pnpm test -- --run`
 - Lint: `pnpm lint`

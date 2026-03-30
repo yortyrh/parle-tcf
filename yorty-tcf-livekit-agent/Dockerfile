@@ -13,8 +13,9 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 # Install required system packages and pnpm, then clean up the apt cache for a smaller image
 # ca-certificates: enables TLS/SSL for securely fetching dependencies and calling HTTPS services
+# python3 make g++: required to compile better-sqlite3 native addon
 # --no-install-recommends keeps the image minimal
-RUN apt-get update -qq && apt-get install --no-install-recommends -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get install --no-install-recommends -y ca-certificates python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Pin pnpm version for reproducible builds
 RUN npm install -g pnpm@10

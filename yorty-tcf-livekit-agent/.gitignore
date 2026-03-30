@@ -202,3 +202,6 @@ ehthumbs.db
 
 # Build info and cache
 *.tsbuildinfo
+
+# Generated SQLite database (built from config/tcf-exercises.csv at build time)
+config/tcf-exercises.db

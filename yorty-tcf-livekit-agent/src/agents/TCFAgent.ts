@@ -62,7 +62,7 @@ export class TCFAgent extends voice.Agent {
             }
             return {
               report_sent: true,
-              next: "Le rapport a été envoyé. Le micro du candidat sera réactivé automatiquement. Restez disponible pour répondre aux questions du candidat sur le rapport et son évaluation.",
+              next: 'Le rapport a été envoyé. Le micro du candidat sera réactivé automatiquement. Restez disponible pour répondre aux questions du candidat sur le rapport et son évaluation.',
             };
           },
         }),
@@ -113,7 +113,9 @@ export class TCFAgent extends voice.Agent {
       const data = JSON.parse(new TextDecoder().decode(payload)) as { type?: string };
       if (data.type !== 'restart_test') return;
 
-      console.log('[TCFAgent] Restart requested — resetting conversation and re-delivering greeting');
+      console.log(
+        '[TCFAgent] Restart requested — resetting conversation and re-delivering greeting',
+      );
 
       // 1. Interrupt any current speech immediately.
       await this.session.interrupt().await;
