@@ -229,6 +229,8 @@ export class TCFAgent extends voice.Agent {
         title,
         description,
         content: this.exercise?.content || '',
+        exerciseId: this.exercise?.id,
+        taskType: this.taskType,
       },
     };
 

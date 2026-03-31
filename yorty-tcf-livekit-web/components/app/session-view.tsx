@@ -62,25 +62,27 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   } = useInputControls({ saveUserChoices: true });
 
   const isTefTask = selectedTask?.taskType?.startsWith('tef') ?? false;
+  const isTache1 = selectedTask?.taskType === 'tache1';
   const isTache2 = selectedTask?.taskType === 'tache2';
+  const isTache3 = selectedTask?.taskType === 'tache3';
   const isReviewPhase = sessionEnded && !!report;
   const isPreparingReport = sessionEnded && !report;
   const isMicEnabled = !sessionEnded || isReviewPhase;
   const canUseMicShortcut = isMicEnabled && session.isConnected && !microphoneToggle.pending;
 
-  const showTache2AgentConnecting =
-    isTache2 &&
+  // "Micro désactivé" — all TCF tasks (1, 2, 3)
+  const showMicHint =
+    (isTache1 || isTache2 || isTache3) &&
     !sessionEnded &&
     !isPreparingReport &&
-    (agentState === 'connecting' || agentState === 'pre-connect-buffering');
-
-  const showTache2MicHint =
-    isTache2 && !sessionEnded && !isPreparingReport && !localParticipant.isMicrophoneEnabled;
+    !localParticipant.isMicrophoneEnabled;
 
   const announcementText =
     exerciseData?.description || selectedTask?.description || 'Description de la tâche';
 
   const showTefSkeleton = isTefTask && (!exerciseImage || !tefTransitionReady);
+  // Show a skeleton while waiting for the specific exercise text for Tâche 2 and 3.
+  const showExerciseSkeleton = !exerciseData && (isTache2 || isTache3);
 
   const handleRestart = useCallback(() => {
     archiveAndReset();
@@ -181,8 +183,8 @@ export function SessionView({ selectedTask }: SessionViewProps) {
               exerciseImage={exerciseImage}
               announcementText={announcementText}
               showTefSkeleton={showTefSkeleton}
-              showTache2AgentConnecting={showTache2AgentConnecting}
-              showTache2MicHint={showTache2MicHint}
+              showExerciseSkeleton={showExerciseSkeleton}
+              showMicHint={showMicHint}
             />
           </TabsContent>
 
@@ -277,8 +279,10 @@ interface ConsigneTabContentProps {
   exerciseImage: ExerciseImageData | null;
   announcementText: string;
   showTefSkeleton: boolean;
-  showTache2AgentConnecting: boolean;
-  showTache2MicHint: boolean;
+  /** True while waiting for exercise_data for Tâche 2 / Tâche 3. */
+  showExerciseSkeleton: boolean;
+  /** True while the mic is off and the session is active (Tâche 1, 2 and 3). */
+  showMicHint: boolean;
 }
 
 function ConsigneTabContent({
@@ -286,15 +290,26 @@ function ConsigneTabContent({
   exerciseImage,
   announcementText,
   showTefSkeleton,
-  showTache2AgentConnecting,
-  showTache2MicHint,
+  showExerciseSkeleton,
+  showMicHint,
 }: ConsigneTabContentProps) {
   return (
-    <div className="flex flex-col gap-3">
-      {/* TCF: announcement text */}
-      {!isTefTask && (
-        <div className="relative flex min-h-[80px] items-start rounded-xl border border-cyan-300/40 bg-cyan-50/70 px-4 py-3 shadow-sm">
-          <p className="text-base leading-relaxed font-semibold text-cyan-700">
+    <div className="flex h-full flex-col gap-3">
+      {/* TCF: exercise skeleton (Tâche 2 / Tâche 3 before exercise_data arrives) */}
+      {!isTefTask && showExerciseSkeleton && (
+        <div className="flex min-h-[88px] animate-pulse items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-50/70 px-4 py-3 shadow-sm">
+          <div className="flex w-full flex-col items-center gap-2.5">
+            <div className="h-4 w-4/5 rounded-md bg-cyan-200/70" />
+            <div className="h-4 w-full rounded-md bg-cyan-200/70" />
+            <div className="h-4 w-3/5 rounded-md bg-cyan-200/70" />
+          </div>
+        </div>
+      )}
+
+      {/* TCF: announcement / exercise text — centered when short, grows with long content */}
+      {!isTefTask && !showExerciseSkeleton && (
+        <div className="flex min-h-[88px] items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-50/70 px-4 py-3 shadow-sm">
+          <p className="text-center text-base leading-relaxed font-semibold text-cyan-700">
             {announcementText}
           </p>
         </div>
@@ -313,35 +328,29 @@ function ConsigneTabContent({
       {/* TEF: exercise image */}
       {exerciseImage && !showTefSkeleton && <ExerciseImageViewer exerciseImage={exerciseImage} />}
 
-      {/* Tache 2: agent connecting hint */}
-      {showTache2AgentConnecting && (
-        <div
-          role="status"
-          className="rounded-xl border border-sky-200/90 bg-sky-50/95 px-4 py-3 text-center text-sky-950 shadow-sm"
-        >
-          <p className="text-sm font-semibold">Connexion de l&apos;examinateur</p>
-          <p className="mt-1 text-sm text-sky-900/90">
-            L&apos;assistant se connecte : dans quelques instants il vous présentera la consigne à
-            l&apos;oral. Si vous n&apos;entendez rien ensuite, vérifiez le volume et le bouton «
-            Démarrer l&apos;audio » du navigateur.
-          </p>
-        </div>
-      )}
-
-      {/* Tache 2: mic off hint */}
-      {showTache2MicHint && (
-        <div
-          role="status"
-          className="rounded-xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 text-center text-amber-950 shadow-sm"
-        >
-          <p className="text-sm font-semibold">Micro désactivé</p>
-          <p className="mt-1 text-sm text-amber-900/90">
-            L&apos;examinateur parle en premier pour expliquer l&apos;exercice ; le micro sert
-            uniquement à ce qu&apos;il vous entende quand vous répondez. Activez-le dans la barre du
-            bas lorsque vous êtes prêt·e à prendre la parole.
-          </p>
-        </div>
-      )}
+      {/* Tâche 1, 2 & 3: mic hint (skeleton while exercise is loading) */}
+      {showMicHint &&
+        (showExerciseSkeleton ? (
+          <div className="mt-auto rounded-xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 shadow-sm">
+            <div className="flex animate-pulse flex-col gap-2.5">
+              <div className="h-4 w-1/3 rounded-md bg-amber-200/80" />
+              <div className="h-4 w-full rounded-md bg-amber-200/80" />
+              <div className="h-4 w-5/6 rounded-md bg-amber-200/80" />
+            </div>
+          </div>
+        ) : (
+          <div
+            role="status"
+            className="mt-auto rounded-xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 text-center text-amber-950 shadow-sm"
+          >
+            <p className="text-sm font-semibold">Micro désactivé</p>
+            <p className="mt-1 text-sm text-amber-900/90">
+              L&apos;examinateur parle en premier pour expliquer l&apos;exercice ; le micro sert
+              uniquement à ce qu&apos;il vous entende quand vous répondez. Activez-le dans la barre
+              du bas lorsque vous êtes prêt·e à prendre la parole.
+            </p>
+          </div>
+        ))}
     </div>
   );
 }

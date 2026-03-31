@@ -59,7 +59,7 @@ export default defineAgent({
     await ctx.connect();
 
     // Wait for a participant to join and read their metadata to determine task type
-    const getParticipantMetadata = (): TaskType => {
+    const getParticipantMetadata = (): { taskType: TaskType; exerciseId?: string } => {
       const participants = Array.from(ctx.room.remoteParticipants.values());
       if (participants.length > 0) {
         const participant = participants[0];
@@ -67,13 +67,14 @@ export default defineAgent({
           try {
             const metadata = JSON.parse(participant.metadata || '{}');
             const taskType = (metadata.taskType || 'tache1') as TaskType;
-            return taskType;
+            const exerciseId = metadata.exerciseId as string | undefined;
+            return exerciseId ? { taskType, exerciseId } : { taskType };
           } catch (error) {
             console.error('Error parsing participant metadata:', error);
           }
         }
       }
-      return 'tache1';
+      return { taskType: 'tache1' };
     };
 
     // Wait until the candidate is in the room so participant metadata (taskType) is present.
@@ -89,10 +90,12 @@ export default defineAgent({
         '[agent] No remote participant before timeout; taskType may default to tache1. Check LiveKit connectivity and participantWaitTime.',
       );
     }
-    const taskType = getParticipantMetadata();
+    const { taskType, exerciseId } = getParticipantMetadata();
     const rawMetadata = Array.from(ctx.room.remoteParticipants.values())[0]?.metadata;
     console.log(`[agent] participant raw metadata: ${rawMetadata}`);
-    console.log(`TCF ${taskType} started in exam mode`);
+    console.log(
+      `TCF ${taskType} started in exam mode${exerciseId ? ` (exerciseId: ${exerciseId})` : ''}`,
+    );
 
     // Create the appropriate agent instance based on task type
     const agent = (() => {
@@ -100,9 +103,9 @@ export default defineAgent({
         case 'tache1':
           return new TCFTache1(ctx);
         case 'tache2':
-          return new TCFTache2(ctx);
+          return new TCFTache2(ctx, exerciseId);
         case 'tache3':
-          return new TCFTache3(ctx);
+          return new TCFTache3(ctx, exerciseId);
         case 'tef-section-a':
           return new TEFSectionA(ctx);
         case 'tef-section-b':

@@ -76,6 +76,24 @@ export function getRandomExercise(taskType: 'tache2' | 'tache3'): TCFExercise | 
 }
 
 /**
+ * Returns the exercise with the given id, or null if not found.
+ */
+export function getExerciseById(id: string): TCFExercise | null {
+  try {
+    const stmt = getDb().prepare<[string], ExerciseRow>('SELECT * FROM exercises WHERE id = ?');
+    const row = stmt.get(id);
+    if (!row) {
+      console.warn(`No exercise found with id: ${id}`);
+      return null;
+    }
+    return rowToExercise(row);
+  } catch (error) {
+    console.error(`Error fetching exercise by id ${id}:`, error);
+    return null;
+  }
+}
+
+/**
  * Returns all exercises for the given task type.
  */
 export function getAllExercises(taskType: 'tache2' | 'tache3'): TCFExercise[] {
