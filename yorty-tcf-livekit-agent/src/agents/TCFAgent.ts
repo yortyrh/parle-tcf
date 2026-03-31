@@ -43,7 +43,7 @@ export class TCFAgent extends voice.Agent {
             await this.sendDataMessage({ type: 'session_end' });
             return {
               client_notified: true,
-              next: "Obligatoire maintenant : appelez l'outil envoiRapport avec le rapport markdown complet (points forts, points à améliorer, exemples).",
+              next: "CHANGEMENT DE RÔLE — L'examen est terminé. Tu es maintenant un coach/professeur bienveillant. Étape obligatoire : appelle l'outil envoiRapport avec le rapport markdown complet (points forts, points à améliorer, exemples de reformulation). Ensuite, aide le candidat à comprendre ses erreurs. Sois généreux en explications mais concis — pose des questions au candidat pour qu'il reste le protagoniste.",
             };
           },
         }),
@@ -83,14 +83,9 @@ export class TCFAgent extends voice.Agent {
       this.listenForRestartRequests();
     }
 
-    let greetingMessage = this.config.greeting;
-    if (this.exercise && this.exercise.content) {
-      greetingMessage += `\n\n${this.exercise.content}`;
-    }
-
     const handleGreeting = this.session.generateReply({
       allowInterruptions: false,
-      instructions: greetingMessage,
+      instructions: this.config.greeting,
     });
     await handleGreeting.waitForPlayout();
   }
@@ -131,14 +126,9 @@ export class TCFAgent extends voice.Agent {
       await this.sendExerciseData();
 
       // 4. Re-deliver the initial greeting exactly as in onEnter.
-      let greetingMessage = this.config.greeting;
-      if (this.exercise && this.exercise.content) {
-        greetingMessage += `\n\n${this.exercise.content}`;
-      }
-
       const handle = this.session.generateReply({
         allowInterruptions: false,
-        instructions: greetingMessage,
+        instructions: this.config.greeting,
       });
       await handle.waitForPlayout();
     } catch (err) {
