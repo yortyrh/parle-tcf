@@ -1,15 +1,38 @@
+# Dependencies (installed fresh inside Docker)
 node_modules
+
+# Build artifacts (rebuilt inside Docker)
 .next
 dist
 .turbo
+
+# Git
 .git
+
+# Environment (injected via Railway / docker-compose env vars)
 .env
 .env.*
+
+# Secrets
 *.pem
+
+# OS
 .DS_Store
+Thumbs.db
+
+# IDE / editor
 .cursor
 .claude
 .idea
 .vscode
+*.swp
+*.swo
+
+# TypeScript incremental cache
 *.tsbuildinfo
+
+# Test output
 coverage
+
+# CI / docs not needed at build time
+.github

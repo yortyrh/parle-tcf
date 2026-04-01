@@ -126,15 +126,48 @@ Deploy as **two services** from this repository (same GitHub repo, monorepo root
 | Next.js (candidates) | `apps/web/Dockerfile` | `apps/web/railway.json` |
 | LiveKit agent (worker) | `apps/agent/Dockerfile` | `apps/agent/railway.json` |
 
-Both Dockerfiles use `turbo prune` and expect the **repository root** as the Docker build context.
+Both Dockerfiles use `turbo prune` and **require the repository root as the Docker build context**.
 
-1. `railway login`, create a project, then add two services and attach the repo (or use the dashboard).
-2. For each service, set the **config file path** to the matching `railway.json` (e.g. `apps/web/railway.json`). The `dockerfilePath` field in each `railway.json` already points to the correct Dockerfile relative to the repo root.
-3. Set variables on each service: web needs `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `AGENT_WAKE_URL`; the agent also needs `OPENAI_API_KEY`.
-4. Expose a **public domain** only on the web service. The agent exposes port 8080 for its wake/health endpoint but should use an internal domain (e.g. `agent.railway.internal`), not a public one.
-5. The agent's `railway.json` includes `healthcheckPath: "/health"` for scale-to-zero support. Railway will scale the agent down when idle and wake it when the web sends an HTTP request.
+### Dashboard setup (critical)
 
-`watchPatterns` in each `railway.json` include `packages/shared/**` so changes to shared types trigger rebuilds of both services.
+For each Railway service, configure these two settings under **Settings → Source**:
+
+1. **Root Directory** — leave **blank** (defaults to the repository root). Do NOT set it to `apps/agent` or `apps/web`; this would break the `turbo prune` step because the build context would be limited to a single app directory instead of the full monorepo.
+2. **Config File Path** — set to the matching `railway.json`:
+   - Agent service → `apps/agent/railway.json`
+   - Web service → `apps/web/railway.json`
+
+If Railway shows "Using Detected Dockerfile" in build logs, the Config File Path is not set correctly.
+
+### Environment variables
+
+Set these on each Railway service (not in files — `.env*` is excluded from Docker builds):
+
+| Variable | Agent | Web |
+| --- | --- | --- |
+| `LIVEKIT_URL` | ✓ | ✓ |
+| `LIVEKIT_API_KEY` | ✓ | ✓ |
+| `LIVEKIT_API_SECRET` | ✓ | ✓ |
+| `OPENAI_API_KEY` | ✓ | |
+| `AGENT_WAKE_URL` | | ✓ |
+
+`AGENT_WAKE_URL` should be the agent's **internal** Railway domain (e.g. `http://agent.railway.internal:8080`).
+
+### Networking
+
+- Expose a **public domain** only on the web service.
+- The agent exposes port 8080 for its wake/health HTTP server but should use a **private/internal domain** (e.g. `agent.railway.internal`), not a public one.
+
+### Scale-to-zero
+
+The agent's `railway.json` sets `sleepApplication: true` and `healthcheckPath: "/health"`. Railway will scale the agent down when idle. The web app wakes it via a dual strategy:
+
+- **Layer B (eager):** The root layout fires a non-blocking `POST /wake` on every page load.
+- **Layer A (safety net):** The `connection-details` API route performs a blocking `POST /wake` before creating a LiveKit token, guaranteeing the agent is running before the session starts.
+
+### Watch patterns
+
+`watchPatterns` in each `railway.json` include `packages/shared/**` and `pnpm-lock.yaml`, so changes to shared types or dependencies trigger rebuilds of both services.
 
 ## Version Notes
 

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Turborepo monorepo build for the Next.js web application.
-# Build context must be the repository root.
+# Build context MUST be the repository root.
 
 ARG NODE_VERSION=22
 

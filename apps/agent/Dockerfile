@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Turborepo monorepo build for the LiveKit agent service.
-# Build context must be the repository root.
+# Build context MUST be the repository root.
 
 ARG NODE_VERSION=22
 
@@ -15,7 +15,6 @@ RUN turbo prune @yorty-tcf/agent --docker
 # --- Stage 2: Install dependencies from the pruned lockfile ---
 FROM node:${NODE_VERSION}-slim AS installer
 
-# Native build dependencies for better-sqlite3
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y ca-certificates python3 make g++ && \
     rm -rf /var/lib/apt/lists/*
@@ -60,11 +59,11 @@ COPY --from=builder /app/ .
 RUN chown -R appuser:appuser /app
 USER appuser
 
-# Pre-download ML model files
-RUN cd apps/agent && pnpm download-files
+# Pre-download ML model files (build already happened in builder stage)
+RUN cd apps/agent && node dist/agent.js download-files
 
 USER root
-RUN cd apps/agent && pnpm prune --prod
+RUN pnpm prune --prod
 RUN chown -R appuser:appuser /app
 USER appuser
 
