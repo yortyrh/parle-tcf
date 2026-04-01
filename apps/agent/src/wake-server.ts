@@ -1,4 +1,5 @@
-import { type AddressInfo, createServer } from 'node:http';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 
 /**
  * Lightweight HTTP server that enables scale-to-zero on Railway.
