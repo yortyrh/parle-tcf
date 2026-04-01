@@ -25,7 +25,7 @@ export interface ChatEntryProps extends React.HTMLAttributes<HTMLDivElement> {
   isLastAgentMessage?: boolean;
 }
 
-export const ChatEntry = ({
+export const ChatEntry = React.memo(function ChatEntry({
   name,
   locale,
   timestamp,
@@ -37,7 +37,7 @@ export const ChatEntry = ({
   isLastAgentMessage = false,
   className,
   ...props
-}: ChatEntryProps) => {
+}: ChatEntryProps) {
   const time = new Date(timestamp);
   const title = time.toLocaleTimeString(locale, { timeStyle: 'full' });
   const isLocal = messageOrigin === 'local';
@@ -149,4 +149,4 @@ export const ChatEntry = ({
       </div>
     </div>
   );
-};
+});
