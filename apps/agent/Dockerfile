@@ -42,6 +42,7 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
+ENV CI=true
 RUN npm install -g pnpm@10
 WORKDIR /app
 
