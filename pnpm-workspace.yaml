@@ -1,0 +1,16 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+onlyBuiltDependencies:
+  - '@ffmpeg-installer/darwin-x64'
+  - '@tailwindcss/oxide'
+  - better-sqlite3
+  - esbuild
+  - onnxruntime-node
+  - protobufjs
+  - sharp
+  - unrs-resolver
+
+patchedDependencies:
+  '@livekit/agents@1.0.27': patches/@livekit__agents@1.0.27.patch

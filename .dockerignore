@@ -1,0 +1,15 @@
+node_modules
+.next
+dist
+.turbo
+.git
+.env
+.env.*
+*.pem
+.DS_Store
+.cursor
+.claude
+.idea
+.vscode
+*.tsbuildinfo
+coverage
