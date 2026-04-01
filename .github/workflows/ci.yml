@@ -1,0 +1,75 @@
+# CI monorepo — remplace les anciens workflows :
+# - apps/agent/.github/workflows/tests.yml
+# - apps/web/.github/workflows/build-and-test.yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint, format & types
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint (tous les packages)
+        run: pnpm run lint
+
+      - name: Prettier (vérification)
+        run: pnpm run format:check
+
+      - name: Typecheck (tous les packages)
+        run: pnpm run typecheck
+
+  build-and-test:
+    name: Build & tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (Turborepo)
+        run: pnpm run build
+
+      - name: Tests unitaires (Turborepo)
+        run: pnpm run test

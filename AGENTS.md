@@ -1,175 +1,88 @@
-# AGENTS.md
+# 🏗️ Architecture & Developer Guide
 
-This repository is a **Turborepo + pnpm workspace monorepo** containing a TCF/TEF oral examination platform built with LiveKit Agents and Next.js.
+Ce guide approfondit l'architecture technique de la plateforme TCF/TEF LiveKit. Il est destiné aux développeurs souhaitant comprendre le fonctionnement interne et commencer à contribuer.
 
-## Repository Layout
+## 🗺️ Architecture de Haut Niveau
 
-```
-/
-├── turbo.json                    Turborepo pipeline configuration
-├── pnpm-workspace.yaml           pnpm workspace definition
-├── package.json                  Root workspace (scripts delegate to turbo)
-├── apps/
-│   ├── agent/                    LiveKit examiner agent (Node.js + TypeScript)
-│   └── web/                      Next.js 15 App Router web application
-├── packages/
-│   └── shared/                   Shared types (TaskType, wire messages, metadata)
-├── patches/                      pnpm patches (e.g. @livekit/agents)
-├── docker-compose.yml
-└── docker-compose.prod.yml
+Le système suit une architecture classique Realtime Voice AI utilisant LiveKit comme couche d'orchestration.
+
+```mermaid
+graph TD
+    User((Candidat)) <--> Web[Next.js Web App]
+    Web <--> LK[LiveKit Cloud / Server]
+    LK <--> Agent[Node.js LiveKit Agent]
+    Agent <--> OpenAI[OpenAI Realtime API]
+    Agent <--> DB[(SQLite Exercises)]
 ```
 
-- `CLAUDE.md`: legacy project guidance. Keep `AGENTS.md` aligned with it when updating shared rules.
+### 🏎️ Stratégie de Réveil (Scale-to-Zero)
+Pour optimiser les coûts sur Railway, l'agent se met en veille lorsqu'il n'est pas utilisé. Nous utilisons une stratégie de réveil à deux niveaux :
 
-If you are working inside `apps/agent/`, also read `apps/agent/AGENTS.md` for LiveKit-specific guidance.
+1.  **Niveau B (Eager)** : Le layout racine de l'application web lance un `POST /wake` non bloquant à chaque chargement de page.
+2.  **Niveau A (Safety)** : La route API `connection-details` effectue un appel de réveil **bloquant** avant de générer le jeton LiveKit. Cela garantit que l'agent est en train de démarrer avant que l'utilisateur n'essaie de se connecter.
 
-## Core Rules
+---
 
-- Use `pnpm` for installs, scripts, and tests. Run commands from the **repository root** via `turbo`, or from the relevant `apps/` directory.
-- Keep the agent entrypoint at `apps/agent/src/agent.ts`.
-- Do not hardcode TCF prompts or exercises in TypeScript when they belong in config files.
-- Edit agent behavior in `apps/agent/config/agents/*.yml` when changing instructions, greetings, or durations.
-- Shared types (TaskType, data message contracts, participant metadata) live in `packages/shared/`. Import from `@yorty-tcf/shared`.
-- Keep JavaScript and TypeScript unit tests beside the tested file.
-- When running unit tests, always append `-- --run`.
-- Use a git commit title plus description body when creating commits.
-- Never create git commits autonomously. Always let the user trigger commits explicitly using the `/commit` command.
+## 🤖 Focus Agent (`apps/agent`)
 
-## Architecture Summary
+### Point d'Entrée : `src/agent.ts`
+Lorsqu'un travailleur LiveKit démarre, il exécute le code dans `agent.ts`.
+1.  **Serveur HTTP** : Démarre un serveur léger (`wake-server.ts`) sur le port 8080 pour les healthchecks et les appels de réveil.
+2.  **Définition de l'Agent** : Se connecte à la salle et **attend un participant**.
+3.  **Poignée de Main de Métadonnées** : Une fois qu'un participant rejoint, l'agent lit ses `metadata` (définies par l'application web lors de la génération du jeton) pour identifier le `taskType` (ex: `tache2`).
+4.  **Instanciation de la Tâche** : Il crée une instance spécifique (ex: `TCFTache2`) qui hérite de la base `TCFAgent`.
 
-### Agent
+### Logique de Tâche : `src/agents/TCFAgent.ts`
+La classe `TCFAgent` est le cœur du comportement de l'examinateur :
+- **Configuration YAML** : Charge les instructions, les salutations et les contraintes à partir de `config/agents/*.yml`.
+- **Chargement d'Exercices** : Si la tâche l'exige, il extrait le contenu de l'exercice de la base de données SQLite.
+- **Outils LLM** : Définit des outils comme `finSession` (pour arrêter l'examen) et `envoiRapport` (pour envoyer le rapport pédagogique).
+- **Messagerie de Données** : Communique avec le client web en utilisant le protocole personnalisé défini dans `@yorty-tcf/shared`.
 
-- The agent reads participant metadata to determine `taskType` (`tache1`, `tache2`, `tache3`, `tef-section-a`, `tef-section-b`).
-- Task-specific logic lives in `apps/agent/src/agents/TCFTache1.ts`, `TCFTache2.ts`, `TCFTache3.ts`, `TEFSectionA.ts`, `TEFSectionB.ts`.
-- The agent sends data messages to the web client for reports and exercise data.
-- A lightweight HTTP wake server (`apps/agent/src/wake-server.ts`) runs on `PORT` (default 8080) alongside the LiveKit worker, providing `/health` and `/wake` endpoints for scale-to-zero support.
+### Cycle de Vie d'une Session
+```mermaid
+sequenceDiagram
+    participant W as Web App
+    participant A as Agent
+    participant L as LLM (OpenAI)
+    
+    W->>A: Rejoindre la Salle (avec Métadonnées de Tâche)
+    A->>W: Envoyer les Données d'Exercice (Titre, Desc, Image)
+    A->>W: Salutation Orale (Audio)
+    Note over W,A: Phase d'Examen
+    W<->A: Échange Audio Temps Réel
+    A->>L: Contexte + Instructions
+    L->>A: Réponse
+    A->>W: Audio + Transcription
+    Note over A: Fin d'Examen Déclenchée
+    A->>W: Envoyer Message 'session_end'
+    A->>L: Requête de Génération de Rapport
+    L->>A: Rapport Markdown
+    A->>W: Envoyer Messages de Données 'report' (Chunked)
+    Note over W,A: Phase de Coaching
+```
 
-### Web
+---
 
-- The web app uses Next.js App Router and React.
-- The main session flow is welcome -> pre-connect -> session -> report.
-- The route `apps/web/app/api/connection-details/route.ts` generates LiveKit connection details and passes `taskType` in participant metadata.
-- LiveKit UI code should stay in client components and keep the `'use client'` directive where required.
-- The root layout fires a non-blocking wake call to the agent (Layer B). The connection-details API route performs a blocking wake call as safety net (Layer A).
+## 📦 Focus Shared Package (`packages/shared`)
 
-### Shared Package
+Ce paquet est la "Source de Vérité" pour tout le monorepo. Il contient :
+- `TaskType` : Type d'union pour tous les examens supportés.
+- `DataMessage` : Union discriminée pour tous les messages de données.
+- `ParticipantMetadata` : Structure des métadonnées passées dans les jetons.
 
-- `packages/shared/` is an internal Turborepo package (consumed as TypeScript source, no build step).
-- Contains `TaskType`, all wire protocol message types (`ExerciseDataMessage`, `ExerciseImageMessage`, `ReportMessage`, etc.), and `ParticipantMetadata`.
+---
 
-## Important Data And Config
+## 🚀 Déploiement sur Railway (Recommandé)
 
-- Agent configuration: `apps/agent/config/agents/`
-- Service configuration: `apps/agent/config/service.yml`
-- TCF exercises source of truth: `apps/agent/config/tcf-exercises.csv` (committed)
-- TCF exercises runtime database: `apps/agent/config/tcf-exercises.db` (generated, not committed)
-- Agent reference content: `apps/agent/config/info/`
+Le déploiement est optimisé pour Railway :
+- Deux services : `web` et `agent`.
+- **Root Directory** : Laissez vide dans les paramètres Railway.
+- **Config Paths** : Pointe vers `apps/agent/railway.json` et `apps/web/railway.json`.
+- **Variables d'Environnement** : Doivent être définies dans le tableau de bord Railway.
 
-The SQLite database is generated from the CSV at build time (`pnpm generate-db`) and is included in the
-`pnpm build` step. Only one row is loaded into memory per session, which keeps agent memory usage low.
-To update exercises, edit the CSV and run `pnpm generate-db` (or `pnpm build`) from `apps/agent/`.
+Pour plus de détails sur Docker et l'hébergement local, consultez [DOCKER.md](./DOCKER.md).
 
-## Development Commands
+## Commandes npm / pnpm
 
-### Root (Turborepo)
-
-- Install all deps: `pnpm install` (from repo root)
-- Build all: `pnpm build`
-- Dev all: `pnpm dev`
-- Lint all: `pnpm lint`
-- Typecheck all: `pnpm typecheck`
-- Test all: `pnpm test`
-
-### Agent (from `apps/agent/`)
-
-- Generate SQLite DB from CSV: `pnpm generate-db`
-- Download required model files: `pnpm run download-files`
-- Dev: `pnpm dev`
-- Build: `pnpm build` (runs `generate-db` automatically before compiling TypeScript)
-- Start: `pnpm start`
-- Test: `pnpm test -- --run`
-- Lint: `pnpm lint`
-- Typecheck: `pnpm typecheck`
-
-### Web (from `apps/web/`)
-
-- Dev: `pnpm dev`
-- Build: `pnpm build`
-- Start: `pnpm start`
-- Lint: `pnpm lint`
-- Typecheck: `pnpm typecheck`
-
-## Environment
-
-Required variables for both packages:
-
-- `LIVEKIT_URL`
-- `LIVEKIT_API_KEY`
-- `LIVEKIT_API_SECRET`
-
-Required for the agent:
-
-- `OPENAI_API_KEY`
-
-Required for the web (production / Railway):
-
-- `AGENT_WAKE_URL` -- internal URL of the agent service (e.g. `http://agent.railway.internal:8080`)
-
-Use `.env.local` for local package development when appropriate.
-
-## Railway
-
-Deploy as **two services** from this repository (same GitHub repo, monorepo root):
-
-| Service | Dockerfile | Config as code |
-| --- | --- | --- |
-| Next.js (candidates) | `apps/web/Dockerfile` | `apps/web/railway.json` |
-| LiveKit agent (worker) | `apps/agent/Dockerfile` | `apps/agent/railway.json` |
-
-Both Dockerfiles use `turbo prune` and **require the repository root as the Docker build context**.
-
-### Dashboard setup (critical)
-
-For each Railway service, configure these two settings under **Settings → Source**:
-
-1. **Root Directory** — leave **blank** (defaults to the repository root). Do NOT set it to `apps/agent` or `apps/web`; this would break the `turbo prune` step because the build context would be limited to a single app directory instead of the full monorepo.
-2. **Config File Path** — set to the matching `railway.json`:
-   - Agent service → `apps/agent/railway.json`
-   - Web service → `apps/web/railway.json`
-
-If Railway shows "Using Detected Dockerfile" in build logs, the Config File Path is not set correctly.
-
-### Environment variables
-
-Set these on each Railway service (not in files — `.env*` is excluded from Docker builds):
-
-| Variable | Agent | Web |
-| --- | --- | --- |
-| `LIVEKIT_URL` | ✓ | ✓ |
-| `LIVEKIT_API_KEY` | ✓ | ✓ |
-| `LIVEKIT_API_SECRET` | ✓ | ✓ |
-| `OPENAI_API_KEY` | ✓ | |
-| `AGENT_WAKE_URL` | | ✓ |
-
-`AGENT_WAKE_URL` should be the agent's **internal** Railway domain (e.g. `http://agent.railway.internal:8080`).
-
-### Networking
-
-- Expose a **public domain** only on the web service.
-- The agent exposes port 8080 for its wake/health HTTP server but should use a **private/internal domain** (e.g. `agent.railway.internal`), not a public one.
-
-### Scale-to-zero
-
-The agent's `railway.json` sets `sleepApplication: true` and `healthcheckPath: "/health"`. Railway will scale the agent down when idle. The web app wakes it via a dual strategy:
-
-- **Layer B (eager):** The root layout fires a non-blocking `POST /wake` on every page load.
-- **Layer A (safety net):** The `connection-details` API route performs a blocking `POST /wake` before creating a LiveKit token, guaranteeing the agent is running before the session starts.
-
-### Watch patterns
-
-`watchPatterns` in each `railway.json` include `packages/shared/**` and `pnpm-lock.yaml`, so changes to shared types or dependencies trigger rebuilds of both services.
-
-## Version Notes
-
-- The project uses Node.js `v22.18.0` in `apps/agent/.nvmrc`.
-- The agent uses the LiveKit Agents Node.js SDK, so verify Node SDK feature support before copying patterns from Python examples.
+La liste complète des scripts (racine, `@yorty-tcf/agent`, `@yorty-tcf/web`) et la syntaxe `pnpm --filter` sont documentées dans [README.md](./README.md) (section **Référence des commandes par paquet**).
