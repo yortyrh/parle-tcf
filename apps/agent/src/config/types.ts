@@ -19,6 +19,9 @@ export interface ServiceConfig {
     participantJoinPollIntervalMs?: number;
     disconnectDelay: number;
   };
+  scaling?: {
+    idleTimeoutMs: number;
+  };
   endExamMessage: {
     instructions: string;
   };
