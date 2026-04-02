@@ -6,15 +6,11 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import { TCFTache1, TCFTache2, TCFTache3, TEFSectionA, TEFSectionB } from './agents/index.js';
 import { loadServiceConfig } from './config/index.js';
-import { resetIdleTimer, startWakeServer } from './wake-server.js';
+import { startWakeServer } from './wake-server.js';
 
 dotenv.config({ path: '.env.local' });
 
-const serviceConfig = loadServiceConfig();
-startWakeServer(
-  Number(process.env.PORT) || 8080,
-  serviceConfig.scaling?.idleTimeoutMs,
-);
+startWakeServer(Number(process.env.PORT) || 8080);
 
 /**
  * Obtient la fonction de noise cancellation appropriée basée sur la configuration
@@ -30,7 +26,8 @@ function getNoiseCancellation(type: string) {
 
 export default defineAgent({
   entry: async (ctx: JobContext) => {
-    resetIdleTimer();
+    // Charger la configuration du service
+    const serviceConfig = loadServiceConfig();
 
     const session = new voice.AgentSession({
       llm: new openai.realtime.RealtimeModel({
@@ -140,7 +137,7 @@ export default defineAgent({
 cli.runApp(
   new ServerOptions({
     agent: fileURLToPath(import.meta.url),
-    numIdleProcesses: 0,
-    jobMemoryWarnMB: 500,
+    // Default 500 MB warns on typical OpenAI Realtime + audio stack RSS (~520–600 MB).
+    jobMemoryWarnMB: 1024,
   }),
 );

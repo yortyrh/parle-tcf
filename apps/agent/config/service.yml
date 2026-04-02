@@ -35,10 +35,3 @@ connection:
   
   # Délai avant déconnexion après fin d'examen (ms)
   disconnectDelay: 3000
-
-# Scale-to-zero : arrêt automatique après inactivité
-scaling:
-  # Durée d'inactivité (ms) avant arrêt du processus.
-  # Railway relancera le container au prochain appel /wake.
-  # Défaut : 600000 (10 minutes). Mettre 0 pour désactiver.
-  idleTimeoutMs: 600000
