@@ -53,11 +53,16 @@ export function ViewController({
   useEffect(() => {
     if (exam.isConnected) {
       wasConnectedRef.current = true;
-    } else if (wasConnectedRef.current && welcomeHref && isMountedRef.current) {
+    } else if (
+      wasConnectedRef.current &&
+      !exam.isRestarting &&
+      welcomeHref &&
+      isMountedRef.current
+    ) {
       wasConnectedRef.current = false;
       router.replace(welcomeHref);
     }
-  }, [exam.isConnected, router, welcomeHref]);
+  }, [exam.isConnected, exam.isRestarting, router, welcomeHref]);
 
   const startSession = (taskType: string, exerciseId?: string) => {
     const task = appConfig.tasks.find((t) => t.taskType === taskType);
@@ -86,7 +91,7 @@ export function ViewController({
   }, []);
 
   if (!exam.isConnected) {
-    if (exam.isConnecting) {
+    if (exam.isConnecting || exam.isRestarting) {
       return <ConnectingSkeleton />;
     }
     return (

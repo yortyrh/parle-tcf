@@ -46,9 +46,13 @@ const FIN_SESSION_NEXT =
 const ENVOI_RAPPORT_NEXT =
   'Le rapport a été envoyé. Le micro du candidat sera réactivé automatiquement. Restez disponible pour répondre aux questions du candidat sur le rapport et son évaluation.';
 
+const RECOMMENCER_TEST_NEXT =
+  "L'épreuve a été réinitialisée. Recommence immédiatement comme examinateur au tout début : suis exactement la consigne d'accueil initiale, sans résumer la tentative précédente.";
+
 export interface RealtimeExamContextValue {
   isConnected: boolean;
   isConnecting: boolean;
+  isRestarting: boolean;
   fatalError: string | null;
   start: (taskType: string, exerciseId?: string) => Promise<void>;
   end: () => void;
@@ -70,7 +74,8 @@ export interface RealtimeExamContextValue {
   resetSessionEnd: () => void;
   transcripts: ExamTranscriptLine[];
   sessionId: string | null;
-  restartExam: () => void;
+  restartSequence: number;
+  restartExam: () => Promise<void>;
 }
 
 const RealtimeExamContext = createContext<RealtimeExamContextValue | null>(null);
@@ -86,6 +91,7 @@ export function useRealtimeExam(): RealtimeExamContextValue {
 export function RealtimeExamProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [micEnabled, setMicEnabledState] = useState(false);
   const [agentSpeaking, setAgentSpeaking] = useState(false);
@@ -98,12 +104,16 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const [sessionEnded, setSessionEnded] = useState(false);
   const [transcripts, setTranscripts] = useState<ExamTranscriptLine[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [restartSequence, setRestartSequence] = useState(0);
 
   const sessionRef = useRef<RealtimeSession | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const currentTaskTypeRef = useRef<string | null>(null);
+  const currentExerciseIdRef = useRef<string | undefined>(undefined);
+  const restartExamRef = useRef<() => Promise<void>>(async () => {});
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const userVadRafRef = useRef<number>(0);
@@ -262,11 +272,12 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     setSessionEnded(false);
   }, []);
 
-  const start = useCallback(
+  const connectToExam = useCallback(
     async (taskType: string, exerciseId?: string) => {
-      if (isConnecting || isConnected) return;
       setFatalError(null);
       setIsConnecting(true);
+      currentTaskTypeRef.current = taskType;
+      currentExerciseIdRef.current = exerciseId;
       try {
         const data = await createExamSession({
           taskType: taskType as TaskType,
@@ -329,11 +340,22 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           },
         });
 
+        const recommencerTest = tool({
+          name: 'recommencerTest',
+          description:
+            "À appeler lorsque le candidat demande de recommencer le test ou de refaire l'épreuve depuis le début. Réinitialise la conversation et le déroulement comme au premier lancement.",
+          parameters: z.object({}),
+          execute: async () => {
+            void restartExamRef.current();
+            return RECOMMENCER_TEST_NEXT;
+          },
+        });
+
         const agent = new RealtimeAgent({
           name: 'Examinateur TCF/TEF',
           instructions,
           voice: data.agentConfig.voice,
-          tools: [finSession, envoiRapport],
+          tools: [finSession, envoiRapport, recommencerTest],
         });
 
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -372,6 +394,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         sessionRef.current = session;
 
         session.on('transport_event', (event: TransportEvent) => {
+          if (sessionRef.current !== session) return;
           if (event.type === 'function_call' && event.name === 'envoiRapport') {
             const partial = extractPartialReportFromToolArgs(event.arguments ?? '');
             if (partial !== null && partial.length > 0) {
@@ -391,6 +414,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         });
 
         session.on('history_updated', (history: RealtimeItem[]) => {
+          if (sessionRef.current !== session) return;
           setTranscripts(transcriptLinesFromHistory(history));
         });
 
@@ -423,34 +447,39 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         setIsConnecting(false);
       }
     },
-    [isConnecting, isConnected, end, startUserVad, startAgentVad]
+    [end, startUserVad, startAgentVad]
   );
 
-  const restartExam = useCallback(() => {
-    const session = sessionRef.current;
-    const sid = sessionIdRef.current;
-    if (!session || !sid) return;
+  const start = useCallback(
+    async (taskType: string, exerciseId?: string) => {
+      if (isConnecting || isConnected || isRestarting) return;
+      await connectToExam(taskType, exerciseId);
+    },
+    [connectToExam, isConnecting, isConnected, isRestarting]
+  );
+
+  const restartExam = useCallback(async () => {
+    const taskType = currentTaskTypeRef.current ?? exerciseData?.taskType ?? null;
+    const exerciseId = currentExerciseIdRef.current ?? exerciseData?.exerciseId;
+    const sessionId = sessionIdRef.current;
+    if (!taskType) return;
 
     archiveReportAndReset();
     resetSessionEnd();
-    setReportStreaming(null);
-    setMicEnabled(false);
+    setRestartSequence((current) => current + 1);
+    setIsRestarting(true);
+    if (sessionId) {
+      socketRef.current?.emit(SOCKET_EVENTS.SESSION_RESTART, { sessionId });
+    }
+    end();
+    try {
+      await connectToExam(taskType, exerciseId);
+    } finally {
+      setIsRestarting(false);
+    }
+  }, [archiveReportAndReset, resetSessionEnd, end, connectToExam, exerciseData]);
 
-    socketRef.current?.emit(SOCKET_EVENTS.SESSION_RESTART, { sessionId: sid });
-
-    session.interrupt();
-    session.updateHistory([]);
-    session.sendMessage({
-      type: 'message',
-      role: 'user',
-      content: [
-        {
-          type: 'input_text',
-          text: "Le candidat demande de recommencer le test. Réinitialise entièrement ton comportement : tu redeviens l'examinateur au début de l'épreuve et tu suis à nouveau la consigne d'accueil initiale.",
-        },
-      ],
-    });
-  }, [archiveReportAndReset, resetSessionEnd, setMicEnabled]);
+  restartExamRef.current = restartExam;
 
   useEffect(() => {
     return () => {
@@ -462,6 +491,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     () => ({
       isConnected,
       isConnecting,
+      isRestarting,
       fatalError,
       start,
       end,
@@ -481,11 +511,13 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       resetSessionEnd,
       transcripts,
       sessionId,
+      restartSequence,
       restartExam,
     }),
     [
       isConnected,
       isConnecting,
+      isRestarting,
       fatalError,
       start,
       end,
@@ -503,6 +535,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       resetSessionEnd,
       transcripts,
       sessionId,
+      restartSequence,
       restartExam,
     ]
   );

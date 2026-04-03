@@ -169,12 +169,13 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const showExerciseSkeleton = !exam.exerciseData && (isTache2 || isTache3);
 
   const handleRestart = useCallback(() => {
-    exam.archiveReportAndReset();
-    exam.resetSessionEnd();
+    void exam.restartExam();
+  }, [exam]);
+
+  useEffect(() => {
     resetTimer();
     setViewingPreviousIndex(null);
-    exam.restartExam();
-  }, [exam, resetTimer]);
+  }, [exam.restartSequence, resetTimer]);
 
   /* Intentionally avoid depending on the whole `exam` object (context value) to limit re-runs. */
   useEffect(() => {
