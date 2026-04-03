@@ -1,171 +1,129 @@
-# 🎙️ TCF/TEF LiveKit - Plateforme d'Examen Oral
+# 🎙️ TCF/TEF — Plateforme d’examen oral
 
-Cette plateforme monorepo (Turborepo + pnpm) permet de passer des simulations d'examens oraux pour le TCF et le TEF avec un examinateur IA ultra-réaliste utilisant **LiveKit Agents** et **OpenAI Realtime**.
+Monorepo (Turborepo + pnpm) pour des simulations d’examens oraux TCF/TEF avec un examinateur IA : **OpenAI Realtime en WebRTC direct dans le navigateur** (`@openai/agents`), **API NestJS** pour les secrets et les données (exercices SQLite, YAML), **Socket.io** optionnel pour le multi-onglet.
 
-## 🏗️ Structure du Projet
+## 🏗️ Structure du projet
 
-L'application est divisée en trois modules principaux :
+| Paquet | Rôle |
+| --- | --- |
+| **`apps/web`** | Next.js 15 — UI candidat, session Realtime, micro, transcriptions, rapport. |
+| **`apps/api`** | NestJS — `client_secrets` OpenAI, chargement config/exercices, gateway Socket.io. |
+| **`packages/shared`** | Types, schémas Zod (session), événements socket — build `tsc` → `dist/`. |
 
-- **🤖 Agent (`apps/agent`)** : L'intelligence de l'examinateur (Node.js). Gère les scénarios TCF/TEF, les outils LLM et les rapports pédagogiques.
-- **🌐 Web (`apps/web`)** : L'interface candidat (Next.js 15). Gère l'audio temps réel, les transcriptions et l'affichage des exercices.
-- **📦 Shared (`packages/shared`)** : Les types et protocoles de communication partagés entre l'agent et le web.
+## 🚀 Démarrage rapide (Docker Compose)
 
-## 🚀 Démarrage Rapide (Local)
+### Prérequis
 
-Le moyen le plus simple de faire tourner l'application localement est d'utiliser **Docker Compose**.
-
-### 1. Prérequis
 - Docker & Docker Compose
-- Identifiants LiveKit Cloud (URL, API Key, Secret)
-- Clé API OpenAI
+- Clé **OpenAI** (`OPENAI_API_KEY`)
 
-### 2. Configuration
-Copiez le fichier `.env.example` à la racine et remplissez-le :
+### Configuration
+
 ```bash
 cp .env.example .env
+# Éditez OPENAI_API_KEY
 ```
 
-### 3. Lancement
+### Lancement
+
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
-L'interface web sera accessible sur `http://localhost:3000`.
+
+- Front : **http://localhost** (port 80 → 3000 dans le conteneur).
+- API : **http://localhost:3001** (health : `/health`).
+
+Le build du front embarque `NEXT_PUBLIC_EXAM_API_URL` (voir `docker-compose.yml` → build args). Pour un accès depuis votre machine, la valeur par défaut est `http://localhost:3001`.
 
 ---
 
-## ☁️ Déploiement sur Railway
+## ☁️ Railway
 
-Le projet est pré-configuré pour un déploiement "Scale-to-Zero" sur Railway.
-
-### Configuration du Tableau de Bord (Crucial)
-Créez deux services dans Railway à partir du même dépôt GitHub :
+Créez **deux** services à partir du même dépôt, **root directory vide** :
 
 | Service | Config File Path |
 | --- | --- |
-| **Web Service** | `apps/web/railway.json` |
-| **Agent Service** | `apps/agent/railway.json` |
+| Web | `apps/web/railway.json` |
+| API | `apps/api/railway.json` |
 
-**IMPORTANT** : Laissez le **Root Directory** vide (racine) pour les deux services. Ne le réglez PAS sur `apps/web` ou `apps/agent`.
+Variables importantes :
 
-### Variables d'Environnement
-Configurez les variables suivantes dans le tableau de bord Railway :
-
-| Variable | Requis pour | Description |
+| Variable | Où | Description |
 | --- | --- | --- |
-| `LIVEKIT_URL` | Web & Agent | Votre URL LiveKit Cloud |
-| `LIVEKIT_API_KEY` | Web & Agent | |
-| `LIVEKIT_API_SECRET` | Web & Agent | |
-| `OPENAI_API_KEY` | Agent | |
-| `AGENT_WAKE_URL` | Web | URL interne de l'agent (ex: `http://agent.railway.internal:8080`) |
+| `OPENAI_API_KEY` | API | Appel `client_secrets` |
+| `CORS_ORIGINS` | API | Origines du front (séparées par des virgules) |
+| `NEXT_PUBLIC_EXAM_API_URL` | Web (**build**) | URL publique de l’API vue par le navigateur |
+| `PORT` | API | Optionnel (défaut 3001 en local) |
 
 ---
 
 ## 🛠️ Développement local (sans Docker)
 
-À la racine du dépôt, après `pnpm install` :
+À la racine, après `pnpm install` :
 
-| Commande racine | Rôle |
+| Commande | Rôle |
 | --- | --- |
-| `pnpm dev` | Lance **tous** les paquets qui exposent `dev` (agent + web via Turborepo). |
-| `pnpm build` | Build de tout le monorepo (`turbo run build`). |
-| `pnpm lint` | Lint sur tous les paquets concernés. |
-| `pnpm typecheck` | Vérification TypeScript partout. |
-| `pnpm test` | Tests unitaires là où un script `test` existe (principalement l’agent). |
-| `pnpm format` | Formate le code (Prettier) partout. |
-| `pnpm format:check` | Vérifie le formatage sans modifier les fichiers. |
+| `pnpm dev` | Lance les paquets qui exposent `dev` (web + api via Turborepo). |
+| `pnpm build` | Build monorepo (`^build` pour `@yorty-tcf/shared` puis apps). |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Qualité (voir scripts de chaque paquet). |
+| `pnpm format` / `pnpm format:check` | Prettier. |
 
-Pour cibler **un seul paquet**, utilisez [`pnpm --filter`](https://pnpm.io/filtering) avec le **nom** du paquet (`package.json` → `name`) :
+Dans deux terminaux typiques :
 
 ```bash
-pnpm --filter @yorty-tcf/agent <script>
-pnpm --filter @yorty-tcf/web   <script>
+pnpm --filter @yorty-tcf/api run dev    # http://localhost:3001
+pnpm --filter @yorty-tcf/web run dev    # http://localhost:3000
 ```
 
-Équivalent pratique avec le chemin du dossier :
+Copier `apps/api/.env.example` → `apps/api/.env` et `apps/web/.env.example` → `apps/web/.env.local` selon besoin.
+
+Cibler un paquet :
 
 ```bash
-pnpm --filter ./apps/agent <script>
-pnpm --filter ./apps/web   <script>
+pnpm --filter @yorty-tcf/api <script>
+pnpm --filter @yorty-tcf/web <script>
+pnpm --filter @yorty-tcf/shared <script>
 ```
 
 ---
 
-## 📋 Référence des commandes par paquet
+## 📋 Scripts par paquet
 
-### Racine (`yorty-tcf-livekit`)
+### API — `@yorty-tcf/api` (`apps/api`)
 
-Ces scripts délèguent à **Turborepo** ; ils s’appliquent à l’ensemble du workspace (selon ce que chaque paquet définit).
-
-| Script | Commande |
+| Script | Description |
 | --- | --- |
-| Développement parallèle | `pnpm dev` |
-| Build | `pnpm build` |
-| Lint | `pnpm lint` |
-| Typecheck | `pnpm typecheck` |
-| Tests | `pnpm test` (équivalent recommandé avec flag explicite : `pnpm test -- --run`) |
-| Prettier (écriture) | `pnpm format` |
-| Prettier (vérification) | `pnpm format:check` |
+| `dev` / `build` / `start` | NestJS |
+| `generate-db` | CSV TCF → SQLite (`config/tcf-exercises.db`) |
+| `extract-tef`, `generate-tef-images`, `generate-tef-annonces`, `clean-tef-dimension-images`, `reset-tef-images` | Pipeline contenu TEF (voir commentaires dans `apps/api/scripts/`) |
+| `lint`, `typecheck`, `format` | Qualité |
 
----
-
-### Agent — `@yorty-tcf/agent` (`apps/agent`)
-
-Premier usage local typique : générer la base SQLite à partir du CSV, puis télécharger les fichiers modèles LiveKit (VAD, etc.).
-
-| Script | Commande (depuis la racine) | Description |
-| --- | --- | --- |
-| `generate-db` | `pnpm --filter @yorty-tcf/agent run generate-db` | Recrée `tcf-exercises.db` à partir de `config/tcf-exercises.csv`. |
-| `download-files` | `pnpm --filter @yorty-tcf/agent run download-files` | Lance un `build` puis télécharge les modèles/fichiers requis par LiveKit Agents (à faire une première fois, ou après changement de dépendances). |
-| `dev` | `pnpm --filter @yorty-tcf/agent run dev` | Agent en mode développement (`tsx src/agent.ts dev`). |
-| `build` | `pnpm --filter @yorty-tcf/agent run build` | CSV → SQLite + compilation TypeScript vers `dist/`. |
-| `start` | `pnpm --filter @yorty-tcf/agent run start` | Production : `node dist/agent.js start`. |
-| `clean` | `pnpm --filter @yorty-tcf/agent run clean` | Supprime le dossier `dist/`. |
-| `typecheck` | `pnpm --filter @yorty-tcf/agent run typecheck` | `tsc --noEmit`. |
-| `lint` | `pnpm --filter @yorty-tcf/agent run lint` | ESLint. |
-| `lint:fix` | `pnpm --filter @yorty-tcf/agent run lint:fix` | ESLint avec correctifs automatiques. |
-| `format` | `pnpm --filter @yorty-tcf/agent run format` | Prettier (écriture). |
-| `format:check` | `pnpm --filter @yorty-tcf/agent run format:check` | Prettier (vérification). |
-| `test` | `pnpm --filter @yorty-tcf/agent run test -- --run` | Tests unitaires (runner Node). **Préférez `-- --run`** pour une exécution non interactive. |
-| `test:watch` | `pnpm --filter @yorty-tcf/agent run test:watch` | Tests en mode watch. |
-| `extract-tef` | `pnpm --filter @yorty-tcf/agent run extract-tef` | Script TEF (extraction). |
-| `generate-tef-images` | `pnpm --filter @yorty-tcf/agent run generate-tef-images` | Génération d’images TEF. |
-| `generate-tef-annonces` | `pnpm --filter @yorty-tcf/agent run generate-tef-annonces` | Génère le markdown des annonces TEF dans `apps/web/content/tef-annonces/`. Régénération complète : ajoutez `-- --force` (voir ci-dessous). |
-| `clean-tef-dimension-images` | `pnpm --filter @yorty-tcf/agent run clean-tef-dimension-images` | Nettoyage dimensions images TEF. |
-| `reset-tef-images` | `pnpm --filter @yorty-tcf/agent run reset-tef-images` | Réinitialisation images TEF. |
-
-Pour passer des arguments à un script npm du paquet agent, placez-les après `--` :
+Exemple :
 
 ```bash
-pnpm --filter @yorty-tcf/agent run generate-tef-annonces -- --force
+pnpm --filter @yorty-tcf/api run generate-db
+pnpm --filter @yorty-tcf/api run generate-tef-annonces -- --force
 ```
-
----
 
 ### Web — `@yorty-tcf/web` (`apps/web`)
 
-| Script | Commande (depuis la racine) | Description |
-| --- | --- | --- |
-| `dev` | `pnpm --filter @yorty-tcf/web run dev` | Next.js avec Turbopack (`localhost:3000` par défaut). |
-| `build` | `pnpm --filter @yorty-tcf/web run build` | Build de production Next.js. |
-| `start` | `pnpm --filter @yorty-tcf/web run start` | Sert le build Next.js. |
-| `lint` | `pnpm --filter @yorty-tcf/web run lint` | `next lint`. |
-| `typecheck` | `pnpm --filter @yorty-tcf/web run typecheck` | `tsc --noEmit`. |
-| `format` | `pnpm --filter @yorty-tcf/web run format` | Prettier sur le dossier web. |
-| `format:check` | `pnpm --filter @yorty-tcf/web run format:check` | Vérification Prettier. |
+| Script | Description |
+| --- | --- |
+| `dev`, `build`, `start` | Next.js |
+| `lint`, `typecheck`, `format` | Qualité |
 
-Le paquet web **n’expose pas** de script `test` pour l’instant ; les tests côté UI/API pourront être ajoutés plus tard dans ce même tableau.
+### Shared — `@yorty-tcf/shared`
 
----
-
-### Shared — `@yorty-tcf/shared` (`packages/shared`)
-
-Paquet de **types et exports TypeScript** uniquement : pas de scripts npm (`build`, `test`, etc.). Il est consommé en source par les autres paquets via `workspace:*`.
+| Script | Description |
+| --- | --- |
+| `build` | `tsc` → `dist/` |
+| `typecheck` | `tsc --noEmit` |
 
 ---
 
-## 🔗 Documentation complémentaire
+## 🔗 Documentation
 
-- Architecture, flux LiveKit et données : [AGENTS.md](./AGENTS.md).
-- Exercices, YAML et contenu TEF : [EXERCICES.md](./EXERCICES.md).
-- Docker local : [DOCKER.md](./DOCKER.md).
-- CI GitHub Actions : [`.github/README.md`](./.github/README.md).
+- Architecture détaillée : [AGENTS.md](./AGENTS.md)
+- Exercices & YAML : [EXERCICES.md](./EXERCICES.md)
+- Docker : [DOCKER.md](./DOCKER.md)
+- CI : [`.github/README.md`](./.github/README.md)

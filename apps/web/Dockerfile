@@ -32,6 +32,9 @@ COPY --from=installer /app/ .
 COPY --from=pruner /app/out/full/ .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# Browser must know the public API URL at build time (inlined into the client bundle).
+ARG NEXT_PUBLIC_EXAM_API_URL=http://localhost:3001
+ENV NEXT_PUBLIC_EXAM_API_URL=$NEXT_PUBLIC_EXAM_API_URL
 RUN turbo run build --filter=@yorty-tcf/web
 
 # --- Stage 4: Production runner ---

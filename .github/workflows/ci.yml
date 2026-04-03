@@ -1,6 +1,4 @@
-# CI monorepo — remplace les anciens workflows :
-# - apps/agent/.github/workflows/tests.yml
-# - apps/web/.github/workflows/build-and-test.yaml
+# CI monorepo (web + api + shared)
 name: CI
 
 on:

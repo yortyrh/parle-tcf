@@ -11,6 +11,3 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
   - unrs-resolver
-
-patchedDependencies:
-  '@livekit/agents@1.0.27': patches/@livekit__agents@1.0.27.patch

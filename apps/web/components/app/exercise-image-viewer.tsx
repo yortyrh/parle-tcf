@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import Image from 'next/image';
 import remarkGfm from 'remark-gfm';
 import { useExerciseAnnonceMarkdown } from '@/hooks/useExerciseAnnonceMarkdown';
-import type { ExerciseImageData } from '@/hooks/useExerciseImage';
+import type { ExerciseImageData } from '@/types/exercise-image';
 
 interface ExerciseImageViewerProps {
   exerciseImage: ExerciseImageData | null;

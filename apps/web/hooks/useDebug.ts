@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
-import { setLogLevel } from 'livekit-client';
 
 export function useDebugMode({ enabled = false }: { enabled?: boolean } = {}) {
   useEffect(() => {
-    setLogLevel(enabled ? 'debug' : 'warn');
+    if (enabled && typeof window !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.debug('[yorty-tcf] debug mode enabled');
+    }
   }, [enabled]);
 }

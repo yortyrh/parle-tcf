@@ -1,52 +1,72 @@
-# 📝 Guide des Exercices & Configuration
+# 📝 Guide des exercices & configuration
 
-Ce document explique comment gérer le contenu des examens (exercices, prompts, images) et la configuration des agents.
+Gestion du contenu des examens (prompts YAML, exercices TCF/TEF, images).
 
-## 🤖 Configuration des Agents (Prompts)
+## 🤖 Configuration des examinateurs (prompts)
 
-Les instructions des examinateurs IA sont définies dans des fichiers YAML situés dans `apps/agent/config/agents/`.
+Fichiers YAML dans **`apps/api/config/agents/`** (chargés par l’API pour construire la session Realtime).
 
-### Structure d'un fichier YAML
-- `name` / `description` : Métadonnées de la tâche.
-- `settings` : Paramètres techniques (voix, interruptions).
-- `baseInstructions` : Instructions communes (ex: "Tu es un examinateur officiel...").
-- `instructions` : Instructions spécifiques à la tâche (ex: "Pose des questions sur le thème X...").
-- `greeting` : La première phrase prononcée par l'agent.
+### Structure d’un fichier YAML
+
+- `name` / `description` : métadonnées de la tâche.
+- `settings` : paramètres (voix, interruptions).
+- `baseInstructions` : instructions communes.
+- `instructions` : consignes spécifiques à la tâche.
+- `greeting` : accueil oral initial.
 
 ### Tâches supportées
+
 - `tache1.yml`, `tache2.yml`, `tache3.yml` (TCF)
 - `tef-section-a.yml`, `tef-section-b.yml` (TEF)
 
----
-
-## 📚 Base de Données des Exercices
-
-### TCF (Tâche 2 et 3)
-Les exercices TCF sont gérés via un fichier CSV : `apps/agent/config/tcf-exercises.csv`.
-- Pour ajouter un exercice, ajoutez une ligne au CSV.
-- **Important** : Après modification, vous devez régénérer la base SQLite utilisée par l'agent :
-  ```bash
-  cd apps/agent
-  pnpm generate-db
-  ```
-
-### TEF (Section A et B)
-Les exercices TEF utilisent des images et des fichiers markdown.
-- **Images** : Situées dans `apps/web/public/tef-exercices/`.
-- **Annonces (Markdown)** : Situées dans `apps/web/content/tef-annonces/`. Ces fichiers contiennent le texte qui s'affiche à côté de l'image de l'exercice.
+La voix / le modèle côté Realtime sont aussi dérivés de `apps/api/config/service.yml` selon l’implémentation actuelle de `ExamSessionService`.
 
 ---
 
-## 🛠️ Outils de Génération
+## 📚 Base de données des exercices
 
-Le module `apps/agent` contient plusieurs scripts pour automatiser la gestion du contenu :
+### TCF (tâches 2 et 3)
 
-- `pnpm generate-db` : Synchronise le CSV TCF vers SQLite.
-- `pnpm run download-files` : Télécharge les modèles nécessaires au fonctionnement de l'agent.
+- CSV : **`apps/api/config/tcf-exercises.csv`**
+- SQLite utilisée à l’exécution : **`apps/api/config/tcf-exercises.db`**
+
+Après modification du CSV :
+
+```bash
+pnpm --filter @yorty-tcf/api run generate-db
+```
+
+### TEF (sections A et B)
+
+- Données structurées : `apps/api/config/tef-exercises.json`
+- **Images** : `apps/web/public/tef-exercices/`
+- **Annonces (markdown)** : `apps/web/content/tef-annonces/`
 
 ---
 
-## 💡 Conseils pour les Prompts
-- **Langue** : Les instructions (`instructions`) peuvent être en français ou en anglais, mais l'agent répondra dans la langue configurée.
-- **Contraintes** : Soyez explicite sur les durées (ex: "L'entretien doit durer exactement 2 minutes").
-- **Personnalité** : Vous pouvez ajuster le ton de l'examinateur (bienveillant, strict, etc.) directement dans le champ `instructions`.
+## 🛠️ Scripts de génération (dans `apps/api`)
+
+Exécution depuis la racine du monorepo avec le filtre `@yorty-tcf/api` :
+
+| Script | Rôle |
+| --- | --- |
+| `generate-db` | CSV TCF → SQLite |
+| `extract-tef` | Images TEF → enrichissement `tef-exercises.json` (voir script, clé OpenAI) |
+| `generate-tef-images` | Génération d’images dans `apps/web/public/tef-exercices/generated/` |
+| `generate-tef-annonces` | Markdown dans `apps/web/content/tef-annonces/` |
+| `clean-tef-dimension-images` | Nettoie les variantes dimensionnées |
+| `reset-tef-images` | Réinitialise les images générées |
+
+Exemple :
+
+```bash
+pnpm --filter @yorty-tcf/api run generate-tef-annonces -- --force
+```
+
+---
+
+## 💡 Conseils pour les prompts
+
+- **Langue** : les `instructions` peuvent être FR ou EN ; le comportement oral suit le modèle Realtime.
+- **Contraintes** : durées, nombre de questions, etc., dans `instructions`.
+- **Personnalité** : ajuster le ton dans `instructions` / `greeting`.

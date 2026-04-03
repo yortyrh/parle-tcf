@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { TextStreamData } from '@livekit/components-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import type { ExamTranscriptLine } from '@/lib/transcript-from-history';
 import { cn } from '@/lib/utils';
 
 const ESTIMATED_ROW_HEIGHT = 72;
@@ -10,17 +10,11 @@ const OVERSCAN = 5;
 const AUTO_SCROLL_THRESHOLD_PX = 120;
 
 interface ConversationTabContentProps {
-  transcriptions: TextStreamData[];
-  localIdentity: string;
+  lines: ExamTranscriptLine[];
 }
 
-const MessageBubble = React.memo(function MessageBubble({
-  item,
-  isLocal,
-}: {
-  item: TextStreamData;
-  isLocal: boolean;
-}) {
+const MessageBubble = React.memo(function MessageBubble({ item }: { item: ExamTranscriptLine }) {
+  const isLocal = item.isLocal;
   const label = isLocal ? 'Vous' : 'Évaluateur';
 
   return (
@@ -51,14 +45,8 @@ const MessageBubble = React.memo(function MessageBubble({
   );
 });
 
-export function ConversationTabContent({
-  transcriptions,
-  localIdentity,
-}: ConversationTabContentProps) {
-  const sorted = useMemo(
-    () => [...transcriptions].sort((a, b) => a.streamInfo.timestamp - b.streamInfo.timestamp),
-    [transcriptions]
-  );
+export function ConversationTabContent({ lines }: ConversationTabContentProps) {
+  const sorted = useMemo(() => [...lines].sort((a, b) => a.timestamp - b.timestamp), [lines]);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -78,50 +66,30 @@ export function ConversationTabContent({
   }, []);
 
   useEffect(() => {
-    if (isNearBottom && sorted.length > 0) {
-      virtualizer.scrollToIndex(sorted.length - 1, { align: 'end', behavior: 'smooth' });
-    }
+    const el = parentRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', checkIfNearBottom, { passive: true });
+    return () => el.removeEventListener('scroll', checkIfNearBottom);
+  }, [checkIfNearBottom]);
+
+  useEffect(() => {
+    if (!isNearBottom || sorted.length === 0) return;
+    virtualizer.scrollToIndex(sorted.length - 1, { align: 'end' });
   }, [sorted.length, isNearBottom, virtualizer]);
 
-  if (sorted.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-        <p className="text-muted-foreground text-sm">Aucune conversation pour le moment.</p>
-        <p className="text-muted-foreground/70 text-xs">
-          La transcription de la conversation apparaîtra ici.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div ref={parentRef} className="h-full overflow-y-auto" onScroll={checkIfNearBottom}>
-      <div
-        style={{
-          height: `${virtualizer.getTotalSize()}px`,
-          width: '100%',
-          position: 'relative',
-        }}
-      >
+    <div ref={parentRef} className="h-full min-h-[200px] overflow-y-auto">
+      <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const item = sorted[virtualRow.index];
-          const isLocal = item.participantInfo.identity === localIdentity;
-
+          if (!item) return null;
           return (
             <div
-              key={item.streamInfo.id}
-              data-index={virtualRow.index}
-              ref={virtualizer.measureElement}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
-              className="pb-3"
+              key={item.id}
+              className="absolute top-0 left-0 w-full px-1 py-2"
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
             >
-              <MessageBubble item={item} isLocal={isLocal} />
+              <MessageBubble item={item} />
             </div>
           );
         })}

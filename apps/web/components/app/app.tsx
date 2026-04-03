@@ -1,38 +1,27 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { TokenSource } from 'livekit-client';
-import {
-  RoomAudioRenderer,
-  SessionProvider,
-  StartAudio,
-  useSession,
-} from '@livekit/components-react';
 import type { AppConfig } from '@/app-config';
 import { ViewController } from '@/components/app/view-controller';
-import { Toaster } from '@/components/livekit/toaster';
-import { useAgentErrors } from '@/hooks/useAgentErrors';
+import { Toaster } from '@/components/ui/toaster';
 import { useDebugMode } from '@/hooks/useDebug';
+import { useRealtimeExamFatalToast } from '@/hooks/useRealtimeExamFatalToast';
+import { RealtimeExamProvider } from '@/providers/realtime-exam-provider';
 
 const IN_DEVELOPMENT = process.env.NODE_ENV !== 'production';
 
 function AppSetup() {
   useDebugMode({ enabled: IN_DEVELOPMENT });
-  useAgentErrors();
+  useRealtimeExamFatalToast();
   return null;
 }
 
 interface AppProps {
   appConfig: AppConfig;
-  /** URL de la page principale (affiche le lien "Retour" lorsque défini) */
   homeHref?: string;
-  /** URL de la page d'accueil de l'examen (ex. /tcf, /tef). Destination lors de la fin de session. */
   welcomeHref?: string;
-  /** Active la navigation vers welcomeHref/taskType lors du choix d'une tâche (TCF). */
   routeByTask?: boolean;
-  /** Pré-sélectionne un type de tâche (lu depuis l'URL) */
   initialTaskType?: string;
-  /** Pré-sélectionne un exercice spécifique (lu depuis l'URL) */
   initialExerciseId?: string;
 }
 
@@ -49,56 +38,28 @@ export function App({
   const connectTaskTypeRef = useRef<string>(initialTaskType ?? defaultTaskType);
   const connectExerciseIdRef = useRef<string | undefined>(initialExerciseId);
 
-  // TokenSource.custom wraps a direct fetch so that every call reads the
-  // *current* connectTaskTypeRef value. We intentionally bypass
-  // TokenSource.endpoint() because its internal TokenSourceCached returns
-  // stale tokens when options change (it caches on "different options" and
-  // refetches on "same options" — opposite of expected). Without this, the
-  // eager prepareConnection() that useSession fires on mount always locks in
-  // the default task type and subsequent start() calls reuse that cached token.
-  const tokenSource = useMemo(
-    () =>
-      TokenSource.custom(async () => {
-        const metadata: Record<string, string> = { taskType: connectTaskTypeRef.current };
-        if (connectExerciseIdRef.current) {
-          metadata.exerciseId = connectExerciseIdRef.current;
-        }
-        const response = await fetch('/api/connection-details', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            participant_metadata: JSON.stringify(metadata),
-          }),
-        });
-        if (!response.ok) {
-          throw new Error(`Token fetch failed: ${response.status} ${await response.text()}`);
-        }
-        return response.json();
-      }),
-    []
+  const viewProps = useMemo(
+    () => ({
+      appConfig,
+      connectTaskTypeRef,
+      connectExerciseIdRef,
+      onTaskSelect: setTaskType,
+      homeHref,
+      welcomeHref,
+      routeByTask,
+      initialTaskType,
+      initialExerciseId,
+    }),
+    [appConfig, homeHref, welcomeHref, routeByTask, initialTaskType, initialExerciseId]
   );
 
-  const session = useSession(tokenSource, {});
-
   return (
-    <SessionProvider session={session}>
+    <RealtimeExamProvider>
       <AppSetup />
       <main className="h-svh">
-        <ViewController
-          appConfig={appConfig}
-          connectTaskTypeRef={connectTaskTypeRef}
-          connectExerciseIdRef={connectExerciseIdRef}
-          onTaskSelect={setTaskType}
-          homeHref={homeHref}
-          welcomeHref={welcomeHref}
-          routeByTask={routeByTask}
-          initialTaskType={initialTaskType}
-          initialExerciseId={initialExerciseId}
-        />
+        <ViewController {...viewProps} />
       </main>
-      <StartAudio label="Démarrer l'audio" />
-      <RoomAudioRenderer />
       <Toaster />
-    </SessionProvider>
+    </RealtimeExamProvider>
   );
 }

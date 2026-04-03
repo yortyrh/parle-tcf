@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { ExerciseImageData } from '@/hooks/useExerciseImage';
+import type { ExerciseImageData } from '@/types/exercise-image';
 
 const ExerciseImageViewer = React.lazy(() =>
   import('@/components/app/exercise-image-viewer').then((m) => ({

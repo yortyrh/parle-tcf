@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Task } from '@/app-config';
-import { Button } from '@/components/livekit/button';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface WelcomeViewProps {

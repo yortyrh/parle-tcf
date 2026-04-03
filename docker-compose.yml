@@ -1,25 +1,29 @@
 services:
-  agent:
+  api:
     build:
       context: .
-      dockerfile: apps/agent/Dockerfile
-    container_name: tcf-agent
+      dockerfile: apps/api/Dockerfile
+    container_name: tcf-api
     environment:
-      - LIVEKIT_URL=${LIVEKIT_URL}
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - PORT=8080
+      - PORT=3001
       - NODE_ENV=production
+      - CORS_ORIGINS=http://localhost:3000,http://web:3000
     volumes:
-      - ./apps/agent/config:/app/apps/agent/config:ro
+      - ./apps/api/config:/app/apps/api/config:ro
     ports:
-      - "8080:8080"
+      - "3001:3001"
     restart: unless-stopped
     networks:
       - tcf-network
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/health').then(r => { if (!r.ok) process.exit(1) })"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/health').then(r => { if (!r.ok) process.exit(1) })",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -28,12 +32,11 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # Must be reachable from the host browser (not the Docker service hostname).
+        NEXT_PUBLIC_EXAM_API_URL: http://localhost:3001
     container_name: tcf-web
     environment:
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - LIVEKIT_URL=${LIVEKIT_URL}
-      - AGENT_WAKE_URL=http://agent:8080
       - NODE_ENV=production
     ports:
       - "80:3000"
@@ -41,7 +44,7 @@ services:
     networks:
       - tcf-network
     depends_on:
-      - agent
+      - api
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s

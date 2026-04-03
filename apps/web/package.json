@@ -12,20 +12,16 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@yorty-tcf/shared": "workspace:*",
-    "@livekit/components-core": "^0.12.12",
-    "@livekit/components-react": "^2.9.15",
-    "@livekit/protocol": "^1.40.0",
+    "@openai/agents": "^0.8.2",
     "@phosphor-icons/react": "^2.1.8",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-toggle": "^1.1.9",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-virtual": "^3.13.23",
+    "@yorty-tcf/shared": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "livekit-client": "^2.15.15",
-    "livekit-server-sdk": "^2.13.2",
     "next": "15.5.14",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
@@ -34,8 +30,10 @@
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
+    "socket.io-client": "^4.8.3",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.3.0"
+    "tailwind-merge": "^3.3.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

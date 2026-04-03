@@ -1,10 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Public_Sans } from 'next/font/google';
 import localFont from 'next/font/local';
 import { ThemeProvider } from '@/components/app/theme-provider';
 import { ThemeToggle } from '@/components/app/theme-toggle';
 import { cn, getAppConfig, getStyles } from '@/lib/utils';
-import { wakeAgentAsync } from '@/lib/wake-agent';
 import '@/styles/globals.css';
 
 const publicSans = Public_Sans({
@@ -43,18 +42,17 @@ export function generateMetadata(): Metadata {
       shortcut: '/logo.png',
       apple: '/logo.png',
     },
-    viewport: {
-      width: 'device-width',
-      initialScale: 1,
-      maximumScale: 1,
-      userScalable: false,
-    },
   };
 }
 
-export default function RootLayout({ children }: RootLayoutProps) {
-  wakeAgentAsync();
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
+export default function RootLayout({ children }: RootLayoutProps) {
   const appConfig = getAppConfig();
   const styles = getStyles(appConfig);
 

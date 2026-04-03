@@ -1,104 +1,195 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { Track } from 'livekit-client';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BarVisualizer,
-  useLocalParticipant,
-  useRoomContext,
-  useSessionContext,
-  useTranscriptions,
-  useVoiceAssistant,
-} from '@livekit/components-react';
-import { ArrowCounterClockwise, PhoneDisconnectIcon } from '@phosphor-icons/react/dist/ssr';
+  ArrowCounterClockwise,
+  Microphone,
+  MicrophoneSlash,
+  PhoneDisconnectIcon,
+} from '@phosphor-icons/react/dist/ssr';
+import type { ExerciseImagePayload } from '@yorty-tcf/shared';
 import type { AppConfig, Task } from '@/app-config';
 import { ConseilsTabContent } from '@/components/app/conseils-tab-content';
 import { ConsigneTabContent } from '@/components/app/consigne-tab-content';
 import { ConversationTabContent } from '@/components/app/conversation-tab-content';
 import { TimerDisplay } from '@/components/app/timer-display';
-import { useInputControls } from '@/components/livekit/agent-control-bar/hooks/use-input-controls';
-import { TrackSelector } from '@/components/livekit/agent-control-bar/track-selector';
-import { Button } from '@/components/livekit/button';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  useExerciseData,
-  useExerciseImage,
-  useReportData,
-  useSessionEnd,
-  useSessionTimer,
-} from '@/hooks';
+import { useSessionTimer } from '@/hooks';
 import { cn } from '@/lib/utils';
+import { useRealtimeExam } from '@/providers/realtime-exam-provider';
+import type { ExerciseImageData } from '@/types/exercise-image';
+
+function mapExerciseImage(img: ExerciseImagePayload | null): ExerciseImageData | null {
+  if (!img) return null;
+  return {
+    id: img.id ?? null,
+    filename: img.filename,
+    section: img.section,
+    annonce: img.annonce ?? null,
+    title: img.title ?? null,
+    consigne: img.consigne ?? null,
+    generatedImagePath: img.generatedImagePath ?? null,
+    generatedImagePaths: img.generatedImagePaths ?? null,
+  };
+}
 
 interface SessionViewProps {
   appConfig: AppConfig;
   selectedTask: Task | null;
 }
 
+const BAR_COUNT = 5;
+const BAR_WEIGHTS = [0.5, 0.8, 1, 0.85, 0.55];
+const MIN_H_IDLE = 18;
+const MIN_H_ACTIVE = 30;
+const SMOOTHING = 0.65;
+
+function SpeakingIndicator({
+  label,
+  active,
+  color,
+  levelRef,
+}: {
+  label: string;
+  active: boolean;
+  color: 'cyan' | 'emerald';
+  levelRef: React.RefObject<number>;
+}) {
+  const barsRef = useRef<(HTMLSpanElement | null)[]>([]);
+  const rafRef = useRef<number>(0);
+  const smoothedRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!active) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+      smoothedRef.current = 0;
+      for (const bar of barsRef.current) {
+        if (bar) bar.style.height = `${MIN_H_IDLE}%`;
+      }
+      return;
+    }
+
+    const animate = () => {
+      const raw = levelRef.current ?? 0;
+      smoothedRef.current = smoothedRef.current * SMOOTHING + raw * (1 - SMOOTHING);
+      const level = smoothedRef.current;
+
+      for (let i = 0; i < BAR_COUNT; i++) {
+        const bar = barsRef.current[i];
+        if (!bar) continue;
+        const h = Math.max(MIN_H_ACTIVE, level * BAR_WEIGHTS[i] * 100);
+        bar.style.height = `${Math.min(h, 100)}%`;
+      }
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    };
+  }, [active, levelRef]);
+
+  const barActiveColor = color === 'cyan' ? 'bg-cyan-500' : 'bg-emerald-500';
+  const barInactiveColor = 'bg-muted-foreground/30';
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 rounded-full border px-2.5 py-1 transition-all duration-200',
+        active
+          ? color === 'cyan'
+            ? 'border-cyan-400 bg-cyan-50 shadow-sm shadow-cyan-200/50'
+            : 'border-emerald-400 bg-emerald-50 shadow-sm shadow-emerald-200/50'
+          : 'border-border/60 bg-background/80'
+      )}
+    >
+      <div className="flex h-5 items-center gap-[2px]">
+        {Array.from({ length: BAR_COUNT }, (_, i) => (
+          <span
+            key={i}
+            ref={(el) => {
+              barsRef.current[i] = el;
+            }}
+            className={cn(
+              'block w-[3px] rounded-full transition-colors duration-150',
+              active ? barActiveColor : barInactiveColor
+            )}
+            style={{ height: `${MIN_H_IDLE}%`, minHeight: '3px' }}
+          />
+        ))}
+      </div>
+      <span
+        className={cn(
+          'text-[11px] font-medium tracking-wide transition-colors duration-200 select-none',
+          active
+            ? color === 'cyan'
+              ? 'text-cyan-700'
+              : 'text-emerald-700'
+            : 'text-muted-foreground'
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export function SessionView({ selectedTask }: SessionViewProps) {
-  const session = useSessionContext();
-  const room = useRoomContext();
-  const { localParticipant } = useLocalParticipant();
-  const { state: agentState, audioTrack: agentAudioTrack } = useVoiceAssistant();
+  const exam = useRealtimeExam();
   const { elapsedSeconds, resetTimer } = useSessionTimer();
-  const exerciseData = useExerciseData();
-  const exerciseImage = useExerciseImage();
-  const { report, previousReports, archiveAndReset } = useReportData();
-  const { sessionEnded, resetSessionEnd } = useSessionEnd();
-  const transcriptions = useTranscriptions();
   const [tefTransitionReady, setTefTransitionReady] = useState(false);
   const [viewingPreviousIndex, setViewingPreviousIndex] = useState<number | null>(null);
 
-  const {
-    micTrackRef,
-    microphoneToggle,
-    handleAudioDeviceChange,
-    handleMicrophoneDeviceSelectError,
-  } = useInputControls({ saveUserChoices: true });
+  const exerciseImage = useMemo(() => mapExerciseImage(exam.exerciseImage), [exam.exerciseImage]);
 
   const isTefTask = selectedTask?.taskType?.startsWith('tef') ?? false;
   const isTache1 = selectedTask?.taskType === 'tache1';
   const isTache2 = selectedTask?.taskType === 'tache2';
   const isTache3 = selectedTask?.taskType === 'tache3';
-  const isReviewPhase = sessionEnded && !!report;
-  const isPreparingReport = sessionEnded && !report;
-  const isMicEnabled = !sessionEnded || isReviewPhase;
-  const canUseMicShortcut = isMicEnabled && session.isConnected && !microphoneToggle.pending;
+
+  const displayReport = exam.report ?? exam.reportStreaming;
+  const isReviewPhase = exam.sessionEnded && !!exam.report;
+  const isPreparingReport = exam.sessionEnded && !exam.report && !exam.reportStreaming;
+  const isMicEnabled = !exam.sessionEnded || isReviewPhase;
+  const canUseMicShortcut = isMicEnabled && exam.isConnected;
 
   const showMicHint =
     (isTache1 || isTache2 || isTache3) &&
-    !sessionEnded &&
+    !exam.sessionEnded &&
     !isPreparingReport &&
-    !localParticipant.isMicrophoneEnabled;
+    !exam.micEnabled;
 
   const announcementText =
-    exerciseData?.description || selectedTask?.description || 'Description de la tâche';
+    exam.exerciseData?.description || selectedTask?.description || 'Description de la tâche';
 
   const showTefSkeleton = isTefTask && (!exerciseImage || !tefTransitionReady);
-  const showExerciseSkeleton = !exerciseData && (isTache2 || isTache3);
+  const showExerciseSkeleton = !exam.exerciseData && (isTache2 || isTache3);
 
   const handleRestart = useCallback(() => {
-    archiveAndReset();
-    resetSessionEnd();
+    exam.archiveReportAndReset();
+    exam.resetSessionEnd();
     resetTimer();
     setViewingPreviousIndex(null);
-    localParticipant.setMicrophoneEnabled(false);
+    exam.restartExam();
+  }, [exam, resetTimer]);
 
-    const encoder = new TextEncoder();
-    const data = encoder.encode(JSON.stringify({ type: 'restart_test' }));
-    room.localParticipant.publishData(data, { reliable: true });
-  }, [archiveAndReset, resetSessionEnd, resetTimer, localParticipant, room]);
-
+  /* Intentionally avoid depending on the whole `exam` object (context value) to limit re-runs. */
   useEffect(() => {
-    if (sessionEnded && !report) {
-      localParticipant.setMicrophoneEnabled(false);
+    if (exam.sessionEnded && !exam.report) {
+      exam.setMicEnabled(false);
     }
-  }, [sessionEnded, report, localParticipant]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- granular deps above
+  }, [exam.sessionEnded, exam.report, exam.setMicEnabled]);
 
   useEffect(() => {
     if (isReviewPhase) {
-      localParticipant.setMicrophoneEnabled(true);
+      exam.setMicEnabled(true);
     }
-  }, [isReviewPhase, localParticipant]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- granular deps above
+  }, [isReviewPhase, exam.setMicEnabled]);
 
   useEffect(() => {
     if (!canUseMicShortcut) return;
@@ -119,12 +210,12 @@ export function SessionView({ selectedTask }: SessionViewProps) {
         if (tag === 'input' || tag === 'textarea' || target.isContentEditable) return;
       }
       event.preventDefault();
-      void microphoneToggle.toggle();
+      exam.setMicEnabled(!exam.micEnabled);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canUseMicShortcut, microphoneToggle]);
+  }, [canUseMicShortcut, exam]);
 
   useEffect(() => {
     if (!isTefTask) {
@@ -153,6 +244,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
               </TabsTrigger>
             </TabsList>
             <button
+              type="button"
               onClick={handleRestart}
               className="mb-1.5 ml-2 inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-cyan-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-cyan-700"
             >
@@ -177,8 +269,8 @@ export function SessionView({ selectedTask }: SessionViewProps) {
             className="min-h-0 flex-1 overflow-y-auto px-3 pt-0 pb-3 sm:px-4 sm:pb-4"
           >
             <ConseilsTabContent
-              report={report}
-              previousReports={previousReports}
+              report={displayReport}
+              previousReports={exam.previousReports}
               isPreparingReport={isPreparingReport}
               isReviewPhase={isReviewPhase}
               viewingPreviousIndex={viewingPreviousIndex}
@@ -187,33 +279,25 @@ export function SessionView({ selectedTask }: SessionViewProps) {
           </TabsContent>
 
           <TabsContent value="conversation" className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
-            <ConversationTabContent
-              transcriptions={transcriptions}
-              localIdentity={localParticipant.identity}
-            />
+            <ConversationTabContent lines={exam.transcripts} />
           </TabsContent>
         </Tabs>
 
         <div className="border-border/70 border-t bg-white/95 px-3 py-2 sm:px-4 sm:py-3">
           <div className="mb-2 flex items-center justify-between">
-            <div aria-label="Indicateur vocal de l'évaluateur" className="flex items-center gap-2">
-              <div className="bg-background/90 border-input/60 h-9 w-16 rounded-md border shadow-sm">
-                <BarVisualizer
-                  barCount={5}
-                  state={agentState}
-                  options={{ minHeight: 3 }}
-                  trackRef={agentAudioTrack}
-                  className="flex h-full items-center justify-center gap-0.5 px-1"
-                >
-                  <span
-                    className={cn(
-                      'bg-muted min-h-1.5 w-1.5 rounded-full',
-                      'origin-center transition-colors duration-250 ease-linear',
-                      'data-[lk-highlighted=true]:bg-foreground data-[lk-muted=true]:bg-muted'
-                    )}
-                  />
-                </BarVisualizer>
-              </div>
+            <div className="flex items-center gap-2">
+              <SpeakingIndicator
+                label="Évaluateur"
+                active={exam.agentSpeaking}
+                color="cyan"
+                levelRef={exam.agentAudioLevelRef}
+              />
+              <SpeakingIndicator
+                label="Vous"
+                active={exam.micEnabled && exam.userSpeaking}
+                color="emerald"
+                levelRef={exam.userAudioLevelRef}
+              />
             </div>
             <TimerDisplay elapsedSeconds={elapsedSeconds} compact />
           </div>
@@ -221,23 +305,30 @@ export function SessionView({ selectedTask }: SessionViewProps) {
           <div className="flex items-center justify-between gap-2">
             <div>
               {isMicEnabled && (
-                <TrackSelector
-                  kind="audioinput"
-                  aria-label="Microphone"
-                  source={Track.Source.Microphone}
-                  pressed={microphoneToggle.enabled}
-                  disabled={microphoneToggle.pending}
-                  audioTrackRef={micTrackRef}
-                  onPressedChange={microphoneToggle.toggle}
-                  onMediaDeviceError={handleMicrophoneDeviceSelectError}
-                  onActiveDeviceChange={handleAudioDeviceChange}
-                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  aria-label={exam.micEnabled ? 'Couper le micro' : 'Activer le micro'}
+                  onClick={() => exam.setMicEnabled(!exam.micEnabled)}
+                  className="gap-2"
+                >
+                  {exam.micEnabled ? (
+                    <Microphone weight="bold" className="h-4 w-4" />
+                  ) : (
+                    <MicrophoneSlash weight="bold" className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {exam.micEnabled ? 'Micro on' : 'Micro off'}
+                  </span>
+                </Button>
               )}
             </div>
             <Button
               variant="destructive"
-              onClick={session.end}
-              disabled={!session.isConnected}
+              type="button"
+              onClick={() => exam.end()}
+              disabled={!exam.isConnected}
               className="px-3 font-mono text-xs sm:px-4 sm:text-sm"
             >
               <PhoneDisconnectIcon weight="bold" className="h-4 w-4 sm:h-5 sm:w-5" />

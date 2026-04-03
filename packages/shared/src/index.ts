@@ -17,3 +17,25 @@ export type {
   WebToAgentMessage,
   DataMessage,
 } from "./messages";
+
+export {
+  taskTypeSchema,
+  createExamSessionInputSchema,
+  createExamSessionOutputSchema,
+  exerciseDataPayloadSchema,
+  exerciseImagePayloadSchema,
+  agentConfigForClientSchema,
+} from "./schemas/exam-session";
+export type {
+  CreateExamSessionInput,
+  CreateExamSessionOutput,
+  ExerciseImagePayload,
+} from "./schemas/exam-session";
+
+export { SOCKET_EVENTS } from "./socket-events";
+export type {
+  JoinSessionPayload,
+  SessionEndSocketPayload,
+  ReportSocketPayload,
+  SessionRestartSocketPayload,
+} from "./socket-events";
