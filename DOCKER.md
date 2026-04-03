@@ -41,22 +41,30 @@ Le fichier `docker-compose.yml` passe un **build arg** `NEXT_PUBLIC_EXAM_API_URL
 
 ## ☁️ Railway
 
-Deux services, **root directory vide** :
+**Deux services** depuis la racine du dépôt (**root directory vide**). Pas de service **agent** séparé : l’agent Realtime est exécuté côté **navigateur** ; l’**API** remplace l’ancien worker / backend qui tenait les secrets et les données.
 
-- **Web** : `apps/web/railway.json` (Dockerfile Next standalone)
-- **API** : `apps/api/railway.json` (Dockerfile Nest + `better-sqlite3`)
+| Service | `railway.json` | Image |
+| --- | --- | --- |
+| **API** | `apps/api/railway.json` | Nest + `better-sqlite3` |
+| **Web** | `apps/web/railway.json` | Next.js standalone |
+
+### Enchaînement typique
+
+1. Déployer l’**API**, noter l’URL publique.
+2. Configurer le **Web** avec `NEXT_PUBLIC_EXAM_API_URL` pointant vers cette URL (build).
+3. Mettre à jour l’**API** : `CORS_ORIGINS` = URL du **Web**, puis redéployer l’API si besoin.
 
 ### Variables
 
 **API**
 
-- `OPENAI_API_KEY` (requis)
-- `CORS_ORIGINS` — origines du front (ex. `https://votre-front.up.railway.app`)
-- `PORT` — optionnel (Railway injecte souvent `PORT`)
+- `OPENAI_API_KEY` — requis
+- `CORS_ORIGINS` — origines autorisées pour le front (ex. `https://votre-web.up.railway.app`)
+- `PORT` — optionnel (Railway fournit souvent `PORT`)
 
-**Web (build)**
+**Web** (injectée au **build**)
 
-- `NEXT_PUBLIC_EXAM_API_URL` — URL **publique** HTTPS de l’API (le client navigateur l’utilise)
+- `NEXT_PUBLIC_EXAM_API_URL` — URL HTTPS **vue par le navigateur** pour joindre l’API
 
 ---
 

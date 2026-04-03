@@ -39,21 +39,41 @@ Le build du front embarque `NEXT_PUBLIC_EXAM_API_URL` (voir `docker-compose.yml`
 
 ## ☁️ Railway
 
-Créez **deux** services à partir du même dépôt, **root directory vide** :
+### Architecture cible
 
-| Service | Config File Path |
-| --- | --- |
-| Web | `apps/web/railway.json` |
-| API | `apps/api/railway.json` |
+Il faut **deux** services Railway (même dépôt Git) : **API** (NestJS) et **Web** (Next.js). **Aucun troisième service « agent »** n’est nécessaire : après le découplage LiveKit, la voix et l’agent OpenAI Realtime tournent **dans le navigateur** via WebRTC ; l’API ne sert qu’aux secrets, aux données d’exercice et à Socket.io.
 
-Variables importantes :
+Pour chaque service, dans les paramètres Railway : **Root Directory** = vide (racine du monorepo), puis indiquer le fichier de config ci-dessous (ou équivalent « Dockerfile path » / config Railway) :
 
-| Variable | Où | Description |
+| Service | Rôle | Fichier de config |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | API | Appel `client_secrets` |
-| `CORS_ORIGINS` | API | Origines du front (séparées par des virgules) |
-| `NEXT_PUBLIC_EXAM_API_URL` | Web (**build**) | URL publique de l’API vue par le navigateur |
-| `PORT` | API | Optionnel (défaut 3001 en local) |
+| **API** | `client_secrets`, SQLite, YAML, CORS, Socket.io | `apps/api/railway.json` |
+| **Web** | UI, micro, session Realtime côté client | `apps/web/railway.json` |
+
+### Ordre recommandé
+
+1. Créer et déployer le service **API**, récupérer son URL publique HTTPS (ex. `https://xxx.up.railway.app`).
+2. Créer le service **Web** avec `NEXT_PUBLIC_EXAM_API_URL` = cette URL API (voir ci-dessous).
+3. Sur l’**API**, définir `CORS_ORIGINS` avec l’URL publique du **Web** (une ou plusieurs origines, séparées par des virgules). Sans cela, le navigateur bloque les appels `fetch` depuis le front.
+4. Redéployer le **Web** si vous changez l’URL de l’API après le premier build (la variable est figée au **build** Next).
+
+### Variables par service
+
+**Service API** (`apps/api/.env.example`)
+
+| Variable | Obligatoire | Description |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | Oui | Appels `POST /v1/realtime/client_secrets` |
+| `CORS_ORIGINS` | Fortement recommandé en prod | Origines du front, ex. `https://votre-web.up.railway.app` (virgule si plusieurs) |
+| `PORT` | Non | Railway injecte souvent `PORT` ; en local, défaut 3001 |
+
+**Service Web** — variables **au moment du build** Docker / Railway
+
+| Variable | Obligatoire | Description |
+| --- | --- | --- |
+| `NEXT_PUBLIC_EXAM_API_URL` | Oui | URL **HTTPS publique** de l’API, telle que le **navigateur** l’atteint (pas d’URL interne Railway-only si le client est sur Internet) |
+
+Le Dockerfile web accepte `NEXT_PUBLIC_EXAM_API_URL` en `ARG` au build ; sur Railway, définissez-la dans les variables du service **Web** (Railway la passera au build).
 
 ---
 

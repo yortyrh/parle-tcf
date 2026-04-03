@@ -64,12 +64,13 @@ Source de vérité pour :
 
 ## 🚀 Déploiement Railway
 
-- Deux services : **web** (`apps/web/railway.json`) et **api** (`apps/api/railway.json`).
-- **Root Directory** : laisser vide (racine du dépôt).
-- **Web** : définir `NEXT_PUBLIC_EXAM_API_URL` comme **URL publique** de l’API (build Next — variable requise au build Docker/Railway).
-- **API** : `OPENAI_API_KEY`, `CORS_ORIGINS` (origines du front), `PORT` si besoin.
+- **Services** : uniquement **api** (`apps/api/railway.json`) et **web** (`apps/web/railway.json`). Il n’y a **pas** de composant Railway dédié à un « agent » : la session Realtime (SDK `@openai/agents/realtime`, WebRTC) vit dans le **navigateur** ; l’API fournit `client_secret`, exercices et config (instructions, greeting, etc.).
+- **Root Directory** : vide (racine du monorepo) pour les deux services.
+- **API** : `OPENAI_API_KEY` ; `CORS_ORIGINS` = URL(s) du front public ; `PORT` laissé à Railway si fourni.
+- **Web** : `NEXT_PUBLIC_EXAM_API_URL` = URL **HTTPS publique** de l’API au **build** (le bundle client appelle cette base pour `POST /exam/session/create`, etc.).
+- **Ordre pratique** : déployer l’API → fixer l’URL dans le build Web → renseigner `CORS_ORIGINS` sur l’API avec l’URL du Web.
 
-Détails Docker local : [DOCKER.md](./DOCKER.md).
+Détails Docker local : [DOCKER.md](./DOCKER.md). Variables détaillées : section **Railway** du [README.md](./README.md).
 
 ## Commandes pnpm
 

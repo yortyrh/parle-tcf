@@ -41,4 +41,4 @@ Optionnel pour des visuels dans la documentation GitHub.
 | --- | --- | --- |
 | `ci.yml` | Push / PR sur `main` | Qualité + build + tests |
 
-Hébergement (Railway, variables) : [README.md](../README.md), [AGENTS.md](../AGENTS.md), [DOCKER.md](../DOCKER.md).
+Hébergement Railway (services **API** + **Web** uniquement, pas de service agent) : [README.md](../README.md), [AGENTS.md](../AGENTS.md), [DOCKER.md](../DOCKER.md).
