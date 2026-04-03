@@ -1,0 +1,79 @@
+# Exercises & configuration guide
+
+How exam content is managed: YAML agent prompts, TCF/TEF exercises, and images.
+
+**Language:** This file is documentation for maintainers (English). **Per-task agent YAML** (`baseInstructions`, `instructions`, `greeting`) and **TEF companion `.md` files** next to each image under `apps/api/config/tef-exercices/` should stay in **French** — they are exam prompts for candidates and the Realtime model.
+
+## Examiner configuration (YAML)
+
+Files live in **`apps/api/config/agents/`** and are loaded by the API when creating a session.
+
+### YAML shape
+
+- `name` / `description` — task metadata.
+- `settings` — e.g. `allowInterruptions`.
+- `baseInstructions` — shared system instructions.
+- `instructions` — task-specific instructions.
+- `greeting` — opening line for the oral interaction.
+
+### Supported tasks
+
+- `tache1.yml`, `tache2.yml`, `tache3.yml` (TCF)
+- `tef-section-a.yml`, `tef-section-b.yml` (TEF)
+
+### Global voice & model
+
+`ExamSessionService` reads **`apps/api/config/service.yml`**:
+
+- `llm.voice` — passed to OpenAI Realtime (`client_secrets` and returned in `agentConfig`).
+- `llm.model` — if set to `realtime`, the API resolves the concrete model via `OPENAI_REALTIME_MODEL` or a built-in default (`ExamSessionService.resolveRealtimeModel`). Any other non-empty string is sent as-is to OpenAI.
+
+See [apps/api/config/SERVICE_CONFIG.md](./apps/api/config/SERVICE_CONFIG.md) for details.
+
+---
+
+## Exercise database
+
+### TCF (tasks 2 and 3)
+
+- CSV source: **`apps/api/config/tcf-exercises.csv`**
+- Runtime SQLite: **`apps/api/config/tcf-exercises.db`**
+
+After changing the CSV:
+
+```bash
+pnpm --filter @yorty-tcf/api run generate-db
+```
+
+### TEF (sections A and B)
+
+- **Source**: `apps/api/config/tef-exercices/TEF-A/` and `TEF-B/` — for each item, pair `TEF-A-01.png` + `TEF-A-01.md` (exercise-specific Realtime instructions; **French** content expected).
+- **Images served to the browser**: copied to `apps/web/public/tef-exercices/` via `sync-tef`.
+
+---
+
+## Generation scripts (`apps/api`)
+
+Run from the monorepo root with `@yorty-tcf/api`:
+
+| Script | Role |
+| --- | --- |
+| `generate-db` | TCF CSV → SQLite |
+| `rename-tef` | Rename scan PNGs to `TEF-{A\|B}-NN.png` (dry-run; `--apply` to write) |
+| `generate-tef-instructions` | Vision model → one `.md` per image; `--stub` for placeholders without `OPENAI_API_KEY` |
+| `sync-tef` | Copy PNGs to `apps/web/public/tef-exercices/` |
+
+Example:
+
+```bash
+pnpm --filter @yorty-tcf/api run generate-tef-instructions -- --force
+pnpm --filter @yorty-tcf/api run sync-tef
+```
+
+---
+
+## Prompt tips
+
+- **Language**: keep candidate-facing and in-character content in **French** for TCF/TEF; technical notes in YAML can be English if you prefer.
+- **Constraints**: durations, number of questions, etc. belong in `instructions`.
+- **Tone**: adjust in `instructions` / `greeting`.

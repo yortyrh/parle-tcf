@@ -1,44 +1,44 @@
-# Configuration GitHub (racine du monorepo)
+# GitHub configuration (monorepo root)
 
-L’automatisation GitHub Actions est centralisée ici (plus de workflows dans `apps/*/.github`).
+GitHub Actions workflows live here (no duplicate workflows under `apps/*/.github`).
 
-## Workflow actif
+## Active workflow
 
 ### [`workflows/ci.yml`](./workflows/ci.yml) — **CI**
 
-**Déclencheurs** : `push` et `pull_request` sur la branche `main`.
+**Triggers**: `push` and `pull_request` on branch `main`.
 
-**Jobs** :
+**Jobs**:
 
-1. **Lint, format & types** — `pnpm lint`, `pnpm format:check`, `pnpm typecheck` (Turborepo sur `@yorty-tcf/web`, `@yorty-tcf/api`, etc.).
-2. **Build & tests** — `pnpm build` puis `pnpm test` (les paquets sans script `test` sont ignorés par Turborepo ; `@yorty-tcf/api` expose un script placeholder pour l’instant).
+1. **Lint, format & types** — `pnpm lint`, `pnpm format:check`, `pnpm typecheck` (Turborepo across `@yorty-tcf/web`, `@yorty-tcf/api`, etc.).
+2. **Build & tests** — `pnpm build` then `pnpm test` (packages without a `test` script are skipped by Turborepo; `@yorty-tcf/api` may expose a placeholder script).
 
-**Outils** : Node.js **22**, **pnpm 10.33.0** (voir `package.json` → `packageManager`), install avec `--frozen-lockfile`.
+**Tooling**: Node.js **22**, **pnpm 10.33.0** (see root `package.json` → `packageManager`), install with `--frozen-lockfile`.
 
-**Concurrence** : une seule exécution active par workflow et par ref Git (`cancel-in-progress`).
-
----
-
-## Workflows volontairement absents
-
-### Sync sandbox LiveKit (historique)
-
-Un workflow manuel pouvait pousser vers une branche sandbox via l’écosystème LiveKit. Il n’est plus pertinent : déploiement cible **Railway** ([README.md](../README.md)).
-
-### `template-check.yml` (template agent LiveKit)
-
-Vérifiait que le lockfile n’était pas versionné — inadapté à ce monorepo où **`pnpm-lock.yaml` est versionné**.
-
-### Assets `.github/assets`
-
-Optionnel pour des visuels dans la documentation GitHub.
+**Concurrency**: one active run per workflow and Git ref (`cancel-in-progress`).
 
 ---
 
-## Résumé
+## Workflows intentionally removed
 
-| Fichier | Quand ça tourne | But |
+### LiveKit sandbox sync (historical)
+
+A manual workflow could push to a sandbox branch via the LiveKit ecosystem. It is no longer relevant: deployment target is **Railway** ([README.md](../README.md)).
+
+### `template-check.yml` (LiveKit agent template)
+
+It enforced “no lockfile in repo” — wrong for this monorepo where **`pnpm-lock.yaml` is committed**.
+
+### `.github/assets`
+
+Optional folder for images used in GitHub-facing docs.
+
+---
+
+## Summary
+
+| File | When it runs | Purpose |
 | --- | --- | --- |
-| `ci.yml` | Push / PR sur `main` | Qualité + build + tests |
+| `ci.yml` | Push / PR on `main` | Quality + build + tests |
 
-Hébergement Railway (services **API** + **Web** uniquement, pas de service agent) : [README.md](../README.md), [AGENTS.md](../AGENTS.md), [DOCKER.md](../DOCKER.md).
+Railway hosting (**API** + **Web** only, no agent service): [README.md](../README.md), [AGENTS.md](../AGENTS.md), [DOCKER.md](../DOCKER.md).

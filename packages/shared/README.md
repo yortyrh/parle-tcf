@@ -1,16 +1,18 @@
-# 📦 Shared Package (@yorty-tcf/shared)
+# Shared package (`@yorty-tcf/shared`)
 
-Types et protocoles partagés entre l'Agent et l'Interface Web.
+Types and protocols shared between the **NestJS API** and the **Next.js web** app.
 
-## Documentation Principale
-Toute la documentation du projet se trouve à la racine :
-- [README.md](../../README.md) : Installation locale et déploiement Railway.
-- [AGENTS.md](../../AGENTS.md) : Architecture détaillée et guide développeur.
+## Documentation
 
-## Contenu
-- `src/task-types.ts` : Types d'examens TCF/TEF.
-- `src/messages.ts` : Protocole de messagerie de données LiveKit.
-- `src/metadata.ts` : Métadonnées du participant.
+- [README.md](../../README.md) — local setup and Railway deployment.
+- [AGENTS.md](../../AGENTS.md) — architecture and developer notes.
+- [EXERCISES.md](../../EXERCISES.md) — exercises and YAML configuration.
 
----
-Pour toute question sur l'utilisation du package partagé, consultez le fichier [AGENTS.md](../../AGENTS.md).
+## Contents (high level)
+
+- `src/task-types.ts` — TCF/TEF task identifiers.
+- `src/messages.ts` — legacy `DataMessage` types (historical LiveKit data channel).
+- `src/metadata.ts` — legacy participant metadata types.
+- Session / socket contracts — see `src/` for Zod schemas and `SOCKET_EVENTS`.
+
+For integration details, prefer [AGENTS.md](../../AGENTS.md).

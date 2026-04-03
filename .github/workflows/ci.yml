@@ -1,4 +1,4 @@
-# CI monorepo (web + api + shared)
+# Monorepo CI (web + api + shared)
 name: CI
 
 on:
@@ -36,13 +36,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: ESLint (tous les packages)
+      - name: ESLint (all packages)
         run: pnpm run lint
 
-      - name: Prettier (vérification)
+      - name: Prettier (check)
         run: pnpm run format:check
 
-      - name: Typecheck (tous les packages)
+      - name: Typecheck (all packages)
         run: pnpm run typecheck
 
   build-and-test:
@@ -69,5 +69,5 @@ jobs:
       - name: Build (Turborepo)
         run: pnpm run build
 
-      - name: Tests unitaires (Turborepo)
+      - name: Unit tests (Turborepo)
         run: pnpm run test

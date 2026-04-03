@@ -47,7 +47,7 @@ export function WelcomeView({ startButtonText, onStartCall, tasks, homeHref }: W
         Sélectionnez une tâche pour commencer
       </p>
 
-      {/* Task Selection Cards — 2 colonnes pour TEF, 3 pour TCF */}
+      {/* Task selection cards — 2 columns for TEF, 3 for TCF */}
       <div
         className={cn(
           'mb-6 grid w-full max-w-2xl grid-cols-1 gap-3 px-2 sm:mb-8 sm:gap-4 sm:px-0',

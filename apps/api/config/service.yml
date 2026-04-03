@@ -1,37 +1,26 @@
-# Configuration du service LiveKit Agent
+# Global Realtime defaults for session creation (NestJS API).
+# Task-specific prompts live under config/agents/*.yml — see EXERCISES.md at repo root.
 
-# Modèle de langage (LLM)
 llm:
   provider: "openai"
+  # Sent to OpenAI client_secrets. Use "realtime" to mean "default Realtime model"
+  # (overridable with env OPENAI_REALTIME_MODEL in ExamSessionService).
   model: "realtime"
-  
-  # Configuration de la voix
-  voice: "alloy"  # Options: alloy, echo, fable, onyx, nova, shimmer
-  
-  # Modalités supportées
+  voice: "alloy" # OpenAI Realtime output voices: alloy, echo, fable, onyx, nova, shimmer
   modalities:
     - "text"
     - "audio"
 
-# Configuration de la session
+# --- Legacy / unused by the current browser Realtime flow ---
+# The Nest API only requires llm.voice and llm.model when loading this file.
+# The blocks below are kept for reference (older LiveKit agent layout).
+
 session:
-  # Collecte des métriques de performance
   metricsEnabled: true
-  
-  # Options d'entrée audio
   inputOptions:
-    # Annulation de bruit (LiveKit Cloud)
-    # Pour l'instant, seul BackgroundVoiceCancellation est supporté
     noiseCancellation: "BackgroundVoiceCancellation"
 
-# Configuration de la connexion
 connection:
-  # Temps max (ms) pour attendre qu'au moins un participant (candidat) soit dans la salle
-  # avant de lire les métadonnées (taskType). Un délai trop court faisait lire le jeton
-  # avant l'arrivée du client → mauvaise tâche / greeting retardé.
   participantWaitTime: 15000
-  # Intervalle entre deux vérifications de présence du participant (ms)
   participantJoinPollIntervalMs: 200
-  
-  # Délai avant déconnexion après fin d'examen (ms)
   disconnectDelay: 3000

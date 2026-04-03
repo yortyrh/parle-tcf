@@ -1,15 +1,15 @@
-# 🌐 TCF LiveKit Web Interface
+# Web app (`@yorty-tcf/web`)
 
-Interface candidat Next.js pour les examens TCF/TEF.
+Next.js candidate UI for TCF/TEF oral practice.
 
-## 📁 Structure
+## Layout
 
-- `app/` : Pages et API routes.
-- `components/` : UI components.
-- `content/` : Contenu markdown des annonces TEF.
-- `public/` : Images des exercices et polices de caractères.
+- `app/` — App Router pages and routes.
+- `components/` — UI components.
+- `content/` — Markdown content for TEF announcements where applicable.
+- `public/` — Exercise images and fonts.
 
 ---
 
-**Documentation Principale** : Consultez le fichier [README.md](../../README.md) et [AGENTS.md](../../AGENTS.md) à la racine du projet.
-**Guide des Exercices** : Consultez [EXERCICES.md](../../EXERCICES.md) à la racine.
+**Main docs**: [README.md](../../README.md) and [AGENTS.md](../../AGENTS.md) at the repo root.  
+**Exercises guide**: [EXERCISES.md](../../EXERCISES.md).

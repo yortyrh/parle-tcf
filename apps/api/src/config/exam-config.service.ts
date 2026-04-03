@@ -17,23 +17,24 @@ export interface AgentYamlConfig {
   greeting: string;
 }
 
+/** Parsed `service.yml`. Only `llm` is required for Realtime session creation; other keys are legacy. */
 export interface ServiceYamlConfig {
   llm: {
-    provider: string;
+    provider?: string;
     model: string;
     voice: string;
-    modalities: string[];
+    modalities?: string[];
   };
-  session: {
-    metricsEnabled: boolean;
-    inputOptions: { noiseCancellation: string };
+  session?: {
+    metricsEnabled?: boolean;
+    inputOptions?: { noiseCancellation?: string };
   };
-  connection: {
-    participantWaitTime: number;
+  connection?: {
+    participantWaitTime?: number;
     participantJoinPollIntervalMs?: number;
-    disconnectDelay: number;
+    disconnectDelay?: number;
   };
-  endExamMessage: { instructions: string };
+  endExamMessage?: { instructions?: string };
 }
 
 @Injectable()

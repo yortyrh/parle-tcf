@@ -1,103 +1,103 @@
-# 🎙️ TCF/TEF — Plateforme d’examen oral
+# TCF/TEF — Oral exam practice platform
 
-Monorepo (Turborepo + pnpm) pour des simulations d’examens oraux TCF/TEF avec un examinateur IA : **OpenAI Realtime en WebRTC direct dans le navigateur** (`@openai/agents`), **API NestJS** pour les secrets et les données (exercices SQLite, YAML), **Socket.io** optionnel pour le multi-onglet.
+Monorepo (Turborepo + pnpm) for TCF/TEF oral exam simulations with an AI examiner: **OpenAI Realtime over direct WebRTC in the browser** (`@openai/agents`), a **NestJS API** for secrets and data (SQLite exercises, YAML), and **optional Socket.io** for multi-tab scenarios.
 
-## 🏗️ Structure du projet
+## Project layout
 
-| Paquet | Rôle |
+| Package | Role |
 | --- | --- |
-| **`apps/web`** | Next.js 15 — UI candidat, session Realtime, micro, transcriptions, rapport. |
-| **`apps/api`** | NestJS — `client_secrets` OpenAI, chargement config/exercices, gateway Socket.io. |
-| **`packages/shared`** | Types, schémas Zod (session), événements socket — build `tsc` → `dist/`. |
+| **`apps/web`** | Next.js 15 — candidate UI, Realtime session, microphone, transcripts, report. |
+| **`apps/api`** | NestJS — OpenAI `client_secrets`, config/exercise loading, Socket.io gateway. |
+| **`packages/shared`** | Types, Zod schemas (session), socket events — `tsc` build → `dist/`. |
 
-## 🚀 Démarrage rapide (Docker Compose)
+## Quick start (Docker Compose)
 
-### Prérequis
+### Prerequisites
 
 - Docker & Docker Compose
-- Clé **OpenAI** (`OPENAI_API_KEY`)
+- **OpenAI** API key (`OPENAI_API_KEY`)
 
 ### Configuration
 
 ```bash
 cp .env.example .env
-# Éditez OPENAI_API_KEY
+# Set OPENAI_API_KEY
 ```
 
-### Lancement
+### Run
 
 ```bash
 docker-compose up -d --build
 ```
 
-- Front : **http://localhost** (port 80 → 3000 dans le conteneur).
-- API : **http://localhost:3001** (health : `/health`).
+- Web: **http://localhost** (host port 80 → container 3000).
+- API: **http://localhost:3001** (health: `/health`).
 
-Le build du front embarque `NEXT_PUBLIC_EXAM_API_URL` (voir `docker-compose.yml` → build args). Pour un accès depuis votre machine, la valeur par défaut est `http://localhost:3001`.
+The web image is built with `NEXT_PUBLIC_EXAM_API_URL` (see `docker-compose.yml` build args). The default targets `http://localhost:3001` so the browser on your machine can reach the API.
 
 ---
 
-## ☁️ Railway
+## Railway
 
-### Architecture cible
+### Target architecture
 
-Il faut **deux** services Railway (même dépôt Git) : **API** (NestJS) et **Web** (Next.js). **Aucun troisième service « agent »** n’est nécessaire : après le découplage LiveKit, la voix et l’agent OpenAI Realtime tournent **dans le navigateur** via WebRTC ; l’API ne sert qu’aux secrets, aux données d’exercice et à Socket.io.
+Use **two** Railway services from the **same** Git repo: **API** (NestJS) and **Web** (Next.js). You do **not** need a third “agent” service: after the LiveKit decoupling, voice and the OpenAI Realtime agent run **in the browser** via WebRTC; the API only serves secrets, exercise data, and Socket.io.
 
-Pour chaque service, dans les paramètres Railway : **Root Directory** = vide (racine du monorepo), puis indiquer le fichier de config ci-dessous (ou équivalent « Dockerfile path » / config Railway) :
+For each service, set Railway **Root Directory** to empty (monorepo root), then point to the config below (or the equivalent Dockerfile path):
 
-| Service | Rôle | Fichier de config |
+| Service | Role | Config file |
 | --- | --- | --- |
 | **API** | `client_secrets`, SQLite, YAML, CORS, Socket.io | `apps/api/railway.json` |
-| **Web** | UI, micro, session Realtime côté client | `apps/web/railway.json` |
+| **Web** | UI, microphone, client-side Realtime session | `apps/web/railway.json` |
 
-### Ordre recommandé
+### Recommended order
 
-1. Créer et déployer le service **API**, récupérer son URL publique HTTPS (ex. `https://xxx.up.railway.app`).
-2. Créer le service **Web** avec `NEXT_PUBLIC_EXAM_API_URL` = cette URL API (voir ci-dessous).
-3. Sur l’**API**, définir `CORS_ORIGINS` avec l’URL publique du **Web** (une ou plusieurs origines, séparées par des virgules). Sans cela, le navigateur bloque les appels `fetch` depuis le front.
-4. Redéployer le **Web** si vous changez l’URL de l’API après le premier build (la variable est figée au **build** Next).
+1. Create and deploy the **API** service; copy its public HTTPS URL (e.g. `https://xxx.up.railway.app`).
+2. Create the **Web** service with `NEXT_PUBLIC_EXAM_API_URL` set to that API URL (see below).
+3. On the **API**, set `CORS_ORIGINS` to the **Web** public URL (one or more origins, comma-separated). Without this, the browser blocks `fetch` from the front end.
+4. Rebuild **Web** if the API URL changes after the first build (the variable is fixed at **build** time for Next.js).
 
-### Variables par service
+### Variables per service
 
-**Service API** (`apps/api/.env.example`)
+**API service** (`apps/api/.env.example`)
 
-| Variable | Obligatoire | Description |
+| Variable | Required | Description |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | Oui | Appels `POST /v1/realtime/client_secrets` |
-| `CORS_ORIGINS` | Fortement recommandé en prod | Origines du front, ex. `https://votre-web.up.railway.app` (virgule si plusieurs) |
-| `PORT` | Non | Railway injecte souvent `PORT` ; en local, défaut 3001 |
+| `OPENAI_API_KEY` | Yes | Calls to `POST /v1/realtime/client_secrets` |
+| `CORS_ORIGINS` | Strongly recommended in prod | Front-end origins, e.g. `https://your-web.up.railway.app` (comma if several) |
+| `PORT` | No | Railway often injects `PORT`; default 3001 locally |
 
-**Service Web** — variables **au moment du build** Docker / Railway
+**Web service** — variables at **Docker / Railway build** time
 
-| Variable | Obligatoire | Description |
+| Variable | Required | Description |
 | --- | --- | --- |
-| `NEXT_PUBLIC_EXAM_API_URL` | Oui | URL **HTTPS publique** de l’API, telle que le **navigateur** l’atteint (pas d’URL interne Railway-only si le client est sur Internet) |
+| `NEXT_PUBLIC_EXAM_API_URL` | Yes | **Public HTTPS** API URL as seen by the **browser** (not a Railway-internal-only URL for Internet clients) |
 
-Le Dockerfile web accepte `NEXT_PUBLIC_EXAM_API_URL` en `ARG` au build ; sur Railway, définissez-la dans les variables du service **Web** (Railway la passera au build).
+The web Dockerfile accepts `NEXT_PUBLIC_EXAM_API_URL` as a build `ARG`; on Railway, define it on the **Web** service so it is passed into the build.
 
 ---
 
-## 🛠️ Développement local (sans Docker)
+## Local development (without Docker)
 
-À la racine, après `pnpm install` :
+From the repo root after `pnpm install`:
 
-| Commande | Rôle |
+| Command | Role |
 | --- | --- |
-| `pnpm dev` | Lance les paquets qui exposent `dev` (web + api via Turborepo). |
-| `pnpm build` | Build monorepo (`^build` pour `@yorty-tcf/shared` puis apps). |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Qualité (voir scripts de chaque paquet). |
+| `pnpm dev` | Runs packages that expose `dev` (web + api via Turborepo). |
+| `pnpm build` | Monorepo build (`^build` for `@yorty-tcf/shared` then apps). |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Quality (see each package’s scripts). |
 | `pnpm format` / `pnpm format:check` | Prettier. |
 
-Dans deux terminaux typiques :
+Typical two terminals:
 
 ```bash
 pnpm --filter @yorty-tcf/api run dev    # http://localhost:3001
 pnpm --filter @yorty-tcf/web run dev    # http://localhost:3000
 ```
 
-Copier `apps/api/.env.example` → `apps/api/.env` et `apps/web/.env.example` → `apps/web/.env.local` selon besoin.
+Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` → `apps/web/.env.local` as needed.
 
-Cibler un paquet :
+Target a single package:
 
 ```bash
 pnpm --filter @yorty-tcf/api <script>
@@ -107,18 +107,18 @@ pnpm --filter @yorty-tcf/shared <script>
 
 ---
 
-## 📋 Scripts par paquet
+## Package scripts
 
 ### API — `@yorty-tcf/api` (`apps/api`)
 
 | Script | Description |
 | --- | --- |
 | `dev` / `build` / `start` | NestJS |
-| `generate-db` | CSV TCF → SQLite (`config/tcf-exercises.db`) |
-| `rename-tef`, `generate-tef-instructions`, `sync-tef` | Pipeline contenu TEF (`config/tef-exercices/` → instructions `.md` + images dans `apps/web/public/`) |
-| `lint`, `typecheck`, `format` | Qualité |
+| `generate-db` | TCF CSV → SQLite (`config/tcf-exercises.db`) |
+| `rename-tef`, `generate-tef-instructions`, `sync-tef` | TEF content pipeline (`config/tef-exercices/` → `.md` instructions + images under `apps/web/public/`) |
+| `lint`, `typecheck`, `format` | Quality |
 
-Exemple :
+Examples:
 
 ```bash
 pnpm --filter @yorty-tcf/api run generate-db
@@ -130,7 +130,7 @@ pnpm --filter @yorty-tcf/api run sync-tef
 | Script | Description |
 | --- | --- |
 | `dev`, `build`, `start` | Next.js |
-| `lint`, `typecheck`, `format` | Qualité |
+| `lint`, `typecheck`, `format` | Quality |
 
 ### Shared — `@yorty-tcf/shared`
 
@@ -141,9 +141,13 @@ pnpm --filter @yorty-tcf/api run sync-tef
 
 ---
 
-## 🔗 Documentation
+## Documentation
 
-- Architecture détaillée : [AGENTS.md](./AGENTS.md)
-- Exercices & YAML : [EXERCICES.md](./EXERCICES.md)
-- Docker : [DOCKER.md](./DOCKER.md)
-- CI : [`.github/README.md`](./.github/README.md)
+- Architecture: [AGENTS.md](./AGENTS.md)
+- Exercises & YAML: [EXERCISES.md](./EXERCISES.md)
+- Docker: [DOCKER.md](./DOCKER.md)
+- CI: [`.github/README.md`](./.github/README.md)
+
+### Language note
+
+Repository **documentation** is in **English** for contributors and sharing. **Exam content** (agent instructions in YAML, per-exercise `.md` under `apps/api/config/tef-exercices/`, and candidate-facing UI copy) stays in **French** where it supports TCF/TEF practice.

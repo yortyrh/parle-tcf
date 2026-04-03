@@ -1,76 +1,76 @@
-# 🐳 Docker & Railway
+# Docker & Railway
 
-Guide pour Docker Compose (local) et Railway (production).
+Docker Compose for local development and Railway for production.
 
-## 📋 Prérequis
+## Prerequisites
 
 - Docker 20.10+, Docker Compose v2+
-- Clé **OpenAI** (`OPENAI_API_KEY`)
+- **OpenAI** API key (`OPENAI_API_KEY`)
 
-## 🚀 Local — Docker Compose
+## Local — Docker Compose
 
-### 1. Variables
+### 1. Environment
 
 ```bash
 cp .env.example .env
-# Renseigner OPENAI_API_KEY
+# Set OPENAI_API_KEY
 ```
 
-### 2. Démarrer
+### 2. Start
 
 ```bash
 docker-compose up -d --build
 ```
 
-- **API** : `http://localhost:3001` — santé : `GET /health`
-- **Web** : `http://localhost` (map 80 → 3000)
+- **API**: `http://localhost:3001` — health: `GET /health`
+- **Web**: `http://localhost` (map 80 → 3000)
 
-Le fichier `docker-compose.yml` passe un **build arg** `NEXT_PUBLIC_EXAM_API_URL=http://localhost:3001` pour que le bundle Next.js appelle l’API depuis le navigateur sur la machine hôte.
+`docker-compose.yml` passes build arg `NEXT_PUBLIC_EXAM_API_URL=http://localhost:3001` so the Next.js bundle calls the API from the host browser.
 
-### 3. Logs & cycle de vie
+### 3. Logs & lifecycle
 
-| Tâche | Commande |
+| Task | Command |
 | --- | --- |
-| Logs suivis | `docker-compose logs -f` |
-| Logs API | `docker-compose logs -f api` |
-| Arrêt | `docker-compose stop` |
-| Suppression | `docker-compose down` |
+| Follow logs | `docker-compose logs -f` |
+| API logs only | `docker-compose logs -f api` |
+| Stop | `docker-compose stop` |
+| Remove containers | `docker-compose down` |
 | Rebuild | `docker-compose up -d --build` |
 
 ---
 
-## ☁️ Railway
+## Railway
 
-**Deux services** depuis la racine du dépôt (**root directory vide**). Pas de service **agent** séparé : l’agent Realtime est exécuté côté **navigateur** ; l’**API** remplace l’ancien worker / backend qui tenait les secrets et les données.
+**Two services** from the repo root (**empty root directory**). There is no separate **agent** service: the Realtime agent runs in the **browser**; the **API** holds secrets and data.
 
 | Service | `railway.json` | Image |
 | --- | --- | --- |
 | **API** | `apps/api/railway.json` | Nest + `better-sqlite3` |
 | **Web** | `apps/web/railway.json` | Next.js standalone |
 
-### Enchaînement typique
+### Typical sequence
 
-1. Déployer l’**API**, noter l’URL publique.
-2. Configurer le **Web** avec `NEXT_PUBLIC_EXAM_API_URL` pointant vers cette URL (build).
-3. Mettre à jour l’**API** : `CORS_ORIGINS` = URL du **Web**, puis redéployer l’API si besoin.
+1. Deploy **API**; note the public URL.
+2. Configure **Web** with `NEXT_PUBLIC_EXAM_API_URL` pointing at that URL (build-time).
+3. Update **API** `CORS_ORIGINS` to the **Web** URL; redeploy the API if needed.
 
 ### Variables
 
 **API**
 
-- `OPENAI_API_KEY` — requis
-- `CORS_ORIGINS` — origines autorisées pour le front (ex. `https://votre-web.up.railway.app`)
-- `PORT` — optionnel (Railway fournit souvent `PORT`)
+- `OPENAI_API_KEY` — required
+- `CORS_ORIGINS` — allowed browser origins (e.g. `https://your-web.up.railway.app`)
+- `PORT` — optional (Railway often provides `PORT`)
 
-**Web** (injectée au **build**)
+**Web** (injected at **build** time)
 
-- `NEXT_PUBLIC_EXAM_API_URL` — URL HTTPS **vue par le navigateur** pour joindre l’API
+- `NEXT_PUBLIC_EXAM_API_URL` — HTTPS URL the **browser** uses to reach the API
 
 ---
 
-## 🏗️ Images
+## Images
 
-- `apps/api/Dockerfile` — `turbo prune @yorty-tcf/api`, build Nest, `CMD node apps/api/dist/main.js`
-- `apps/web/Dockerfile` — `turbo prune @yorty-tcf/web`, build Next standalone, `ARG NEXT_PUBLIC_EXAM_API_URL`
+- `apps/api/Dockerfile` — `turbo prune @yorty-tcf/api`, Nest build, `CMD node apps/api/dist/main.js`
+- `apps/web/Dockerfile` — `turbo prune @yorty-tcf/web`, Next standalone build, `ARG NEXT_PUBLIC_EXAM_API_URL`
 
-Architecture fonctionnelle : [AGENTS.md](./AGENTS.md).
+Functional overview: [AGENTS.md](./AGENTS.md).

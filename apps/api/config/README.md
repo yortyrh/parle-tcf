@@ -1,7 +1,7 @@
-# 🤖 Configuration de l'Agent
+# API config directory
 
-Ce dossier contient les prompts YAML et la base de données SQLite générée pour les examens.
+YAML agent prompts and the generated SQLite database used at runtime for exams.
 
 ---
 
-**IMPORTANT** : Pour comprendre comment configurer les agents ou ajouter des exercices, consultez le fichier **[EXERCICES.md](../../../EXERCICES.md)** à la racine du projet.
+**IMPORTANT**: For how to configure agents or add exercises, see **[EXERCISES.md](../../../EXERCISES.md)** at the repository root.
