@@ -38,9 +38,8 @@ pnpm --filter @yorty-tcf/api run generate-db
 
 ### TEF (sections A et B)
 
-- Données structurées : `apps/api/config/tef-exercises.json`
-- **Images** : `apps/web/public/tef-exercices/`
-- **Annonces (markdown)** : `apps/web/content/tef-annonces/`
+- **Source** : `apps/api/config/tef-exercices/TEF-A/` et `TEF-B/` — pour chaque exercice, une paire `TEF-A-01.png` + `TEF-A-01.md` (instructions spécifiques Realtime, éditables).
+- **Images servies au navigateur** : copie dans `apps/web/public/tef-exercices/` via `sync-tef`.
 
 ---
 
@@ -51,16 +50,15 @@ Exécution depuis la racine du monorepo avec le filtre `@yorty-tcf/api` :
 | Script | Rôle |
 | --- | --- |
 | `generate-db` | CSV TCF → SQLite |
-| `extract-tef` | Images TEF → enrichissement `tef-exercises.json` (voir script, clé OpenAI) |
-| `generate-tef-images` | Génération d’images dans `apps/web/public/tef-exercices/generated/` |
-| `generate-tef-annonces` | Markdown dans `apps/web/content/tef-annonces/` |
-| `clean-tef-dimension-images` | Nettoie les variantes dimensionnées |
-| `reset-tef-images` | Réinitialise les images générées |
+| `rename-tef` | Renomme les scans PNG en `TEF-{A\|B}-NN.png` (dry-run ; `--apply` pour exécuter) |
+| `generate-tef-instructions` | Vision (GPT-4o) → un `.md` par image ; `--stub` pour des brouillons sans clé API |
+| `sync-tef` | Copie les PNG vers `apps/web/public/tef-exercices/` |
 
 Exemple :
 
 ```bash
-pnpm --filter @yorty-tcf/api run generate-tef-annonces -- --force
+pnpm --filter @yorty-tcf/api run generate-tef-instructions -- --force
+pnpm --filter @yorty-tcf/api run sync-tef
 ```
 
 ---

@@ -22,14 +22,9 @@ export interface ExerciseDataMessage {
 
 export interface ExerciseImageMessage {
   type: "exerciseImage";
-  id?: string;
+  id: string;
   filename: string;
   section: "A" | "B";
-  annonce?: string;
-  title?: string;
-  consigne?: string;
-  generatedImagePath?: string | null;
-  generatedImagePaths?: Record<string, string> | null;
 }
 
 export interface ReportMessage {

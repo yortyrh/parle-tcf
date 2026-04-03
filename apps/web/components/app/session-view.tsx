@@ -23,14 +23,9 @@ import type { ExerciseImageData } from '@/types/exercise-image';
 function mapExerciseImage(img: ExerciseImagePayload | null): ExerciseImageData | null {
   if (!img) return null;
   return {
-    id: img.id ?? null,
+    id: img.id,
     filename: img.filename,
     section: img.section,
-    annonce: img.annonce ?? null,
-    title: img.title ?? null,
-    consigne: img.consigne ?? null,
-    generatedImagePath: img.generatedImagePath ?? null,
-    generatedImagePaths: img.generatedImagePaths ?? null,
   };
 }
 

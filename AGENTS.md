@@ -45,7 +45,7 @@ Variables utiles : voir `apps/web/.env.example` (`NEXT_PUBLIC_EXAM_API_URL`).
 
 Variables : voir `apps/api/.env.example` (`OPENAI_API_KEY`, `PORT`, `CORS_ORIGINS`).
 
-Scripts contenu TEF/TCF (exécutés depuis `apps/api`) : `generate-db`, `extract-tef`, `generate-tef-images`, `generate-tef-annonces`, etc. — voir `apps/api/package.json`.
+Scripts contenu TEF/TCF (exécutés depuis `apps/api`) : `generate-db`, `rename-tef`, `generate-tef-instructions`, `sync-tef` — voir `apps/api/package.json`.
 
 ---
 

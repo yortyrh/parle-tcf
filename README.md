@@ -95,14 +95,14 @@ pnpm --filter @yorty-tcf/shared <script>
 | --- | --- |
 | `dev` / `build` / `start` | NestJS |
 | `generate-db` | CSV TCF → SQLite (`config/tcf-exercises.db`) |
-| `extract-tef`, `generate-tef-images`, `generate-tef-annonces`, `clean-tef-dimension-images`, `reset-tef-images` | Pipeline contenu TEF (voir commentaires dans `apps/api/scripts/`) |
+| `rename-tef`, `generate-tef-instructions`, `sync-tef` | Pipeline contenu TEF (`config/tef-exercices/` → instructions `.md` + images dans `apps/web/public/`) |
 | `lint`, `typecheck`, `format` | Qualité |
 
 Exemple :
 
 ```bash
 pnpm --filter @yorty-tcf/api run generate-db
-pnpm --filter @yorty-tcf/api run generate-tef-annonces -- --force
+pnpm --filter @yorty-tcf/api run sync-tef
 ```
 
 ### Web — `@yorty-tcf/web` (`apps/web`)

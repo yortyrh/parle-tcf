@@ -23,14 +23,9 @@ export const exerciseDataPayloadSchema = z.object({
 
 export const exerciseImagePayloadSchema = z.object({
   type: z.literal('exerciseImage'),
-  id: z.string().optional(),
+  id: z.string(),
   filename: z.string(),
   section: z.enum(['A', 'B']),
-  annonce: z.string().optional(),
-  title: z.string().optional(),
-  consigne: z.string().optional(),
-  generatedImagePath: z.string().nullable().optional(),
-  generatedImagePaths: z.record(z.string()).nullable().optional(),
 });
 
 export const agentConfigForClientSchema = z.object({

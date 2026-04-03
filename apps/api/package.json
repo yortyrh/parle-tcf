@@ -13,11 +13,9 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "generate-db": "tsx scripts/csv-to-sqlite.ts",
-    "extract-tef": "tsx scripts/extract-tef-exercises.ts",
-    "generate-tef-annonces": "tsx scripts/generate-tef-annonces.ts",
-    "generate-tef-images": "tsx scripts/generate-tef-images.ts",
-    "clean-tef-dimension-images": "tsx scripts/clean-tef-dimension-images.ts",
-    "reset-tef-images": "tsx scripts/reset-tef-images.ts",
+    "rename-tef": "tsx scripts/rename-tef-images.ts",
+    "generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts",
+    "sync-tef": "tsx scripts/sync-tef-to-web.ts",
     "test": "node ./scripts/noop-test.mjs"
   },
   "engines": {

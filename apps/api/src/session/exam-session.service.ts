@@ -128,10 +128,8 @@ export class ExamSessionService {
     if (taskType === "tef-section-a") {
       return {
         title: "TEF Section A - Demande d'informations",
-        description: tef?.consigne ?? "",
-        content: tef
-          ? `TITRE: ${tef.title}\n\nANNONCE:\n${tef.annonce}\n\nCONSIGNE DU CANDIDAT:\n${tef.consigne}`
-          : "",
+        description: "Demande d'informations par téléphone",
+        content: tef?.instructions ?? "",
         exerciseId: tef?.id,
         taskType,
       };
@@ -139,10 +137,8 @@ export class ExamSessionService {
     if (taskType === "tef-section-b") {
       return {
         title: "TEF Section B - Argumentation",
-        description: tef?.consigne ?? "",
-        content: tef
-          ? `TITRE: ${tef.title}\n\nANNONCE:\n${tef.annonce}\n\nCONSIGNE DU CANDIDAT:\n${tef.consigne}`
-          : "",
+        description: "Argumentation avec un(e) ami(e)",
+        content: tef?.instructions ?? "",
         exerciseId: tef?.id,
         taskType,
       };
@@ -163,11 +159,6 @@ export class ExamSessionService {
       id: tef.id,
       filename: tef.filename,
       section,
-      annonce: tef.annonce,
-      title: tef.title,
-      consigne: tef.consigne,
-      generatedImagePath: tef.generatedImagePath ?? null,
-      generatedImagePaths: tef.generatedImagePaths ?? null,
     };
   }
 

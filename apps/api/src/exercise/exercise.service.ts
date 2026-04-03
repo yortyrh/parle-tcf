@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import Database from "better-sqlite3";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { TaskType } from "@yorty-tcf/shared";
 import { getApiConfigDir } from "../paths.js";
@@ -30,12 +30,10 @@ export interface TefExercise {
   id: string;
   section: "A" | "B";
   filename: string;
-  title: string;
-  annonce: string;
-  consigne: string;
-  generatedImagePath?: string;
-  generatedImagePaths?: Record<string, string>;
+  instructions: string;
 }
+
+const TEF_MD = /^TEF-[AB]-\d{2}\.md$/i;
 
 @Injectable()
 export class ExerciseService implements OnModuleDestroy {
@@ -110,41 +108,72 @@ export class ExerciseService implements OnModuleDestroy {
 
   private loadTefExercises(): TefExercise[] {
     if (this.tefCache) return this.tefCache;
-    const jsonPath = join(this.getConfigDir(), "tef-exercises.json");
-    if (!existsSync(jsonPath)) {
+    const exercises: TefExercise[] = [];
+    const root = join(this.getConfigDir(), "tef-exercices");
+
+    for (const section of ["A", "B"] as const) {
+      const dir = join(root, `TEF-${section}`);
+      if (!existsSync(dir)) {
+        this.logger.warn(`TEF folder missing: ${dir}`);
+        continue;
+      }
+      const mdNames = readdirSync(dir)
+        .filter((f) => TEF_MD.test(f))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+      for (const mdName of mdNames) {
+        const base = mdName.replace(/\.md$/i, "");
+        const pngName = `${base}.png`;
+        const pngPath = join(dir, pngName);
+        if (!existsSync(pngPath)) {
+          this.logger.warn(`Skipping ${mdName}: missing ${pngName}`);
+          continue;
+        }
+        try {
+          const instructions = readFileSync(join(dir, mdName), "utf-8");
+          exercises.push({
+            id: base,
+            section,
+            filename: pngName,
+            instructions,
+          });
+        } catch (e) {
+          this.logger.error(`read ${mdName}`, e);
+        }
+      }
+    }
+
+    if (exercises.length === 0) {
       this.logger.warn(
-        "tef-exercises.json missing; run extract-tef in content pipeline",
+        "No TEF exercises found; add TEF-A-NN.md + TEF-A-NN.png under config/tef-exercices/",
       );
-      this.tefCache = [];
-      return this.tefCache;
     }
-    try {
-      const content = readFileSync(jsonPath, "utf-8");
-      this.tefCache = JSON.parse(content) as TefExercise[];
-      return this.tefCache;
-    } catch (e) {
-      this.logger.error("loadTefExercises", e);
-      this.tefCache = [];
-      return this.tefCache;
-    }
+
+    this.tefCache = exercises;
+    return this.tefCache;
   }
 
-  getTefExercise(section: "A" | "B"): TefExercise {
+  getTefExercise(section: "A" | "B", exerciseId?: string): TefExercise {
     const all = this.loadTefExercises();
     const filtered = all.filter((ex) => ex.section === section);
     if (filtered.length === 0) {
       return {
         id: `TEF-${section}-00`,
         section,
-        filename: `TEF-${section} 01.jpg`,
-        title: "Exercice TEF",
-        annonce:
-          "Annonce non disponible. Générez tef-exercises.json (voir documentation).",
-        consigne:
+        filename: `TEF-${section}-01.png`,
+        instructions:
           section === "A"
             ? "Vous téléphonez pour obtenir des informations sur cette annonce."
             : "Vous présentez cette annonce à un(e) ami(e) et essayez de le/la convaincre.",
       };
+    }
+    if (exerciseId) {
+      const normalized = exerciseId.trim();
+      const found = filtered.find(
+        (ex) => ex.id === normalized || ex.id.toLowerCase() === normalized.toLowerCase(),
+      );
+      if (found) return found;
+      this.logger.warn(`TEF exercise not found: ${exerciseId} (section ${section})`);
     }
     const randomIndex = Math.floor(Math.random() * filtered.length);
     return filtered[randomIndex]!;
@@ -170,10 +199,10 @@ export class ExerciseService implements OnModuleDestroy {
       return { tcf: ex, tef: null };
     }
     if (taskType === "tef-section-a") {
-      return { tcf: null, tef: this.getTefExercise("A") };
+      return { tcf: null, tef: this.getTefExercise("A", exerciseId) };
     }
     if (taskType === "tef-section-b") {
-      return { tcf: null, tef: this.getTefExercise("B") };
+      return { tcf: null, tef: this.getTefExercise("B", exerciseId) };
     }
     return { tcf: null, tef: null };
   }
