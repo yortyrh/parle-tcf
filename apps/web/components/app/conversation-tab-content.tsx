@@ -5,7 +5,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import type { ExamTranscriptLine } from '@/lib/transcript-from-history';
 import { cn } from '@/lib/utils';
 
-const ESTIMATED_ROW_HEIGHT = 72;
+/** Initial guess only; rows are measured after paint via virtualizer.measureElement. */
+const ESTIMATED_ROW_HEIGHT = 96;
 const OVERSCAN = 5;
 const AUTO_SCROLL_THRESHOLD_PX = 120;
 
@@ -32,7 +33,7 @@ const MessageBubble = React.memo(function MessageBubble({ item }: { item: ExamTr
         <span className="text-muted-foreground text-xs font-semibold">{label}</span>
         <div
           className={cn(
-            'max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug',
+            'max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug break-words',
             isLocal
               ? 'rounded-tr-none bg-cyan-700 text-white'
               : 'rounded-tl-none bg-gray-100 text-gray-900'
@@ -85,7 +86,9 @@ export function ConversationTabContent({ lines }: ConversationTabContentProps) {
           if (!item) return null;
           return (
             <div
-              key={item.id}
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
               className="absolute top-0 left-0 w-full px-1 py-2"
               style={{ transform: `translateY(${virtualRow.start}px)` }}
             >
