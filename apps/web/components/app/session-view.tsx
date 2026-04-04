@@ -48,6 +48,7 @@ function SpeakingIndicator({
   levelRef,
   variant = 'default',
   icons = 'none',
+  evaluatorCaptionVisible = true,
 }: {
   /** Libellé visible (ex. « Vous »). Omis pour l’évaluateur (casque + barres seuls). */
   label?: string;
@@ -57,6 +58,8 @@ function SpeakingIndicator({
   variant?: 'default' | 'barsOnly';
   /** Casque à gauche des barres, sans texte — pour le canal agent uniquement. */
   icons?: 'none' | 'evaluator';
+  /** Affiche « Évaluateur » à côté des barres (desktop assez haut uniquement). */
+  evaluatorCaptionVisible?: boolean;
 }) {
   const barsRef = useRef<(HTMLSpanElement | null)[]>([]);
   const rafRef = useRef<number>(0);
@@ -120,14 +123,46 @@ function SpeakingIndicator({
   }
 
   const iconMuted = 'text-muted-foreground';
-  const iconActive =
-    color === 'cyan' ? 'text-cyan-600' : 'text-emerald-600';
+  const iconActive = color === 'cyan' ? 'text-cyan-600' : 'text-emerald-600';
   const iconClass = cn('h-4 w-4 shrink-0', active ? iconActive : iconMuted);
   const showEvaluatorIcons = icons === 'evaluator' && variant === 'default';
 
   const evaluatorAriaLabel = active
     ? 'Évaluateur parle — assistant vocal par intelligence artificielle'
     : 'Évaluateur, silence — assistant vocal par intelligence artificielle';
+
+  if (showEvaluatorIcons) {
+    return (
+      <div
+        className={cn(
+          'inline-flex h-8 shrink-0 items-center gap-2 rounded-full border px-3 transition-all duration-200',
+          'border-input bg-background hover:bg-accent hover:text-accent-foreground',
+          'dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+          active
+            ? 'text-foreground border-cyan-400/90 bg-cyan-50/90 shadow-sm shadow-cyan-200/40 hover:bg-cyan-50 dark:border-cyan-500/50 dark:bg-cyan-950/35 dark:hover:bg-cyan-950/45'
+            : null
+        )}
+        aria-label={evaluatorAriaLabel}
+        role="status"
+      >
+        <Headset weight="bold" className={iconClass} aria-hidden />
+        <div className="flex h-5 items-center gap-[2px]" aria-hidden>
+          {bars}
+        </div>
+        {evaluatorCaptionVisible ? (
+          <span
+            className={cn(
+              'text-xs font-bold tracking-wider whitespace-nowrap uppercase select-none',
+              active ? 'text-cyan-800 dark:text-cyan-100' : 'text-foreground'
+            )}
+            aria-hidden
+          >
+            Évaluateur
+          </span>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -139,13 +174,9 @@ function SpeakingIndicator({
             : 'border-emerald-400 bg-emerald-50 shadow-sm shadow-emerald-200/50'
           : 'border-border/60 bg-background/80'
       )}
-      {...(showEvaluatorIcons ? { 'aria-label': evaluatorAriaLabel, role: 'status' as const } : {})}
     >
-      {showEvaluatorIcons && (
-        <Headset weight="bold" className={iconClass} aria-hidden />
-      )}
       <div className="flex h-5 items-center gap-[2px]">{bars}</div>
-      {!showEvaluatorIcons && label != null && label !== '' ? (
+      {label != null && label !== '' ? (
         <span
           className={cn(
             'text-[11px] font-medium tracking-wide transition-colors duration-200 select-none',
@@ -169,6 +200,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const [tefTransitionReady, setTefTransitionReady] = useState(false);
   const [viewingPreviousIndex, setViewingPreviousIndex] = useState<number | null>(null);
   const [compactSessionFooter, setCompactSessionFooter] = useState(false);
+  const [showEvaluatorFooterCaption, setShowEvaluatorFooterCaption] = useState(false);
 
   const exerciseImage = useMemo(() => mapExerciseImage(exam.exerciseImage), [exam.exerciseImage]);
 
@@ -256,11 +288,22 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   }, [isTefTask, selectedTask?.taskType]);
 
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 640px) and (max-height: 700px)');
-    const apply = () => setCompactSessionFooter(mq.matches);
+    const mqCompact = window.matchMedia('(min-width: 640px) and (max-height: 700px)');
+    const mqSm = window.matchMedia('(min-width: 640px)');
+    const mqShort = window.matchMedia('(max-height: 700px)');
+    const apply = () => {
+      setCompactSessionFooter(mqCompact.matches);
+      setShowEvaluatorFooterCaption(mqSm.matches && !mqShort.matches);
+    };
     apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
+    mqCompact.addEventListener('change', apply);
+    mqSm.addEventListener('change', apply);
+    mqShort.addEventListener('change', apply);
+    return () => {
+      mqCompact.removeEventListener('change', apply);
+      mqSm.removeEventListener('change', apply);
+      mqShort.removeEventListener('change', apply);
+    };
   }, []);
 
   const footerEvaluatorIndicator = (
@@ -269,6 +312,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
       color="cyan"
       levelRef={exam.agentAudioLevelRef}
       icons="evaluator"
+      evaluatorCaptionVisible={showEvaluatorFooterCaption}
     />
   );
 
@@ -293,9 +337,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
         levelRef={exam.userAudioLevelRef}
         variant="barsOnly"
       />
-      <span className="hidden sm:inline">
-        {exam.micEnabled ? 'Micro on' : 'Micro off'}
-      </span>
+      <span className="hidden sm:inline">{exam.micEnabled ? 'Micro on' : 'Micro off'}</span>
     </Button>
   ) : (
     <SpeakingIndicator
@@ -345,7 +387,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
               className={cn(
                 'mb-1.5 ml-2 inline-flex flex-shrink-0 touch-manipulation items-center justify-center gap-1.5 rounded-lg',
                 'bg-cyan-600 text-xs font-medium text-white shadow-sm transition-colors',
-                'min-h-7 min-w-[3.75rem] px-4 py-0.5 active:bg-cyan-800 hover:bg-cyan-700',
+                'min-h-7 min-w-[3.75rem] px-4 py-0.5 hover:bg-cyan-700 active:bg-cyan-800',
                 'sm:min-h-0 sm:min-w-0 sm:px-2.5 sm:py-1'
               )}
             >
@@ -356,10 +398,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
 
           <TabsContent
             value="consigne"
-            className={cn(
-              'min-h-0 flex-1 overflow-y-auto',
-              isTefTask ? 'p-0' : 'p-3 sm:p-4'
-            )}
+            className={cn('min-h-0 flex-1 overflow-y-auto', isTefTask ? 'p-0' : 'p-3 sm:p-4')}
           >
             <ConsigneTabContent
               isTefTask={isTefTask}
