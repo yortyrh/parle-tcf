@@ -340,10 +340,16 @@ export function SessionView({ selectedTask }: SessionViewProps) {
             </TabsList>
             <button
               type="button"
+              aria-label="Recommencer la session"
               onClick={handleRestart}
-              className="mb-1.5 ml-2 inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-cyan-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-cyan-700"
+              className={cn(
+                'mb-1.5 ml-2 inline-flex flex-shrink-0 touch-manipulation items-center justify-center gap-1.5 rounded-lg',
+                'bg-cyan-600 text-xs font-medium text-white shadow-sm transition-colors',
+                'min-h-7 min-w-[3.75rem] px-4 py-0.5 active:bg-cyan-800 hover:bg-cyan-700',
+                'sm:min-h-0 sm:min-w-0 sm:px-2.5 sm:py-1'
+              )}
             >
-              <ArrowCounterClockwise size={14} weight="bold" />
+              <ArrowCounterClockwise className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" weight="bold" />
               <span className="hidden sm:inline">Recommencer</span>
             </button>
           </div>
