@@ -55,7 +55,7 @@ export const ConsigneTabContent = React.memo(function ConsigneTabContent({
         </div>
       )}
 
-      {exerciseImage && !showTefSkeleton && (
+      {isTefTask && exerciseImage && !showTefSkeleton && (
         <React.Suspense
           fallback={
             <div className="border-border/70 bg-card relative flex min-h-[200px] flex-1 animate-pulse flex-col gap-2 overflow-hidden rounded-2xl border p-3 shadow-sm sm:p-4">

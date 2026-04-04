@@ -17,8 +17,8 @@ export function ExerciseImageViewer({ exerciseImage }: ExerciseImageViewerProps)
   const src = `/tef-exercices/${folder}/${filename}`;
 
   return (
-    <div className="mt-2 flex min-h-0 flex-1 flex-col">
-      <div className="border-border/70 bg-card min-h-0 min-w-0 flex-1 overflow-y-auto rounded-2xl border shadow-md ring-1 ring-black/5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="border-0 bg-card min-h-0 min-w-0 flex-1 overflow-y-auto rounded-none pt-4 shadow-md ring-1 ring-black/5">
         {/* eslint-disable-next-line @next/next/no-img-element -- natural dimensions, full-width scroll */}
         <img
           src={src}
