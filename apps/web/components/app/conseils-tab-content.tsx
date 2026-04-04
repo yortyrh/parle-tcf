@@ -101,8 +101,8 @@ export const ConseilsTabContent = React.memo(function ConseilsTabContent({
           <p className="text-sm text-red-900/90">{reportDeliveryError}</p>
           <p className="text-sm text-red-800/85">
             Cela arrive parfois lors de l&apos;envoi technique du rapport. Utilisez{' '}
-            <strong>Recommencer</strong> en haut pour relancer une session, ou <strong>RACCROCHER</strong>{' '}
-            puis démarrez une nouvelle épreuve.
+            <strong>Recommencer</strong> en haut pour relancer une session, ou{' '}
+            <strong>RACCROCHER</strong> puis démarrez une nouvelle épreuve.
           </p>
         </div>
       </div>

@@ -212,10 +212,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const displayReport = exam.report ?? exam.reportStreaming;
   const isReviewPhase = exam.sessionEnded && !!exam.report;
   const isPreparingReport =
-    exam.sessionEnded &&
-    !exam.report &&
-    !exam.reportStreaming &&
-    !exam.reportDeliveryError;
+    exam.sessionEnded && !exam.report && !exam.reportStreaming && !exam.reportDeliveryError;
   const isMicEnabled = !exam.sessionEnded || isReviewPhase;
   const canUseMicShortcut = isMicEnabled && exam.isConnected;
 

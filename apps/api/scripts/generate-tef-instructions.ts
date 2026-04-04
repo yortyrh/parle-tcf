@@ -145,7 +145,7 @@ Règles :
 - Rester factuel par rapport à l'image ; si un détail est illisible, indique « (illisible sur le scan) ».
 ${
   section === "A"
-    ? `- Section A : dans « Informations que le personnage connaît », pour les détails absents de l'image, décris les **faits** que le personnage pourrait encore devoir préciser au fil d'un échange téléphonique crédible ; évite la seule consigne « répondre que ce n'est pas sur la fiche ». Indique plutôt ce qui manque à l'annonce et, si utile, comment le personnage peut **poursuivre l'appel** (vérification, rappel, habitude du service) sans faire la leçon au candidat.\n`
+    ? `- Section A : dans « Informations que le personnage connaît », pour les détails absents ou illisibles sur l'image, liste ce que le personnage **peut quand même préciser au téléphone** (réponses courtes, cohérentes avec l'offre) : horaires plausibles, tarif indicatif, modalités d'inscription, etc. **Ne jamais** formuler une consigne du type « dire que ce n'est pas sur l'annonce », « renvoyer au site », « dire d'appeler un autre numéro » ou « refuser l'info » : l'oral doit rester fluide. Tu peux marquer « (illisible sur le scan) » pour ce que le **candidat** ne lit pas sur l'image, mais complète toujours par **ce que l'agent peut répondre en scène** si on l'interroge.\n`
     : ""
 }- Réponds UNIQUEMENT avec le markdown, sans bloc de code, sans préambule.`;
 
