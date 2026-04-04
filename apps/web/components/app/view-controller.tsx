@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AppConfig, Task } from '@/app-config';
 import { SessionView } from '@/components/app/session-view';
+import { TefExerciseImageSkeleton } from '@/components/app/tef-exercise-image-skeleton';
 import { WelcomeView } from '@/components/app/welcome-view';
+import { cn } from '@/lib/utils';
 import { useRealtimeExam } from '@/providers/realtime-exam-provider';
 
 interface ViewControllerProps {
@@ -92,7 +94,9 @@ export function ViewController({
 
   if (!exam.isConnected) {
     if (exam.isConnecting || exam.isRestarting) {
-      return <ConnectingSkeleton />;
+      const taskType = selectedTask?.taskType ?? connectTaskTypeRef.current;
+      const isTefTask = taskType.startsWith('tef');
+      return <ConnectingSkeleton isTef={isTefTask} />;
     }
     return (
       <WelcomeView
@@ -107,39 +111,45 @@ export function ViewController({
   return <SessionView appConfig={appConfig} selectedTask={selectedTask} />;
 }
 
-function ConnectingSkeleton() {
+function ConnectingSkeleton({ isTef }: { isTef: boolean }) {
   return (
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-b from-slate-100/70 via-slate-50/40 to-white p-2 sm:p-4">
       <div className="border-border/70 bg-card/95 relative flex h-full w-full max-w-3xl animate-pulse flex-col overflow-hidden rounded-xl border border-solid shadow-xl ring-1 ring-black/5 backdrop-blur sm:rounded-2xl">
         <div className="border-border/70 flex items-end border-b bg-white/60 px-3 pt-2">
-          <div className="flex flex-1 gap-0">
-            {[28, 24, 36].map((w, i) => (
-              <div
-                key={i}
-                className={`bg-muted/70 mb-0 h-9 flex-1 rounded-t-md sm:flex-none sm:w-${w}`}
-              />
-            ))}
+          <div className="flex min-w-0 flex-1 gap-0">
+            <div className="bg-muted/70 mb-0 h-9 min-w-0 flex-1 rounded-t-md sm:w-28 sm:flex-none" />
+            <div className="bg-muted/70 mb-0 h-9 min-w-0 flex-1 rounded-t-md sm:w-24 sm:flex-none" />
+            <div className="bg-muted/70 mb-0 h-9 min-w-0 flex-1 rounded-t-md sm:w-36 sm:flex-none" />
           </div>
-          <div className="bg-muted mb-1.5 ml-2 h-6 w-24 flex-shrink-0 rounded-lg" />
+          <div className="bg-muted mb-1.5 ml-2 h-6 w-24 shrink-0 rounded-lg" />
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-          <div className="flex h-full flex-col gap-3">
-            <div className="flex min-h-[88px] items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-50/60 px-4 py-3 shadow-sm">
-              <div className="w-full">
-                <div className="mb-2.5 h-4 w-3/4 rounded-md bg-cyan-200/60" />
-                <div className="mb-2 h-4 w-full rounded-md bg-cyan-200/60" />
-                <div className="mb-2 h-4 w-5/6 rounded-md bg-cyan-200/60" />
-                <div className="h-4 w-2/3 rounded-md bg-cyan-200/60" />
-              </div>
-            </div>
+        <div className={cn('flex min-h-0 flex-1 overflow-y-auto', isTef ? 'p-0' : 'p-3 sm:p-4')}>
+          <div className={cn('flex min-h-0 w-full flex-col', !isTef && 'gap-3')}>
+            {isTef ? (
+              <TefExerciseImageSkeleton
+                className="min-h-[min(380px,52vh)]"
+                ariaLabel="Connexion à la session et préparation de l’exercice"
+              />
+            ) : (
+              <>
+                <div className="flex min-h-[88px] items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-50/60 px-4 py-3 shadow-sm">
+                  <div className="w-full">
+                    <div className="mb-2.5 h-4 w-3/4 rounded-md bg-cyan-200/60" />
+                    <div className="mb-2 h-4 w-full rounded-md bg-cyan-200/60" />
+                    <div className="mb-2 h-4 w-5/6 rounded-md bg-cyan-200/60" />
+                    <div className="h-4 w-2/3 rounded-md bg-cyan-200/60" />
+                  </div>
+                </div>
 
-            <div className="mt-auto rounded-xl border border-amber-200/60 bg-amber-50/60 px-4 py-3 shadow-sm">
-              <div className="mb-2 h-3.5 w-1/3 rounded-md bg-amber-200/70" />
-              <div className="mb-1.5 h-3 w-full rounded-md bg-amber-200/50" />
-              <div className="mb-1.5 h-3 w-5/6 rounded-md bg-amber-200/50" />
-              <div className="h-3 w-3/4 rounded-md bg-amber-200/50" />
-            </div>
+                <div className="mt-auto rounded-xl border border-amber-200/60 bg-amber-50/60 px-4 py-3 shadow-sm">
+                  <div className="mb-2 h-3.5 w-1/3 rounded-md bg-amber-200/70" />
+                  <div className="mb-1.5 h-3 w-full rounded-md bg-amber-200/50" />
+                  <div className="mb-1.5 h-3 w-5/6 rounded-md bg-amber-200/50" />
+                  <div className="h-3 w-3/4 rounded-md bg-amber-200/50" />
+                </div>
+              </>
+            )}
           </div>
         </div>
 

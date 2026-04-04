@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { TefExerciseImageSkeleton } from '@/components/app/tef-exercise-image-skeleton';
 import type { ExerciseImageData } from '@/types/exercise-image';
 
 const ExerciseImageViewer = React.lazy(() =>
@@ -46,24 +47,10 @@ export const ConsigneTabContent = React.memo(function ConsigneTabContent({
         </div>
       )}
 
-      {showTefSkeleton && (
-        <div className="border-border/70 bg-card relative flex min-h-[200px] flex-1 animate-pulse flex-col gap-2 overflow-hidden rounded-2xl border p-3 shadow-sm sm:p-4">
-          <div className="bg-muted h-5 w-36 rounded-md" />
-          <div className="bg-muted h-3.5 w-56 rounded-md" />
-          <div className="bg-muted/70 mt-1 h-full min-h-[120px] rounded-xl sm:min-h-[160px]" />
-          <div className="bg-muted h-4 w-44 rounded-md" />
-        </div>
-      )}
+      {showTefSkeleton && <TefExerciseImageSkeleton />}
 
       {isTefTask && exerciseImage && !showTefSkeleton && (
-        <React.Suspense
-          fallback={
-            <div className="border-border/70 bg-card relative flex min-h-[200px] flex-1 animate-pulse flex-col gap-2 overflow-hidden rounded-2xl border p-3 shadow-sm sm:p-4">
-              <div className="bg-muted h-5 w-36 rounded-md" />
-              <div className="bg-muted/70 mt-1 h-full min-h-[120px] rounded-xl" />
-            </div>
-          }
-        >
+        <React.Suspense fallback={<TefExerciseImageSkeleton />}>
           <ExerciseImageViewer exerciseImage={exerciseImage} />
         </React.Suspense>
       )}
