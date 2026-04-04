@@ -1,0 +1,20 @@
+diff --git a/dist/realtimeSession.mjs b/dist/realtimeSession.mjs
+--- a/dist/realtimeSession.mjs
++++ b/dist/realtimeSession.mjs
+@@ -1,6 +1,6 @@
+ import { getTransferMessage, ModelBehaviorError, OutputGuardrailTripwireTriggered, RunContext, RunToolApprovalItem, invokeFunctionTool, } from '@openai/agents-core';
+ import { RuntimeEventEmitter } from '@openai/agents-core/_shims';
+-import { isZodObject, toSmartString } from '@openai/agents-core/utils';
++import { isZodObject, parseLenientJson, toSmartString } from '@openai/agents-core/utils';
+ import { defineRealtimeOutputGuardrail, getRealtimeGuardrailFeedbackMessage, getRealtimeGuardrailSettings, } from "./guardrail.mjs";
+ import { DEFAULT_OPENAI_REALTIME_SESSION_CONFIG, } from "./openaiRealtimeBase.mjs";
+ import { OpenAIRealtimeWebRTC } from "./openaiRealtimeWebRtc.mjs";
+@@ -321,7 +321,7 @@
+                 parsedArgs = tool.parameters.parse(parsedArgs);
+             }
+             else {
+-                parsedArgs = JSON.parse(parsedArgs);
++                parsedArgs = parseLenientJson(parsedArgs);
+             }
+         }
+         const needsApproval = await tool.needsApproval(this.#context, parsedArgs, toolCall.callId);

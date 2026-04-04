@@ -4,6 +4,14 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@openai/agents-core@0.8.2':
+    hash: 7934cb01948509de7d2e5b5bc7694b606ec0f54a163c7306ec860454fc40e6d5
+    path: patches/@openai__agents-core@0.8.2.patch
+  '@openai/agents-realtime@0.8.2':
+    hash: 6ffb253bd387c8d6ae2cfddeb412668f10c6b73c27dc117eca91b642978425a9
+    path: patches/@openai__agents-realtime@0.8.2.patch
+
 importers:
 
   .:
@@ -5800,7 +5808,7 @@ snapshots:
     dependencies:
       consola: 3.4.2
 
-  '@openai/agents-core@0.8.2(ws@8.20.0)(zod@4.3.6)':
+  '@openai/agents-core@0.8.2(patch_hash=7934cb01948509de7d2e5b5bc7694b606ec0f54a163c7306ec860454fc40e6d5)(ws@8.20.0)(zod@4.3.6)':
     dependencies:
       debug: 4.4.3
       openai: 6.33.0(ws@8.20.0)(zod@4.3.6)
@@ -5814,7 +5822,7 @@ snapshots:
 
   '@openai/agents-openai@0.8.2(ws@8.20.0)(zod@4.3.6)':
     dependencies:
-      '@openai/agents-core': 0.8.2(ws@8.20.0)(zod@4.3.6)
+      '@openai/agents-core': 0.8.2(patch_hash=7934cb01948509de7d2e5b5bc7694b606ec0f54a163c7306ec860454fc40e6d5)(ws@8.20.0)(zod@4.3.6)
       debug: 4.4.3
       openai: 6.33.0(ws@8.20.0)(zod@4.3.6)
       zod: 4.3.6
@@ -5823,9 +5831,9 @@ snapshots:
       - supports-color
       - ws
 
-  '@openai/agents-realtime@0.8.2(zod@4.3.6)':
+  '@openai/agents-realtime@0.8.2(patch_hash=6ffb253bd387c8d6ae2cfddeb412668f10c6b73c27dc117eca91b642978425a9)(zod@4.3.6)':
     dependencies:
-      '@openai/agents-core': 0.8.2(ws@8.20.0)(zod@4.3.6)
+      '@openai/agents-core': 0.8.2(patch_hash=7934cb01948509de7d2e5b5bc7694b606ec0f54a163c7306ec860454fc40e6d5)(ws@8.20.0)(zod@4.3.6)
       '@types/ws': 8.18.1
       debug: 4.4.3
       ws: 8.20.0
@@ -5838,9 +5846,9 @@ snapshots:
 
   '@openai/agents@0.8.2(ws@8.20.0)(zod@4.3.6)':
     dependencies:
-      '@openai/agents-core': 0.8.2(ws@8.20.0)(zod@4.3.6)
+      '@openai/agents-core': 0.8.2(patch_hash=7934cb01948509de7d2e5b5bc7694b606ec0f54a163c7306ec860454fc40e6d5)(ws@8.20.0)(zod@4.3.6)
       '@openai/agents-openai': 0.8.2(ws@8.20.0)(zod@4.3.6)
-      '@openai/agents-realtime': 0.8.2(zod@4.3.6)
+      '@openai/agents-realtime': 0.8.2(patch_hash=6ffb253bd387c8d6ae2cfddeb412668f10c6b73c27dc117eca91b642978425a9)(zod@4.3.6)
       debug: 4.4.3
       openai: 6.33.0(ws@8.20.0)(zod@4.3.6)
       zod: 4.3.6

@@ -143,7 +143,11 @@ Structure EXACTE (titres en français, contenu riche et factuel) :
 Règles :
 - Ne pas mentionner « IA », « examen », « TEF » dans le contenu du markdown (c'est pour le moteur, pas pour le candidat).
 - Rester factuel par rapport à l'image ; si un détail est illisible, indique « (illisible sur le scan) ».
-- Réponds UNIQUEMENT avec le markdown, sans bloc de code, sans préambule.`;
+${
+  section === "A"
+    ? `- Section A : dans « Informations que le personnage connaît », pour les détails absents de l'image, décris les **faits** que le personnage pourrait encore devoir préciser au fil d'un échange téléphonique crédible ; évite la seule consigne « répondre que ce n'est pas sur la fiche ». Indique plutôt ce qui manque à l'annonce et, si utile, comment le personnage peut **poursuivre l'appel** (vérification, rappel, habitude du service) sans faire la leçon au candidat.\n`
+    : ""
+}- Réponds UNIQUEMENT avec le markdown, sans bloc de code, sans préambule.`;
 
   const response = await client.chat.completions.create({
     model,

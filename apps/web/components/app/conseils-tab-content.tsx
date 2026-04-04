@@ -14,6 +14,8 @@ interface ConseilsTabContentProps {
   report: string | null;
   previousReports: string[];
   isPreparingReport: boolean;
+  /** Erreur ex. outil envoiRapport — évite un chargement infini sans message */
+  reportDeliveryError: string | null;
   isReviewPhase: boolean;
   viewingPreviousIndex: number | null;
   onSetViewingPreviousIndex: (index: number | null) => void;
@@ -40,6 +42,7 @@ export const ConseilsTabContent = React.memo(function ConseilsTabContent({
   report,
   previousReports,
   isPreparingReport,
+  reportDeliveryError,
   isReviewPhase,
   viewingPreviousIndex,
   onSetViewingPreviousIndex,
@@ -85,6 +88,26 @@ export const ConseilsTabContent = React.memo(function ConseilsTabContent({
       )}
     </div>
   ) : null;
+
+  if (reportDeliveryError) {
+    return (
+      <div className="flex flex-col gap-4">
+        {topBar}
+        <div
+          role="alert"
+          className="mx-auto flex w-full max-w-lg flex-col gap-3 rounded-2xl border border-red-200 bg-red-50/95 px-5 py-6 text-red-950 shadow-sm"
+        >
+          <p className="text-base font-semibold">Le rapport n&apos;a pas pu être reçu</p>
+          <p className="text-sm text-red-900/90">{reportDeliveryError}</p>
+          <p className="text-sm text-red-800/85">
+            Cela arrive parfois lors de l&apos;envoi technique du rapport. Utilisez{' '}
+            <strong>Recommencer</strong> en haut pour relancer une session, ou <strong>RACCROCHER</strong>{' '}
+            puis démarrez une nouvelle épreuve.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (isPreparingReport) {
     return (

@@ -21,9 +21,21 @@ import {
 } from '@openai/agents/realtime';
 import type { ExerciseData, ExerciseImagePayload, TaskType } from '@yorty-tcf/shared';
 import { SOCKET_EVENTS, TCF_TASK_TYPES } from '@yorty-tcf/shared';
+import { toastAlert } from '@/components/ui/alert-toast';
 import { createExamSession } from '@/lib/exam-api';
 import { extractPartialReportFromToolArgs } from '@/lib/report-stream';
 import { type ExamTranscriptLine, transcriptLinesFromHistory } from '@/lib/transcript-from-history';
+
+function messageFromSessionError(payload: unknown): string {
+  if (payload && typeof payload === 'object' && 'error' in payload) {
+    const inner = (payload as { error: unknown }).error;
+    if (inner instanceof Error) return inner.message;
+    if (typeof inner === 'string') return inner;
+  }
+  if (payload instanceof Error) return payload.message;
+  if (typeof payload === 'string') return payload;
+  return 'Erreur Realtime';
+}
 
 function getExamApiBase(): string {
   const base = process.env.NEXT_PUBLIC_EXAM_API_URL;
@@ -54,6 +66,8 @@ export interface RealtimeExamContextValue {
   isConnecting: boolean;
   isRestarting: boolean;
   fatalError: string | null;
+  /** Erreur session/outil (ex. échec d’envoi du rapport) — affichée à la place du loader infini */
+  reportDeliveryError: string | null;
   start: (taskType: string, exerciseId?: string) => Promise<void>;
   end: () => void;
   micEnabled: boolean;
@@ -93,6 +107,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const [fatalError, setFatalError] = useState<string | null>(null);
+  const [reportDeliveryError, setReportDeliveryError] = useState<string | null>(null);
   const [micEnabled, setMicEnabledState] = useState(false);
   const [agentSpeaking, setAgentSpeaking] = useState(false);
   const [userSpeaking, setUserSpeaking] = useState(false);
@@ -235,6 +250,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
     setFatalError(null);
+    setReportDeliveryError(null);
     setIsConnected(false);
     setIsConnecting(false);
     setMicEnabledState(false);
@@ -275,6 +291,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const connectToExam = useCallback(
     async (taskType: string, exerciseId?: string) => {
       setFatalError(null);
+      setReportDeliveryError(null);
       setIsConnecting(true);
       currentTaskTypeRef.current = taskType;
       currentExerciseIdRef.current = exerciseId;
@@ -326,6 +343,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
             report: z.string().describe('Le rapport à envoyer'),
           }),
           execute: async ({ report: reportText }) => {
+            setReportDeliveryError(null);
             setReport(reportText);
             setReportStreaming(null);
             socket.emit(SOCKET_EVENTS.REPORT, {
@@ -413,6 +431,16 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           }
         });
 
+        session.on('error', (payload: unknown) => {
+          if (sessionRef.current !== session) return;
+          const msg = messageFromSessionError(payload);
+          setReportDeliveryError(msg);
+          toastAlert({
+            title: 'Erreur pendant la session',
+            description: <p className="w-full text-sm">{msg}</p>,
+          });
+        });
+
         session.on('history_updated', (history: RealtimeItem[]) => {
           if (sessionRef.current !== session) return;
           setTranscripts(transcriptLinesFromHistory(history));
@@ -493,6 +521,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       isConnecting,
       isRestarting,
       fatalError,
+      reportDeliveryError,
       start,
       end,
       micEnabled,
@@ -519,6 +548,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       isConnecting,
       isRestarting,
       fatalError,
+      reportDeliveryError,
       start,
       end,
       micEnabled,

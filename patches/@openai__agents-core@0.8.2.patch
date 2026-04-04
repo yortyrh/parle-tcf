@@ -1,0 +1,110 @@
+diff --git a/dist/utils/index.mjs b/dist/utils/index.mjs
+index 5ccb14240c82039aa3c95f4db7b26c8605e05b7d..76c269798baafa240edf1fc74a5f57387509643a 100644
+--- a/dist/utils/index.mjs
++++ b/dist/utils/index.mjs
+@@ -1,4 +1,5 @@
+ export { isZodObject } from "./typeGuards.mjs";
++export { parseLenientJson } from "./parseJsonLenient.mjs";
+ export { toSmartString } from "./smartString.mjs";
+ export { toFunctionToolName } from "./tools.mjs";
+ export { EventEmitterDelegate } from "../lifecycle.mjs";
+diff --git a/dist/utils/parseJsonLenient.mjs b/dist/utils/parseJsonLenient.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..8f773951eb6e08d14218c9c3b15010f104ad48cd
+--- /dev/null
++++ b/dist/utils/parseJsonLenient.mjs
+@@ -0,0 +1,56 @@
++/**
++ * Parse tool-call arguments from the Realtime API. Models sometimes emit a valid JSON object
++ * followed by extra non-whitespace (e.g. another value). `JSON.parse` rejects that; we take the
++ * first complete top-level `{ ... }` using brace depth while respecting string boundaries.
++ * @param {unknown} raw
++ * @returns {unknown}
++ */
++export function parseLenientJson(raw) {
++    if (typeof raw !== 'string') {
++        return raw;
++    }
++    const trimmed = raw.trim();
++    try {
++        return JSON.parse(trimmed);
++    }
++    catch {
++        const start = trimmed.indexOf('{');
++        if (start === -1) {
++            throw new SyntaxError('No JSON object found in tool arguments');
++        }
++        let depth = 0;
++        let inString = false;
++        let escape = false;
++        for (let i = start; i < trimmed.length; i++) {
++            const c = trimmed[i];
++            if (escape) {
++                escape = false;
++                continue;
++            }
++            if (inString) {
++                if (c === '\\') {
++                    escape = true;
++                }
++                else if (c === '"') {
++                    inString = false;
++                }
++                continue;
++            }
++            if (c === '"') {
++                inString = true;
++                continue;
++            }
++            if (c === '{') {
++                depth++;
++            }
++            else if (c === '}') {
++                depth--;
++                if (depth === 0) {
++                    return JSON.parse(trimmed.slice(start, i + 1));
++                }
++            }
++        }
++        throw new SyntaxError('Unterminated JSON object in tool arguments');
++    }
++}
++//# sourceMappingURL=parseJsonLenient.mjs.map
+diff --git a/dist/utils/tools.mjs b/dist/utils/tools.mjs
+index 41d4a322c1cba1cf81aa63fedb684c1f359cfc52..79e3d2a820daa02aa889335b8d2ef977a88d88e0 100644
+--- a/dist/utils/tools.mjs
++++ b/dist/utils/tools.mjs
+@@ -3,6 +3,7 @@ import { UserError } from "../errors.mjs";
+ import { isZodObject } from "./typeGuards.mjs";
+ import { zodJsonSchemaCompat, hasJsonSchemaObjectShape, mergeJsonSchemaDescriptions, } from "./zodJsonSchemaCompat.mjs";
+ import { asZodType } from "./zodCompat.mjs";
++import { parseLenientJson } from "./parseJsonLenient.mjs";
+ const zodResponsesFunctionCompat = zodResponsesFunction;
+ // The `.schema` payload is all we need, so a lightweight signature keeps the compiler happy.
+ const zodTextFormatCompat = zodTextFormat;
+@@ -38,14 +39,14 @@ export function toFunctionToolName(name) {
+  * @returns The schema and parser.
+  */
+ export function getSchemaAndParserFromInputType(inputType, name) {
+-    const parser = (input) => JSON.parse(input);
++    const parser = (input) => parseLenientJson(input);
+     if (isZodObject(inputType)) {
+         const useFallback = (originalError) => {
+             const fallbackSchema = buildJsonSchemaFromZod(inputType);
+             if (fallbackSchema) {
+                 return {
+                     schema: fallbackSchema,
+-                    parser: (rawInput) => inputType.parse(JSON.parse(rawInput)),
++                    parser: (rawInput) => inputType.parse(parseLenientJson(rawInput)),
+                 };
+             }
+             const errorMessage = originalError instanceof Error
+@@ -72,7 +73,7 @@ export function getSchemaAndParserFromInputType(inputType, name) {
+             }
+             return {
+                 schema: formattedFunction.parameters,
+-                parser: formattedFunction.$parseRaw,
++                parser: (rawInput) => inputType.parse(parseLenientJson(rawInput)),
+             };
+         }
+         return useFallback();

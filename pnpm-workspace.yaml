@@ -11,3 +11,5 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
   - unrs-resolver
+patchedDependencies:
+  '@openai/agents-core@0.8.2': patches/@openai__agents-core@0.8.2.patch
