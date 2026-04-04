@@ -170,10 +170,14 @@ export class ExerciseService implements OnModuleDestroy {
     if (exerciseId) {
       const normalized = exerciseId.trim();
       const found = filtered.find(
-        (ex) => ex.id === normalized || ex.id.toLowerCase() === normalized.toLowerCase(),
+        (ex) =>
+          ex.id === normalized ||
+          ex.id.toLowerCase() === normalized.toLowerCase(),
       );
       if (found) return found;
-      this.logger.warn(`TEF exercise not found: ${exerciseId} (section ${section})`);
+      this.logger.warn(
+        `TEF exercise not found: ${exerciseId} (section ${section})`,
+      );
     }
     const randomIndex = Math.floor(Math.random() * filtered.length);
     return filtered[randomIndex]!;
