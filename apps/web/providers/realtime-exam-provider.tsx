@@ -20,7 +20,7 @@ import {
   tool,
 } from '@openai/agents/realtime';
 import type { ExerciseData, ExerciseImagePayload, TaskType } from '@yorty-tcf/shared';
-import { SOCKET_EVENTS, TCF_TASK_TYPES } from '@yorty-tcf/shared';
+import { SOCKET_EVENTS, TCF_TASK_TYPES, TEF_TASK_TYPES } from '@yorty-tcf/shared';
 import { toastAlert } from '@/components/ui/alert-toast';
 import { createExamSession } from '@/lib/exam-api';
 import { extractPartialReportFromToolArgs } from '@/lib/report-stream';
@@ -44,8 +44,15 @@ function getExamApiBase(): string {
 }
 
 function syncExerciseUrl(taskType: string, exerciseId?: string): void {
-  if (!(TCF_TASK_TYPES as readonly string[]).includes(taskType)) return;
-  const segments = ['/tcf', taskType];
+  let base: string;
+  if ((TCF_TASK_TYPES as readonly string[]).includes(taskType)) {
+    base = '/tcf';
+  } else if ((TEF_TASK_TYPES as readonly string[]).includes(taskType)) {
+    base = '/tef';
+  } else {
+    return;
+  }
+  const segments = [base, taskType];
   if (exerciseId) segments.push(exerciseId);
   const newUrl = segments.join('/');
   if (typeof window === 'undefined' || window.location.pathname === newUrl) return;
