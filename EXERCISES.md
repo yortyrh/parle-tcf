@@ -2,7 +2,7 @@
 
 How exam content is managed: YAML agent prompts, TCF/TEF exercises, and images.
 
-**Language:** This file is documentation for maintainers (English). **Per-task agent YAML** (`baseInstructions`, `instructions`, `greeting`) and **TEF companion `.md` files** next to each image under `apps/api/config/tef-exercices/` should stay in **French** — they are exam prompts for candidates and the Realtime model.
+**Language:** This file is documentation for maintainers (English). **Per-task agent YAML** (`baseInstructions`, `instructions`, `greeting`) and **TEF `.md` files** under `apps/api/config/tef-exercices/` should stay in **French** — they are exam / Realtime prompts. For TEF, the `.md` files embed the same instruction text as the section YAML (plus the per-exercise block) as the **complete** system prompt sent to the model.
 
 ## Examiner configuration (YAML)
 
@@ -47,8 +47,17 @@ pnpm --filter @yorty-tcf/api run generate-db
 
 ### TEF (sections A and B)
 
-- **Source**: `apps/api/config/tef-exercices/TEF-A/` and `TEF-B/` — for each item, pair `TEF-A-01.png` + `TEF-A-01.md` (exercise-specific Realtime instructions; **French** content expected).
+- **Source**: `apps/api/config/tef-exercices/TEF-A/` and `TEF-B/` — for each item, pair `TEF-A-01.png` + `TEF-A-01.md`.
+- **Self-contained prompts**: Each `.md` is the **full** Realtime **system** prompt for that exercise: content from `apps/api/config/agents/tef-section-a.yml` or `tef-section-b.yml`, then the heading `EXERCICE À UTILISER:`, then the exercise-specific body (role, annonce, infos, consigne). The API sends that file verbatim as `agentConfig.instructions` (YAML is still used at runtime for `greeting`, `settings`, `name`, `description` only).
 - **Images served to the browser**: copied to `apps/web/public/tef-exercices/` via `sync-tef`.
+- **Test / edit one exercise**: Open a `.md`, paste into OpenAI Realtime Playground as the system message, or edit the file directly; no need to reassemble YAML + fragment mentally.
+- **After changing generic rules** in `tef-section-a.yml` / `tef-section-b.yml`, propagate to all exercises:
+
+  ```bash
+  pnpm --filter @yorty-tcf/api run generate-tef-instructions -- --upgrade
+  ```
+
+  This re-merges the YAML template with the existing exercise body (no vision / no API cost for the exercise text).
 
 ---
 
@@ -60,12 +69,13 @@ Run from the monorepo root with `@yorty-tcf/api`:
 | --- | --- |
 | `generate-db` | TCF CSV → SQLite |
 | `rename-tef` | Rename scan PNGs to `TEF-{A\|B}-NN.png` (dry-run; `--apply` to write) |
-| `generate-tef-instructions` | Vision model → one `.md` per image; `--stub` for placeholders without `OPENAI_API_KEY` |
+| `generate-tef-instructions` | Vision → exercise body; merges with YAML into **self-contained** `.md` per PNG. `--stub` placeholders without `OPENAI_API_KEY`. `--upgrade` re-merge YAML + existing body (e.g. after editing agent YAML). `--force` overwrites existing `.md` and re-runs vision. |
 | `sync-tef` | Copy PNGs to `apps/web/public/tef-exercices/` |
 
 Example:
 
 ```bash
+pnpm --filter @yorty-tcf/api run generate-tef-instructions -- --upgrade
 pnpm --filter @yorty-tcf/api run generate-tef-instructions -- --force
 pnpm --filter @yorty-tcf/api run sync-tef
 ```

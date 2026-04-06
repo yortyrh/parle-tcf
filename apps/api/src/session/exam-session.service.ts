@@ -14,21 +14,6 @@ import {
   type TefExercise,
 } from "../exercise/exercise.service.js";
 
-/**
- * Appended after per-exercise markdown so it overrides contradictory lines
- * (e.g. “répondre que ce n’est pas sur l’annonce”) that older generated files may contain.
- */
-const TEF_SECTION_A_INSTRUCTION_CLOSING = `
-
----
-RAPPEL FINAL — Section A (prime sur toute phrase du bloc « EXERCICE À UTILISER » qui suggérerait un refus d’information) :
-
-Pendant l’appel, ne bloque pas l’échange en renvoyant le candidat à l’affiche, au site, à un courriel, à « appeler ailleurs » ou à un autre service comme seule réponse, ni en répétant que le détail « n’est pas sur l’annonce », « n’est pas écrit », « vous auriez dû lire » ou équivalent. Ce ton est pédagogiquement contre-productif et tue l’oral.
-
-À la place, reste entièrement dans le personnage : réponds aux questions, y compris lorsque le point ne figure pas clairement sur la fiche du candidat. Donne une information courte et crédible qu’un interlocuteur au téléphone fournirait, ou une suite naturelle (prise de note, vérification, « pour votre situation on fait comme ceci », rappel avec le détail, précision d’usage), en restant cohérent avec l’annonce et les faits de l’exercice. Les mentions « (illisible sur le scan) » indiquent ce que le candidat ne voit pas sur son document ; elles n’obligent pas à refuser la réponse : au téléphone tu peux préciser ces points comme le ferait le service.
-
-L’évaluation pourra noter dans le rapport si une question visait une info hors fiche ; pendant l’épreuve, le personnage accueille et répond sans moraliser sur la démarche à suivre.`;
-
 @Injectable()
 export class ExamSessionService {
   private readonly logger = new Logger(ExamSessionService.name);
@@ -182,12 +167,16 @@ export class ExamSessionService {
     agentYaml: { baseInstructions: string; instructions: string },
     contentAppend: string | undefined,
   ): string {
+    // TEF: `tef-exercices` .md files are self-contained system prompts (YAML + EXERCICE À UTILISER + body).
+    if (
+      (taskType === "tef-section-a" || taskType === "tef-section-b") &&
+      contentAppend
+    ) {
+      return contentAppend;
+    }
     let full = `${agentYaml.baseInstructions}\n\n${agentYaml.instructions}`;
     if (contentAppend) {
       full += `\n\nEXERCICE À UTILISER:\n${contentAppend}`;
-      if (taskType === "tef-section-a") {
-        full += TEF_SECTION_A_INSTRUCTION_CLOSING;
-      }
     }
     return full;
   }
