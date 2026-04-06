@@ -199,6 +199,7 @@ export class ExamSessionService {
     }
 
     const exerciseData = this.buildExerciseData(taskType, tcf, tef);
+    const orderedExerciseIds = this.exercises.listOrderedExerciseIds(taskType);
     const contentForInstructions =
       taskType === "tache1"
         ? undefined
@@ -224,6 +225,7 @@ export class ExamSessionService {
       sessionId,
       exerciseData,
       exerciseImage,
+      orderedExerciseIds,
       agentConfig: {
         instructions,
         greeting: agentYaml.greeting,

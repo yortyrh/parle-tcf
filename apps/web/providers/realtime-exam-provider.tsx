@@ -23,8 +23,14 @@ import type { ExerciseData, ExerciseImagePayload, TaskType } from '@yorty-tcf/sh
 import { SOCKET_EVENTS, TCF_TASK_TYPES, TEF_TASK_TYPES } from '@yorty-tcf/shared';
 import { toastAlert } from '@/components/ui/alert-toast';
 import { createExamSession } from '@/lib/exam-api';
+import {
+  nextExerciseIdRandom,
+  nextExerciseIdSequential,
+  previousExerciseIdSequential,
+} from '@/lib/next-exercise-id';
 import { extractPartialReportFromToolArgs } from '@/lib/report-stream';
 import { type ExamTranscriptLine, transcriptLinesFromHistory } from '@/lib/transcript-from-history';
+import { mergeStreamingAssistantText, pruneStreamBuffer } from '@/lib/transcript-merge';
 
 function messageFromSessionError(payload: unknown): string {
   if (payload && typeof payload === 'object' && 'error' in payload) {
@@ -94,6 +100,9 @@ export interface RealtimeExamContextValue {
   sessionEnded: boolean;
   resetSessionEnd: () => void;
   transcripts: ExamTranscriptLine[];
+  /** Ids for current task type (empty for tache1). */
+  orderedExerciseIds: string[];
+  goToAnotherExercise: (mode: 'next' | 'previous' | 'random') => Promise<void>;
   sessionId: string | null;
   restartSequence: number;
   restartExam: () => Promise<void>;
@@ -125,6 +134,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const [previousReports, setPreviousReports] = useState<string[]>([]);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [transcripts, setTranscripts] = useState<ExamTranscriptLine[]>([]);
+  const [orderedExerciseIds, setOrderedExerciseIds] = useState<string[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [restartSequence, setRestartSequence] = useState(0);
 
@@ -135,6 +145,9 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const sessionIdRef = useRef<string | null>(null);
   const currentTaskTypeRef = useRef<string | null>(null);
   const currentExerciseIdRef = useRef<string | undefined>(undefined);
+  const orderedExerciseIdsRef = useRef<string[]>([]);
+  const historySnapshotRef = useRef<RealtimeItem[]>([]);
+  const assistantStreamBufRef = useRef<Record<string, string>>({});
   const restartExamRef = useRef<() => Promise<void>>(async () => {});
 
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -269,6 +282,10 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     setReportStreaming(null);
     setSessionEnded(false);
     setTranscripts([]);
+    setOrderedExerciseIds([]);
+    orderedExerciseIdsRef.current = [];
+    historySnapshotRef.current = [];
+    assistantStreamBufRef.current = {};
     setSessionId(null);
     sessionIdRef.current = null;
     cleanupSocket();
@@ -295,11 +312,20 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     setSessionEnded(false);
   }, []);
 
+  const flushTranscripts = useCallback(() => {
+    const base = transcriptLinesFromHistory(historySnapshotRef.current);
+    pruneStreamBuffer(base, assistantStreamBufRef.current);
+    setTranscripts(mergeStreamingAssistantText(base, { ...assistantStreamBufRef.current }));
+  }, []);
+
   const connectToExam = useCallback(
     async (taskType: string, exerciseId?: string) => {
       setFatalError(null);
       setReportDeliveryError(null);
       setIsConnecting(true);
+      historySnapshotRef.current = [];
+      assistantStreamBufRef.current = {};
+      setTranscripts([]);
       currentTaskTypeRef.current = taskType;
       currentExerciseIdRef.current = exerciseId;
       try {
@@ -311,6 +337,9 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         sessionIdRef.current = data.sessionId;
         setSessionId(data.sessionId);
         setExerciseData(data.exerciseData);
+        const ids = data.orderedExerciseIds ?? [];
+        setOrderedExerciseIds(ids);
+        orderedExerciseIdsRef.current = ids;
         if (data.exerciseData.taskType) {
           syncExerciseUrl(data.exerciseData.taskType, data.exerciseData.exerciseId);
         }
@@ -420,6 +449,32 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
 
         session.on('transport_event', (event: TransportEvent) => {
           if (sessionRef.current !== session) return;
+          if (
+            event &&
+            typeof event === 'object' &&
+            'type' in event &&
+            (event as { type?: string }).type === 'response.output_text.delta' &&
+            typeof (event as { item_id?: unknown }).item_id === 'string' &&
+            typeof (event as { delta?: unknown }).delta === 'string'
+          ) {
+            const e = event as { type: string; item_id: string; delta: string };
+            assistantStreamBufRef.current[e.item_id] =
+              (assistantStreamBufRef.current[e.item_id] ?? '') + e.delta;
+            flushTranscripts();
+          }
+          if (
+            event &&
+            typeof event === 'object' &&
+            'type' in event &&
+            (event as { type?: string }).type === 'response.output_audio_transcript.delta' &&
+            typeof (event as { item_id?: unknown }).item_id === 'string' &&
+            typeof (event as { delta?: unknown }).delta === 'string'
+          ) {
+            const e = event as { type: string; item_id: string; delta: string };
+            assistantStreamBufRef.current[e.item_id] =
+              (assistantStreamBufRef.current[e.item_id] ?? '') + e.delta;
+            flushTranscripts();
+          }
           if (event.type === 'function_call' && event.name === 'envoiRapport') {
             const partial = extractPartialReportFromToolArgs(event.arguments ?? '');
             if (partial !== null && partial.length > 0) {
@@ -450,7 +505,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
 
         session.on('history_updated', (history: RealtimeItem[]) => {
           if (sessionRef.current !== session) return;
-          setTranscripts(transcriptLinesFromHistory(history));
+          historySnapshotRef.current = history;
+          flushTranscripts();
         });
 
         await session.connect({
@@ -482,7 +538,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         setIsConnecting(false);
       }
     },
-    [end, startUserVad, startAgentVad]
+    [end, startUserVad, startAgentVad, flushTranscripts]
   );
 
   const start = useCallback(
@@ -513,6 +569,38 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       setIsRestarting(false);
     }
   }, [archiveReportAndReset, resetSessionEnd, end, connectToExam, exerciseData]);
+
+  const goToAnotherExercise = useCallback(
+    async (mode: 'next' | 'previous' | 'random') => {
+      const taskType = currentTaskTypeRef.current ?? exerciseData?.taskType;
+      if (!taskType) return;
+      const ids = orderedExerciseIdsRef.current;
+      if (ids.length === 0) return;
+      const currentId = currentExerciseIdRef.current ?? exerciseData?.exerciseId;
+      const nextId =
+        mode === 'next'
+          ? nextExerciseIdSequential(ids, currentId)
+          : mode === 'previous'
+            ? previousExerciseIdSequential(ids, currentId)
+            : nextExerciseIdRandom(ids, currentId);
+
+      archiveReportAndReset();
+      resetSessionEnd();
+      setRestartSequence((c) => c + 1);
+      setIsRestarting(true);
+      const sid = sessionIdRef.current;
+      if (sid) {
+        socketRef.current?.emit(SOCKET_EVENTS.SESSION_RESTART, { sessionId: sid });
+      }
+      end();
+      try {
+        await connectToExam(taskType, nextId);
+      } finally {
+        setIsRestarting(false);
+      }
+    },
+    [archiveReportAndReset, resetSessionEnd, end, connectToExam, exerciseData]
+  );
 
   restartExamRef.current = restartExam;
 
@@ -546,6 +634,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       sessionEnded,
       resetSessionEnd,
       transcripts,
+      orderedExerciseIds,
+      goToAnotherExercise,
       sessionId,
       restartSequence,
       restartExam,
@@ -571,6 +661,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       sessionEnded,
       resetSessionEnd,
       transcripts,
+      orderedExerciseIds,
+      goToAnotherExercise,
       sessionId,
       restartSequence,
       restartExam,

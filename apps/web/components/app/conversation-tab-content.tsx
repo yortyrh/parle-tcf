@@ -5,6 +5,13 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import type { ExamTranscriptLine } from '@/lib/transcript-from-history';
 import { cn } from '@/lib/utils';
 
+const ReactMarkdown = React.lazy(() => import('react-markdown'));
+const remarkGfm = import('remark-gfm').then((m) => m.default);
+let _remarkGfm: typeof import('remark-gfm').default | null = null;
+remarkGfm.then((mod) => {
+  _remarkGfm = mod;
+});
+
 /** Initial guess only; rows are measured after paint via virtualizer.measureElement. */
 const ESTIMATED_ROW_HEIGHT = 96;
 const OVERSCAN = 5;
@@ -13,6 +20,36 @@ const AUTO_SCROLL_THRESHOLD_PX = 120;
 interface ConversationTabContentProps {
   lines: ExamTranscriptLine[];
 }
+
+const EvaluatorMarkdownBody = React.memo(function EvaluatorMarkdownBody({
+  content,
+}: {
+  content: string;
+}) {
+  const plugins = useMemo(() => (_remarkGfm ? [_remarkGfm] : []), []);
+  if (!content) {
+    return (
+      <span className="text-muted-foreground text-xs tabular-nums" aria-hidden>
+        …
+      </span>
+    );
+  }
+  return (
+    <React.Suspense
+      fallback={<span className="text-muted-foreground animate-pulse text-xs">…</span>}
+    >
+      <div
+        className={cn(
+          'prose prose-sm prose-gray prose-headings:text-gray-900 prose-p:my-1 prose-p:text-gray-900',
+          'prose-p:leading-snug prose-headings:my-1.5 prose-headings:text-sm prose-ul:my-1 prose-li:my-0',
+          'prose-strong:text-gray-950 prose-strong:font-semibold max-w-none text-sm'
+        )}
+      >
+        <ReactMarkdown remarkPlugins={plugins}>{content}</ReactMarkdown>
+      </div>
+    </React.Suspense>
+  );
+});
 
 const MessageBubble = React.memo(function MessageBubble({ item }: { item: ExamTranscriptLine }) {
   const isLocal = item.isLocal;
@@ -39,7 +76,7 @@ const MessageBubble = React.memo(function MessageBubble({ item }: { item: ExamTr
               : 'rounded-tl-none bg-gray-100 text-gray-900'
           )}
         >
-          {item.text}
+          {isLocal ? item.text : <EvaluatorMarkdownBody content={item.text} />}
         </div>
       </div>
     </div>
@@ -48,6 +85,8 @@ const MessageBubble = React.memo(function MessageBubble({ item }: { item: ExamTr
 
 export function ConversationTabContent({ lines }: ConversationTabContentProps) {
   const sorted = useMemo(() => [...lines].sort((a, b) => a.timestamp - b.timestamp), [lines]);
+
+  const lastLineCharCount = sorted.length > 0 ? sorted[sorted.length - 1].text.length : 0;
 
   const parentRef = useRef<HTMLDivElement>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -76,7 +115,7 @@ export function ConversationTabContent({ lines }: ConversationTabContentProps) {
   useEffect(() => {
     if (!isNearBottom || sorted.length === 0) return;
     virtualizer.scrollToIndex(sorted.length - 1, { align: 'end' });
-  }, [sorted.length, isNearBottom, virtualizer]);
+  }, [sorted.length, lastLineCharCount, isNearBottom, virtualizer]);
 
   return (
     <div ref={parentRef} className="h-full min-h-[200px] overflow-y-auto">

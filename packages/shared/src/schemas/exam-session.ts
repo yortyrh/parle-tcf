@@ -42,6 +42,8 @@ export const createExamSessionOutputSchema = z.object({
   exerciseData: exerciseDataPayloadSchema,
   exerciseImage: exerciseImagePayloadSchema.nullable(),
   agentConfig: agentConfigForClientSchema,
+  /** Ordered exercise ids for this task type (empty for tache1). Enables next/random navigation in the client. */
+  orderedExerciseIds: z.array(z.string()).optional(),
 });
 
 export type CreateExamSessionInput = z.infer<typeof createExamSessionInputSchema>;

@@ -7,6 +7,9 @@ import {
   Microphone,
   MicrophoneSlash,
   PhoneDisconnectIcon,
+  Shuffle,
+  SkipBack,
+  SkipForward,
 } from '@phosphor-icons/react/dist/ssr';
 import type { ExerciseImagePayload } from '@yorty-tcf/shared';
 import type { AppConfig, Task } from '@/app-config';
@@ -29,6 +32,8 @@ function mapExerciseImage(img: ExerciseImagePayload | null): ExerciseImageData |
     section: img.section,
   };
 }
+
+type SessionTab = 'consigne' | 'conseils' | 'conversation';
 
 interface SessionViewProps {
   appConfig: AppConfig;
@@ -197,6 +202,7 @@ function SpeakingIndicator({
 export function SessionView({ selectedTask }: SessionViewProps) {
   const exam = useRealtimeExam();
   const { elapsedSeconds, resetTimer } = useSessionTimer();
+  const [sessionTab, setSessionTab] = useState<SessionTab>('consigne');
   const [tefTransitionReady, setTefTransitionReady] = useState(false);
   const [viewingPreviousIndex, setViewingPreviousIndex] = useState<number | null>(null);
   const [compactSessionFooter, setCompactSessionFooter] = useState(false);
@@ -235,7 +241,18 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   useEffect(() => {
     resetTimer();
     setViewingPreviousIndex(null);
+    setSessionTab('consigne');
   }, [exam.restartSequence, resetTimer]);
+
+  useEffect(() => {
+    const showReportTab =
+      (exam.reportStreaming != null && exam.reportStreaming.length > 0) ||
+      (exam.sessionEnded && !exam.report && !exam.reportStreaming && !exam.reportDeliveryError) ||
+      exam.report != null;
+    if (showReportTab) {
+      setSessionTab('conseils');
+    }
+  }, [exam.report, exam.reportStreaming, exam.reportDeliveryError, exam.sessionEnded]);
 
   /* Intentionally avoid depending on the whole `exam` object (context value) to limit re-runs. */
   useEffect(() => {
@@ -351,6 +368,9 @@ export function SessionView({ selectedTask }: SessionViewProps) {
 
   const footerTimer = <TimerDisplay elapsedSeconds={elapsedSeconds} compact />;
 
+  const canSwitchExercise =
+    exam.orderedExerciseIds.length > 0 && !exam.isConnecting && !exam.isRestarting;
+
   const footerEndCall = (
     <Button
       variant="destructive"
@@ -368,7 +388,58 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   return (
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-b from-slate-100/70 via-slate-50/40 to-white p-2 sm:p-4">
       <div className="border-border/70 bg-card/95 relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-solid shadow-xl ring-1 ring-black/5 backdrop-blur sm:rounded-2xl">
-        <Tabs defaultValue="consigne" className="flex min-h-0 flex-1 flex-col">
+        <div className="pointer-events-none absolute top-1/2 right-1 z-20 hidden -translate-y-1/2 flex-col gap-2 sm:flex">
+          <button
+            type="button"
+            disabled={!canSwitchExercise}
+            onClick={() => void exam.goToAnotherExercise('previous')}
+            title="Sujet précédent (ordre de la banque)"
+            aria-label="Sujet précédent (ordre de la banque)"
+            className={cn(
+              'pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border bg-white/95 text-teal-700 shadow-md transition-colors',
+              canSwitchExercise
+                ? 'border-teal-200 hover:bg-teal-50 active:bg-teal-100'
+                : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
+            )}
+          >
+            <SkipBack weight="bold" className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            disabled={!canSwitchExercise}
+            onClick={() => void exam.goToAnotherExercise('next')}
+            title="Sujet suivant (ordre de la banque)"
+            aria-label="Sujet suivant (ordre de la banque)"
+            className={cn(
+              'pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border bg-white/95 text-teal-700 shadow-md transition-colors',
+              canSwitchExercise
+                ? 'border-teal-200 hover:bg-teal-50 active:bg-teal-100'
+                : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
+            )}
+          >
+            <SkipForward weight="bold" className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            disabled={!canSwitchExercise}
+            onClick={() => void exam.goToAnotherExercise('random')}
+            title="Autre sujet au hasard"
+            aria-label="Autre sujet au hasard"
+            className={cn(
+              'pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border bg-white/95 text-violet-700 shadow-md transition-colors',
+              canSwitchExercise
+                ? 'border-violet-200 hover:bg-violet-50 active:bg-violet-100'
+                : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
+            )}
+          >
+            <Shuffle weight="bold" className="h-5 w-5" />
+          </button>
+        </div>
+        <Tabs
+          value={sessionTab}
+          onValueChange={(v) => setSessionTab(v as SessionTab)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
           <div className="border-border/70 flex items-end border-b bg-white/60 px-3 pt-2">
             <TabsList variant="line" className="min-w-0 flex-1 justify-start gap-0">
               <TabsTrigger value="consigne" className="flex-1 sm:flex-none sm:px-5">
@@ -381,20 +452,72 @@ export function SessionView({ selectedTask }: SessionViewProps) {
                 Conversation
               </TabsTrigger>
             </TabsList>
-            <button
-              type="button"
-              aria-label="Recommencer la session"
-              onClick={handleRestart}
-              className={cn(
-                'mb-1.5 ml-2 inline-flex flex-shrink-0 touch-manipulation items-center justify-center gap-1.5 rounded-lg',
-                'bg-cyan-600 text-xs font-medium text-white shadow-sm transition-colors',
-                'min-h-7 min-w-[3.75rem] px-4 py-0.5 hover:bg-cyan-700 active:bg-cyan-800',
-                'sm:min-h-0 sm:min-w-0 sm:px-2.5 sm:py-1'
-              )}
-            >
-              <ArrowCounterClockwise className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" weight="bold" />
-              <span className="hidden sm:inline">Recommencer</span>
-            </button>
+            <div className="mb-1.5 ml-2 flex shrink-0 items-center gap-1">
+              <div className="flex gap-1 sm:hidden">
+                <button
+                  type="button"
+                  disabled={!canSwitchExercise}
+                  onClick={() => void exam.goToAnotherExercise('previous')}
+                  title="Sujet précédent"
+                  aria-label="Sujet précédent (ordre de la banque)"
+                  className={cn(
+                    'inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-lg border bg-white text-teal-700 shadow-sm',
+                    canSwitchExercise
+                      ? 'border-teal-200 active:bg-teal-100'
+                      : 'cursor-not-allowed opacity-50'
+                  )}
+                >
+                  <SkipBack weight="bold" className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!canSwitchExercise}
+                  onClick={() => void exam.goToAnotherExercise('next')}
+                  title="Sujet suivant"
+                  aria-label="Sujet suivant (ordre de la banque)"
+                  className={cn(
+                    'inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-lg border bg-white text-teal-700 shadow-sm',
+                    canSwitchExercise
+                      ? 'border-teal-200 active:bg-teal-100'
+                      : 'cursor-not-allowed opacity-50'
+                  )}
+                >
+                  <SkipForward weight="bold" className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!canSwitchExercise}
+                  onClick={() => void exam.goToAnotherExercise('random')}
+                  title="Sujet au hasard"
+                  aria-label="Autre sujet au hasard"
+                  className={cn(
+                    'inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-lg border bg-white text-violet-700 shadow-sm',
+                    canSwitchExercise
+                      ? 'border-violet-200 active:bg-violet-100'
+                      : 'cursor-not-allowed opacity-50'
+                  )}
+                >
+                  <Shuffle weight="bold" className="h-4 w-4" />
+                </button>
+              </div>
+              <button
+                type="button"
+                aria-label="Recommencer la session"
+                onClick={handleRestart}
+                className={cn(
+                  'inline-flex flex-shrink-0 touch-manipulation items-center justify-center gap-1.5 rounded-lg',
+                  'bg-cyan-600 text-xs font-medium text-white shadow-sm transition-colors',
+                  'min-h-8 min-w-[3.75rem] px-3 py-0.5 hover:bg-cyan-700 active:bg-cyan-800',
+                  'sm:min-h-0 sm:min-w-0 sm:px-2.5 sm:py-1'
+                )}
+              >
+                <ArrowCounterClockwise
+                  className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5"
+                  weight="bold"
+                />
+                <span className="hidden sm:inline">Recommencer</span>
+              </button>
+            </div>
           </div>
 
           <TabsContent

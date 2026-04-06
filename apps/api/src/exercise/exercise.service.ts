@@ -92,6 +92,36 @@ export class ExerciseService implements OnModuleDestroy {
     }
   }
 
+  listOrderedExerciseIds(taskType: TaskType): string[] {
+    if (taskType === "tache1") {
+      return [];
+    }
+    if (taskType === "tache2" || taskType === "tache3") {
+      const label = taskType === "tache2" ? "Tâche 2" : "Tâche 3";
+      try {
+        const stmt = this.getDb().prepare<[string], { id: string }>(
+          "SELECT id FROM exercises WHERE taskType = ? ORDER BY LENGTH(id), id",
+        );
+        const rows = stmt.all(label);
+        return rows.map((r) => r.id);
+      } catch (e) {
+        this.logger.error(`listOrderedExerciseIds ${taskType}`, e);
+        return [];
+      }
+    }
+    if (taskType === "tef-section-a") {
+      return this.loadTefExercises()
+        .filter((ex) => ex.section === "A")
+        .map((ex) => ex.id);
+    }
+    if (taskType === "tef-section-b") {
+      return this.loadTefExercises()
+        .filter((ex) => ex.section === "B")
+        .map((ex) => ex.id);
+    }
+    return [];
+  }
+
   getExerciseById(id: string): TcfExerciseRow | null {
     try {
       const stmt = this.getDb().prepare<[string], ExerciseRow>(

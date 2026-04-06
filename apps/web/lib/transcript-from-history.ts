@@ -38,6 +38,7 @@ export function transcriptLinesFromHistory(history: RealtimeItem[]): ExamTranscr
     const msg = item as {
       itemId: string;
       role: 'user' | 'assistant' | 'system';
+      status?: string;
       content: ContentPart[];
     };
     if (msg.role === 'system') continue;
@@ -45,7 +46,8 @@ export function transcriptLinesFromHistory(history: RealtimeItem[]): ExamTranscr
       msg.role === 'user'
         ? textFromUserContent(msg.content)
         : textFromAssistantContent(msg.content);
-    if (!text) continue;
+    const allowEmptyAssistant = msg.role === 'assistant' && msg.status === 'in_progress';
+    if (!text && !allowEmptyAssistant) continue;
     lines.push({
       id: msg.itemId ?? `m-${seq}`,
       text,
