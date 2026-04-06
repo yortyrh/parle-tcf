@@ -27,9 +27,7 @@ export class ExamSessionService {
     if (serviceModel && serviceModel !== "realtime") {
       return serviceModel;
     }
-    return (
-      process.env.OPENAI_REALTIME_MODEL ?? "gpt-4o-realtime-preview-2024-12-17"
-    );
+    return process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-mini";
   }
 
   private async mintOpenAiClientSecret(params: {
