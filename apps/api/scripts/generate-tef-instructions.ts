@@ -6,10 +6,12 @@
  * Usage:
  *   pnpm generate-tef-instructions
  *   pnpm generate-tef-instructions -- --force
- *   pnpm generate-tef-instructions -- --upgrade   (re-merge YAML + existing exercise body, no vision)
+ *   pnpm generate-tef-instructions -- --upgrade        (re-merge YAML + existing exercise body, no vision)
+ *   pnpm generate-tef-instructions -- --add-guide      (add/overwrite <<<GUIDE_CANDIDAT>>> block via vision, keeps exercise body)
+ *   pnpm generate-tef-instructions -- --add-guide --force  (overwrite even files that already have a guide)
  *   pnpm generate-tef-instructions -- --only TEF-A-01 TEF-B-02
  *   pnpm generate-tef-instructions -- --model gpt-4o
- *   pnpm generate-tef-instructions -- --stub   (placeholders without OPENAI_API_KEY)
+ *   pnpm generate-tef-instructions -- --stub           (placeholders without OPENAI_API_KEY)
  */
 import dotenv from "dotenv";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -39,6 +41,7 @@ Pendant l’appel, ne bloque pas l’échange en renvoyant le candidat à l’af
 L’évaluation pourra noter dans le rapport si une question visait une info hors fiche ; pendant l’épreuve, le personnage accueille et répond sans moraliser sur la démarche à suivre.`;
 
 const EXERCICE_MARKER = "\n\nEXERCICE À UTILISER:\n";
+const GUIDE_MARKER = "\n\n<<<GUIDE_CANDIDAT>>>\n";
 
 const COMPLETION_TOKEN_BUDGET = 4096;
 
@@ -48,7 +51,9 @@ interface AgentYamlFragment {
 }
 
 /** Newer chat models reject `max_tokens` and require `max_completion_tokens`. */
-function completionTokenParams(model: string): { max_tokens: number } | { max_completion_tokens: number } {
+function completionTokenParams(
+  model: string,
+): { max_tokens: number } | { max_completion_tokens: number } {
   const m = model.toLowerCase();
   if (
     m.startsWith("gpt-5") ||
@@ -67,11 +72,13 @@ function parseArgs(): {
   model: string;
   stub: boolean;
   upgrade: boolean;
+  addGuide: boolean;
 } {
   const argv = process.argv.slice(2);
   let force = false;
   let stub = false;
   let upgrade = false;
+  let addGuide = false;
   let model = "gpt-5.4-mini";
   const only = new Set<string>();
   let i = 0;
@@ -80,6 +87,7 @@ function parseArgs(): {
     if (a === "--force") force = true;
     if (a === "--stub") stub = true;
     else if (a === "--upgrade") upgrade = true;
+    else if (a === "--add-guide") addGuide = true;
     else if (a === "--model" && argv[i + 1]) {
       model = argv[++i]!;
     } else if (a === "--only") {
@@ -92,7 +100,14 @@ function parseArgs(): {
     }
     i++;
   }
-  return { force, only: only.size > 0 ? only : null, model, stub, upgrade };
+  return {
+    force,
+    only: only.size > 0 ? only : null,
+    model,
+    stub,
+    upgrade,
+    addGuide,
+  };
 }
 
 function loadAgentYaml(section: "A" | "B"): AgentYamlFragment {
@@ -102,8 +117,13 @@ function loadAgentYaml(section: "A" | "B"): AgentYamlFragment {
   const config = parse(fileContent) as Record<string, unknown>;
   const baseInstructions = config.baseInstructions;
   const instructions = config.instructions;
-  if (typeof baseInstructions !== "string" || typeof instructions !== "string") {
-    throw new Error(`Invalid agent YAML (need baseInstructions, instructions): ${taskType}.yml`);
+  if (
+    typeof baseInstructions !== "string" ||
+    typeof instructions !== "string"
+  ) {
+    throw new Error(
+      `Invalid agent YAML (need baseInstructions, instructions): ${taskType}.yml`,
+    );
   }
   return { baseInstructions, instructions };
 }
@@ -126,21 +146,45 @@ function getGenericRulesPrefix(section: "A" | "B"): string {
   return genericPrefixCache[section]!;
 }
 
-function wrapFullSystemPrompt(exerciseMarkdown: string, section: "A" | "B"): string {
+function wrapFullSystemPrompt(
+  exerciseMarkdown: string,
+  section: "A" | "B",
+  practiceGuide?: string,
+): string {
   const generic = getGenericRulesPrefix(section);
-  return `${generic}${EXERCICE_MARKER}${exerciseMarkdown.trim()}`;
+  let out = `${generic}${EXERCICE_MARKER}${exerciseMarkdown.trim()}`;
+  if (practiceGuide) {
+    out += `${GUIDE_MARKER}${practiceGuide.trim()}`;
+  }
+  return out;
 }
 
 /**
- * Extract exercise-only body from a .md file: content after EXERCICE À UTILISER, or the
- * whole file if legacy (fragment-only) format.
+ * Extract exercise-only body and optional practice guide from a .md file.
+ * Returns the exercise fragment (between EXERCICE À UTILISER and <<<GUIDE_CANDIDAT>>>)
+ * and the guide block (after <<<GUIDE_CANDIDAT>>>), preserving both across regenerations.
  */
-function extractExerciseBodyFromExistingMd(fileContent: string): string {
-  const idx = fileContent.indexOf(EXERCICE_MARKER);
-  if (idx >= 0) {
-    return fileContent.slice(idx + EXERCICE_MARKER.length).trim();
+function extractExerciseBodyFromExistingMd(fileContent: string): {
+  exerciseBody: string;
+  practiceGuide: string | null;
+} {
+  const guideIdx = fileContent.indexOf(GUIDE_MARKER);
+  let base = fileContent;
+  let practiceGuide: string | null = null;
+
+  if (guideIdx >= 0) {
+    practiceGuide =
+      fileContent.slice(guideIdx + GUIDE_MARKER.length).trim() || null;
+    base = fileContent.slice(0, guideIdx);
   }
-  return fileContent.trim();
+
+  const exIdx = base.indexOf(EXERCICE_MARKER);
+  const exerciseBody =
+    exIdx >= 0
+      ? base.slice(exIdx + EXERCICE_MARKER.length).trim()
+      : base.trim();
+
+  return { exerciseBody, practiceGuide };
 }
 
 function stubExerciseFragment(id: string, section: "A" | "B"): string {
@@ -250,11 +294,102 @@ ${
   return md;
 }
 
-async function main(): Promise<void> {
-  const { force, only, model, stub, upgrade } = parseArgs();
+const GUIDE_TOKEN_BUDGET = 4096;
 
-  if (stub && upgrade) {
-    console.error("Use either --stub or --upgrade, not both.");
+async function generatePracticeGuideForImage(
+  client: OpenAI,
+  section: "A" | "B",
+  filename: string,
+  model: string,
+): Promise<string> {
+  const imagePath = join(TEF_ROOT, `TEF-${section}`, filename);
+  const imageData = readFileSync(imagePath);
+  const base64Image = imageData.toString("base64");
+
+  const sectionPrompt =
+    section === "A"
+      ? `L'exercice est une **prise de renseignements téléphoniques** : le candidat voit l'annonce et doit appeler pour obtenir des informations. Génère un guide de préparation en **trois sections ## exactement** :
+
+## Présentation de l'appel
+Donne **deux options** (libellées **Option 1** et **Option 2**) pour commencer l'appel. Chaque option est une phrase complète, naturelle, **spécifique au sujet de cette annonce** (nomme clairement le service / l'activité / le produit affiché). Pas de crochets ni de textes génériques.
+
+## Questions à poser
+Liste **15 questions numérotées** (1 à 15), interrogatives et complètes, **spécifiques au contenu de cette annonce** (utilise les détails, le lieu, les tarifs, l'activité, le public cible réels visibles). Les questions doivent être variées (tarif, horaires, lieu, modalités, public, matériel, durée, inscription, annulation, etc.). Pas de crochets ni de placeholders.
+
+## Prendre congé
+Donne **deux options** (libellées **Option 1** et **Option 2**) pour terminer l'appel poliment. Phrases complètes, ton naturel pour un appel de renseignements. Pas de crochets.`
+      : `L'exercice est une **présentation d'une annonce à un·e ami·e** pour le/la convaincre. Génère un **guide de préparation pour l'étudiant** en **deux sections ## exactement** :
+
+## Introduction
+Donne **deux variantes** (libellées **Variante 1** et **Variante 2**) pour débuter la conversation avec l'ami·e. Chaque variante fait **3 à 4 phrases**, est naturelle, **spécifique au sujet de cette annonce** (nomme l'activité / le service / le produit réel). Plante bien la situation : comment on a découvert l'annonce, pourquoi ça a attiré l'attention, un détail concret qui donne envie. Ton entre amis, chaleureux. Pas de crochets ni de placeholders.
+
+## Arguments et réponses aux objections
+Liste numérotée **unique** de **7 éléments**. C'est un **guide de préparation**, pas un script de dialogue. Pas de labels comme « Objection possible » ou « Comment répondre ». Chaque élément a un titre en gras suivi directement du texte de l'argument.
+
+**Éléments 1 à 3 — Arguments généraux proactifs.** Ce sont des arguments que l'étudiant peut utiliser de lui-même pour convaincre son ami·e.
+- Titre : **Argument général** (le numéro est déjà fourni par la liste numérotée, ne pas le répéter dans le titre en gras)
+- Texte : **3 à 4 phrases développées**, concrètes, spécifiques à l'annonce (vrais détails : lieu, prix, activité, avantages…). Couvre trois angles différents : valeur/prix, expérience/originalité, praticité/logistique.
+
+**Éléments 4 à 7 — Réponses aux contre-arguments.** Ce sont des réponses à des objections réalistes que l'ami·e pourrait soulever.
+- Titre : un mot-clé décrivant le thème de l'objection (ex. **Le prix**, **Le froid**, **Le danger**, **Le manque d'intérêt** — le numéro est déjà fourni par la liste numérotée, ne pas le répéter dans le titre). Pense aux vraies réticences qu'un·e ami·e aurait face à CETTE annonce précise (coût, météo, danger, éloignement, manque d'intérêt, contraintes pratiques…).
+- Texte : **4 à 5 phrases** structurées ainsi, directement (sans labels) :
+  (a) reconnaître franchement la préoccupation (« C'est vrai que… », « Je comprends que… ») ;
+  (b) développer une explication qui met en perspective pourquoi ça ne devrait pas bloquer ;
+  (c) ajouter une précision concrète tirée de l'annonce (chiffre, caractéristique, service inclus…) ;
+  (d) conclure sur la conséquence positive : le bénéfice concret qu'on en tire, pour relancer l'envie.
+
+Les 4 contre-arguments (éléments 4-7) doivent couvrir des angles **variés et réalistes** liés au thème précis de l'annonce. Ne pas rester générique. Pas de crochets ni de placeholders.`;
+
+  const userPrompt = `Tu analyses une image d'exercice du TEF Canada (Expression Orale), Section ${section}.
+
+Lis attentivement le contenu de l'annonce visible sur l'image.
+
+${sectionPrompt}
+
+Règles générales :
+- Rédigé entièrement en français.
+- Pas de crochets, pas de texte générique type "[le service]" ou "[votre annonce]" : utilise les **vrais mots** tirés de l'annonce.
+- Réponds UNIQUEMENT avec le markdown demandé, sans préambule ni bloc de code.`;
+
+  const response = await client.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:image/png;base64,${base64Image}`,
+              detail: "high",
+            },
+          },
+          { type: "text", text: userPrompt },
+        ],
+      },
+    ],
+    ...(model.toLowerCase().startsWith("o1") ||
+    model.toLowerCase().startsWith("o3") ||
+    model.toLowerCase().startsWith("o4") ||
+    model.toLowerCase().startsWith("gpt-5")
+      ? { max_completion_tokens: GUIDE_TOKEN_BUDGET }
+      : { max_tokens: GUIDE_TOKEN_BUDGET }),
+  });
+
+  const content = response.choices[0]?.message?.content?.trim();
+  if (!content) throw new Error("Empty guide response");
+
+  let md = content.replace(/^```markdown\n?/i, "").replace(/^```\n?/, "");
+  md = md.replace(/\n?```$/i, "").trim();
+  return md;
+}
+
+async function main(): Promise<void> {
+  const { force, only, model, stub, upgrade, addGuide } = parseArgs();
+
+  const exclusiveFlags = [stub, upgrade, addGuide].filter(Boolean).length;
+  if (exclusiveFlags > 1) {
+    console.error("Use only one of --stub, --upgrade, or --add-guide.");
     process.exit(1);
   }
 
@@ -264,12 +399,19 @@ async function main(): Promise<void> {
       for (const filename of listStandardPngs(section)) {
         const id = basename(filename, ".png").toUpperCase();
         if (only && !only.has(id)) continue;
-        const mdPath = join(TEF_ROOT, `TEF-${section}`, `${basename(filename, ".png")}.md`);
+        const mdPath = join(
+          TEF_ROOT,
+          `TEF-${section}`,
+          `${basename(filename, ".png")}.md`,
+        );
         if (existsSync(mdPath) && !force) {
           console.log(`Skip stub ${id} (exists)`);
           continue;
         }
-        const full = wrapFullSystemPrompt(stubExerciseFragment(id, section), section);
+        const full = wrapFullSystemPrompt(
+          stubExerciseFragment(id, section),
+          section,
+        );
         writeFileSync(mdPath, full, "utf-8");
         console.log(`Stub ${id}`);
       }
@@ -285,16 +427,27 @@ async function main(): Promise<void> {
       for (const filename of listStandardPngs(section)) {
         const id = basename(filename, ".png").toUpperCase();
         if (only && !only.has(id)) continue;
-        const mdPath = join(TEF_ROOT, `TEF-${section}`, `${basename(filename, ".png")}.md`);
+        const mdPath = join(
+          TEF_ROOT,
+          `TEF-${section}`,
+          `${basename(filename, ".png")}.md`,
+        );
         if (!existsSync(mdPath)) {
           console.log(`Skip upgrade ${id} (no .md yet)`);
           continue;
         }
         const raw = readFileSync(mdPath, "utf-8");
-        const exerciseBody = extractExerciseBodyFromExistingMd(raw);
-        const full = wrapFullSystemPrompt(exerciseBody, section);
+        const { exerciseBody, practiceGuide } =
+          extractExerciseBodyFromExistingMd(raw);
+        const full = wrapFullSystemPrompt(
+          exerciseBody,
+          section,
+          practiceGuide ?? undefined,
+        );
         writeFileSync(mdPath, full, "utf-8");
-        console.log(`Upgrade ${id}`);
+        console.log(
+          `Upgrade ${id}${practiceGuide ? " (guide preserved)" : ""}`,
+        );
         count++;
       }
     }
@@ -304,11 +457,63 @@ async function main(): Promise<void> {
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.error("OPENAI_API_KEY not found. Use --stub for placeholders or set .env.local");
+    console.error(
+      "OPENAI_API_KEY not found. Use --stub for placeholders or set .env.local",
+    );
     process.exit(1);
   }
 
   const client = new OpenAI({ apiKey });
+
+  if (addGuide) {
+    // Generate exercise-specific practice guides for .md files that don't have one yet
+    // (or overwrite existing ones when --force is set).
+    let count = 0;
+    for (const section of ["A", "B"] as const) {
+      for (const filename of listStandardPngs(section)) {
+        const id = basename(filename, ".png").toUpperCase();
+        if (only && !only.has(id)) continue;
+        const mdPath = join(
+          TEF_ROOT,
+          `TEF-${section}`,
+          `${basename(filename, ".png")}.md`,
+        );
+        if (!existsSync(mdPath)) {
+          console.log(
+            `Skip ${id} (no .md yet — run without --add-guide first)`,
+          );
+          continue;
+        }
+        const raw = readFileSync(mdPath, "utf-8");
+        const { exerciseBody, practiceGuide: existingGuide } =
+          extractExerciseBodyFromExistingMd(raw);
+        if (existingGuide && !force) {
+          console.log(
+            `Skip ${id} (guide already present, use --force to overwrite)`,
+          );
+          continue;
+        }
+        try {
+          console.log(`  ${id} — generating guide…`);
+          const guide = await generatePracticeGuideForImage(
+            client,
+            section,
+            filename,
+            model,
+          );
+          const full = wrapFullSystemPrompt(exerciseBody, section, guide);
+          writeFileSync(mdPath, full, "utf-8");
+          console.log(`  ✓ ${id}`);
+          count++;
+        } catch (e) {
+          console.error(`  ✗ ${id}`, e);
+        }
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
+    console.log(`Add-guide done (${count} file(s) updated).`);
+    return;
+  }
 
   type Job = { section: "A" | "B"; filename: string; id: string };
   const jobs: Job[] = [];
@@ -318,7 +523,11 @@ async function main(): Promise<void> {
     for (const filename of listStandardPngs(section)) {
       const id = basename(filename, ".png").toUpperCase();
       if (only && !only.has(id)) continue;
-      const mdPath = join(TEF_ROOT, `TEF-${section}`, `${basename(filename, ".png")}.md`);
+      const mdPath = join(
+        TEF_ROOT,
+        `TEF-${section}`,
+        `${basename(filename, ".png")}.md`,
+      );
       if (existsSync(mdPath) && !force) {
         console.log(`Skip ${id} (exists, use --force)`);
         continue;
@@ -335,13 +544,40 @@ async function main(): Promise<void> {
   console.log(`Generating ${jobs.length} file(s) with model ${model}…`);
 
   for (const { section, filename, id } of jobs) {
-    const mdPath = join(TEF_ROOT, `TEF-${section}`, `${basename(filename, ".png")}.md`);
+    const mdPath = join(
+      TEF_ROOT,
+      `TEF-${section}`,
+      `${basename(filename, ".png")}.md`,
+    );
     try {
-      console.log(`  ${id}…`);
-      const fragment = await generateExerciseFragmentForImage(client, section, filename, model);
-      const full = wrapFullSystemPrompt(fragment, section);
+      console.log(`  ${id} — generating exercise…`);
+      const fragment = await generateExerciseFragmentForImage(
+        client,
+        section,
+        filename,
+        model,
+      );
+      await new Promise((r) => setTimeout(r, 300));
+      // When --force is used on a file with an existing guide, preserve it; otherwise generate fresh.
+      const existingGuide = existsSync(mdPath)
+        ? extractExerciseBodyFromExistingMd(readFileSync(mdPath, "utf-8"))
+            .practiceGuide
+        : null;
+      let guide = existingGuide ?? null;
+      if (!guide) {
+        console.log(`  ${id} — generating guide…`);
+        guide = await generatePracticeGuideForImage(
+          client,
+          section,
+          filename,
+          model,
+        );
+      }
+      const full = wrapFullSystemPrompt(fragment, section, guide ?? undefined);
       writeFileSync(mdPath, full, "utf-8");
-      console.log(`  ✓ ${id}`);
+      console.log(
+        `  ✓ ${id}${existingGuide ? " (guide preserved)" : " (guide generated)"}`,
+      );
     } catch (e) {
       console.error(`  ✗ ${id}`, e);
     }

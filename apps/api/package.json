@@ -16,7 +16,7 @@
     "rename-tef": "tsx scripts/rename-tef-images.ts",
     "generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts",
     "sync-tef": "tsx scripts/sync-tef-to-web.ts",
-    "test": "node ./scripts/noop-test.mjs"
+    "test": "vitest"
   },
   "engines": {
     "node": ">=22.0.0",
@@ -52,6 +52,7 @@
     "prettier": "^3.4.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.25.0"
+    "typescript-eslint": "^8.25.0",
+    "vitest": "^3.2.4"
   }
 }

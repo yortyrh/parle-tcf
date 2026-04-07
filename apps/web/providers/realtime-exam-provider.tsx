@@ -93,6 +93,8 @@ export interface RealtimeExamContextValue {
   userAudioLevelRef: React.RefObject<number>;
   exerciseData: ExerciseData | null;
   exerciseImage: ExerciseImagePayload | null;
+  /** Markdown guide shown in Conseils tab before the report is available (TEF sessions only). */
+  practiceGuideMarkdown: string | null;
   report: string | null;
   reportStreaming: string | null;
   previousReports: string[];
@@ -129,6 +131,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [exerciseData, setExerciseData] = useState<ExerciseData | null>(null);
   const [exerciseImage, setExerciseImage] = useState<ExerciseImagePayload | null>(null);
+  const [practiceGuideMarkdown, setPracticeGuideMarkdown] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [reportStreaming, setReportStreaming] = useState<string | null>(null);
   const [previousReports, setPreviousReports] = useState<string[]>([]);
@@ -278,6 +281,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     setUserSpeaking(false);
     setExerciseData(null);
     setExerciseImage(null);
+    setPracticeGuideMarkdown(null);
     setReport(null);
     setReportStreaming(null);
     setSessionEnded(false);
@@ -344,6 +348,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           syncExerciseUrl(data.exerciseData.taskType, data.exerciseData.exerciseId);
         }
         setExerciseImage(data.exerciseImage);
+        setPracticeGuideMarkdown(data.practiceGuideMarkdown ?? null);
 
         const apiBase = getExamApiBase();
         const socket = io(apiBase, {
@@ -627,6 +632,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       userAudioLevelRef,
       exerciseData,
       exerciseImage,
+      practiceGuideMarkdown,
       report,
       reportStreaming,
       previousReports,
@@ -654,6 +660,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       userSpeaking,
       exerciseData,
       exerciseImage,
+      practiceGuideMarkdown,
       report,
       reportStreaming,
       previousReports,

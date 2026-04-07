@@ -30,7 +30,26 @@ export interface TefExercise {
   id: string;
   section: "A" | "B";
   filename: string;
+  /** Full raw .md content (agent instructions only — guide stripped at load time). */
   instructions: string;
+  /** Markdown guide for the candidate (Conseils tab). Never sent to the agent. */
+  practiceGuide: string | null;
+}
+
+const GUIDE_MARKER = "<<<GUIDE_CANDIDAT>>>";
+
+/** Pure split: returns agent instructions before the marker and candidate guide after it. */
+export function splitTefPracticeGuide(raw: string): {
+  agentInstructions: string;
+  practiceGuide: string | null;
+} {
+  const idx = raw.indexOf(GUIDE_MARKER);
+  if (idx === -1) {
+    return { agentInstructions: raw.trim(), practiceGuide: null };
+  }
+  const agentInstructions = raw.slice(0, idx).trim();
+  const guide = raw.slice(idx + GUIDE_MARKER.length).trim();
+  return { agentInstructions, practiceGuide: guide || null };
 }
 
 const TEF_MD = /^TEF-[AB]-\d{2}\.md$/i;
@@ -40,9 +59,38 @@ export class ExerciseService implements OnModuleDestroy {
   private readonly logger = new Logger(ExerciseService.name);
   private db: Database.Database | null = null;
   private tefCache: TefExercise[] | null = null;
+  private defaultGuideCache: Partial<Record<"A" | "B", string>> = {};
 
   private getConfigDir(): string {
     return getApiConfigDir();
+  }
+
+  private loadDefaultPracticeGuide(section: "A" | "B"): string | null {
+    if (this.defaultGuideCache[section] !== undefined) {
+      return this.defaultGuideCache[section] ?? null;
+    }
+    const path = join(
+      this.getConfigDir(),
+      "tef-exercices",
+      `TEF-${section}`,
+      "_default-practice-guide.md",
+    );
+    if (!existsSync(path)) {
+      this.defaultGuideCache[section] = undefined;
+      return null;
+    }
+    try {
+      const content = readFileSync(path, "utf-8").trim();
+      this.defaultGuideCache[section] = content || undefined;
+      return content || null;
+    } catch (e) {
+      this.logger.error(
+        `read _default-practice-guide.md section ${section}`,
+        e,
+      );
+      this.defaultGuideCache[section] = undefined;
+      return null;
+    }
   }
 
   private getDb(): Database.Database {
@@ -160,12 +208,17 @@ export class ExerciseService implements OnModuleDestroy {
           continue;
         }
         try {
-          const instructions = readFileSync(join(dir, mdName), "utf-8");
+          const raw = readFileSync(join(dir, mdName), "utf-8");
+          const { agentInstructions, practiceGuide: inlineGuide } =
+            splitTefPracticeGuide(raw);
+          const practiceGuide =
+            inlineGuide ?? this.loadDefaultPracticeGuide(section);
           exercises.push({
             id: base,
             section,
             filename: pngName,
-            instructions,
+            instructions: agentInstructions,
+            practiceGuide,
           });
         } catch (e) {
           this.logger.error(`read ${mdName}`, e);
@@ -195,6 +248,7 @@ export class ExerciseService implements OnModuleDestroy {
           section === "A"
             ? "Vous téléphonez pour obtenir des informations sur cette annonce."
             : "Vous présentez cette annonce à un(e) ami(e) et essayez de le/la convaincre.",
+        practiceGuide: this.loadDefaultPracticeGuide(section),
       };
     }
     if (exerciseId) {

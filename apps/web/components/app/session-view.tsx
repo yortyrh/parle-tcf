@@ -546,6 +546,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
               isReviewPhase={isReviewPhase}
               viewingPreviousIndex={viewingPreviousIndex}
               onSetViewingPreviousIndex={setViewingPreviousIndex}
+              practiceGuideMarkdown={exam.practiceGuideMarkdown}
             />
           </TabsContent>
 

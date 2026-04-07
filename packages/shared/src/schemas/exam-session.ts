@@ -44,6 +44,8 @@ export const createExamSessionOutputSchema = z.object({
   agentConfig: agentConfigForClientSchema,
   /** Ordered exercise ids for this task type (empty for tache1). Enables next/random navigation in the client. */
   orderedExerciseIds: z.array(z.string()).optional(),
+  /** Markdown guide shown in the Conseils tab during a TEF session. Not sent to the agent. */
+  practiceGuideMarkdown: z.string().optional(),
 });
 
 export type CreateExamSessionInput = z.infer<typeof createExamSessionInputSchema>;
