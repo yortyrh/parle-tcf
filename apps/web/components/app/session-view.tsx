@@ -394,10 +394,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
           className="flex min-h-0 flex-1 flex-col"
         >
           <div className="border-border/70 flex items-end border-b bg-white/60 px-3 pt-1.5">
-            <TabsList
-              variant="line"
-              className="min-w-0 w-full justify-start gap-0 pb-1.5"
-            >
+            <TabsList variant="line" className="w-full min-w-0 justify-start gap-0 pb-1.5">
               <TabsTrigger value="consigne" className="min-w-0 flex-1 sm:flex-none sm:px-5">
                 Consigne
               </TabsTrigger>
