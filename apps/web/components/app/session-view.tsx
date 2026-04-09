@@ -388,171 +388,132 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   return (
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-b from-slate-100/70 via-slate-50/40 to-white p-2 sm:p-4">
       <div className="border-border/70 bg-card/95 relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-solid shadow-xl ring-1 ring-black/5 backdrop-blur sm:rounded-2xl">
-        <div className="pointer-events-none absolute top-1/2 right-1 z-20 hidden -translate-y-1/2 flex-col gap-2 sm:flex">
-          <button
-            type="button"
-            disabled={!canSwitchExercise}
-            onClick={() => void exam.goToAnotherExercise('previous')}
-            title="Sujet précédent (ordre de la banque)"
-            aria-label="Sujet précédent (ordre de la banque)"
-            className={cn(
-              'pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border bg-white/95 text-teal-700 shadow-md transition-colors',
-              canSwitchExercise
-                ? 'border-teal-200 hover:bg-teal-50 active:bg-teal-100'
-                : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
-            )}
-          >
-            <SkipBack weight="bold" className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            disabled={!canSwitchExercise}
-            onClick={() => void exam.goToAnotherExercise('next')}
-            title="Sujet suivant (ordre de la banque)"
-            aria-label="Sujet suivant (ordre de la banque)"
-            className={cn(
-              'pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border bg-white/95 text-teal-700 shadow-md transition-colors',
-              canSwitchExercise
-                ? 'border-teal-200 hover:bg-teal-50 active:bg-teal-100'
-                : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
-            )}
-          >
-            <SkipForward weight="bold" className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            disabled={!canSwitchExercise}
-            onClick={() => void exam.goToAnotherExercise('random')}
-            title="Autre sujet au hasard"
-            aria-label="Autre sujet au hasard"
-            className={cn(
-              'pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border bg-white/95 text-violet-700 shadow-md transition-colors',
-              canSwitchExercise
-                ? 'border-violet-200 hover:bg-violet-50 active:bg-violet-100'
-                : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
-            )}
-          >
-            <Shuffle weight="bold" className="h-5 w-5" />
-          </button>
-        </div>
         <Tabs
           value={sessionTab}
           onValueChange={(v) => setSessionTab(v as SessionTab)}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="border-border/70 flex items-end border-b bg-white/60 px-3 pt-2">
-            <TabsList variant="line" className="min-w-0 flex-1 justify-start gap-0">
-              <TabsTrigger value="consigne" className="flex-1 sm:flex-none sm:px-5">
+          <div className="border-border/70 flex items-end border-b bg-white/60 px-3 pt-1.5">
+            <TabsList
+              variant="line"
+              className="min-w-0 w-full justify-start gap-0 pb-1.5"
+            >
+              <TabsTrigger value="consigne" className="min-w-0 flex-1 sm:flex-none sm:px-5">
                 Consigne
               </TabsTrigger>
-              <TabsTrigger value="conseils" className="flex-1 sm:flex-none sm:px-5">
+              <TabsTrigger value="conseils" className="min-w-0 flex-1 sm:flex-none sm:px-5">
                 Conseils
               </TabsTrigger>
-              <TabsTrigger value="conversation" className="flex-1 sm:flex-none sm:px-5">
+              <TabsTrigger value="conversation" className="min-w-0 flex-1 sm:flex-none sm:px-5">
                 Conversation
               </TabsTrigger>
             </TabsList>
-            <div className="mb-1.5 ml-2 flex shrink-0 items-center gap-1">
-              <div className="flex gap-1 sm:hidden">
-                <button
-                  type="button"
-                  disabled={!canSwitchExercise}
-                  onClick={() => void exam.goToAnotherExercise('previous')}
-                  title="Sujet précédent"
-                  aria-label="Sujet précédent (ordre de la banque)"
-                  className={cn(
-                    'inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-lg border bg-white text-teal-700 shadow-sm',
-                    canSwitchExercise
-                      ? 'border-teal-200 active:bg-teal-100'
-                      : 'cursor-not-allowed opacity-50'
-                  )}
-                >
-                  <SkipBack weight="bold" className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={!canSwitchExercise}
-                  onClick={() => void exam.goToAnotherExercise('next')}
-                  title="Sujet suivant"
-                  aria-label="Sujet suivant (ordre de la banque)"
-                  className={cn(
-                    'inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-lg border bg-white text-teal-700 shadow-sm',
-                    canSwitchExercise
-                      ? 'border-teal-200 active:bg-teal-100'
-                      : 'cursor-not-allowed opacity-50'
-                  )}
-                >
-                  <SkipForward weight="bold" className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={!canSwitchExercise}
-                  onClick={() => void exam.goToAnotherExercise('random')}
-                  title="Sujet au hasard"
-                  aria-label="Autre sujet au hasard"
-                  className={cn(
-                    'inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-lg border bg-white text-violet-700 shadow-sm',
-                    canSwitchExercise
-                      ? 'border-violet-200 active:bg-violet-100'
-                      : 'cursor-not-allowed opacity-50'
-                  )}
-                >
-                  <Shuffle weight="bold" className="h-4 w-4" />
-                </button>
-              </div>
+          </div>
+
+          <div
+            role="toolbar"
+            aria-label="Navigation entre les sujets"
+            className="border-border/70 bg-muted/20 grid w-full shrink-0 grid-cols-[auto_1fr_auto] items-center border-b px-2 py-1 sm:px-3 sm:py-1"
+          >
+            <button
+              type="button"
+              disabled={!canSwitchExercise}
+              onClick={() => void exam.goToAnotherExercise('previous')}
+              title="Aller à l’exercice précédent"
+              aria-label="Aller à l’exercice précédent (ordre de la banque)"
+              className={cn(
+                'inline-flex size-8 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border bg-white text-teal-700 shadow-sm transition-colors sm:size-9',
+                canSwitchExercise
+                  ? 'border-teal-200 hover:bg-teal-50 active:bg-teal-100'
+                  : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
+              )}
+            >
+              <SkipBack weight="bold" className="h-4 w-4" />
+            </button>
+            <div className="flex items-center justify-center gap-4 sm:gap-5">
+              <button
+                type="button"
+                disabled={!canSwitchExercise}
+                onClick={() => void exam.goToAnotherExercise('random')}
+                title="Autre sujet au hasard"
+                aria-label="Autre sujet au hasard"
+                className={cn(
+                  'inline-flex size-8 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border bg-white text-violet-700 shadow-sm transition-colors sm:size-9',
+                  canSwitchExercise
+                    ? 'border-violet-200 hover:bg-violet-50 active:bg-violet-100'
+                    : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
+                )}
+              >
+                <Shuffle weight="bold" className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 aria-label="Recommencer la session"
+                title="Recommencer la session"
                 onClick={handleRestart}
-                className={cn(
-                  'inline-flex flex-shrink-0 touch-manipulation items-center justify-center gap-1.5 rounded-lg',
-                  'bg-cyan-600 text-xs font-medium text-white shadow-sm transition-colors',
-                  'min-h-8 min-w-[3.75rem] px-3 py-0.5 hover:bg-cyan-700 active:bg-cyan-800',
-                  'sm:min-h-0 sm:min-w-0 sm:px-2.5 sm:py-1'
-                )}
+                className="inline-flex size-8 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-cyan-700/25 bg-cyan-600 text-white shadow-sm transition-colors hover:bg-cyan-700 active:bg-cyan-800 sm:size-9"
               >
-                <ArrowCounterClockwise
-                  className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5"
-                  weight="bold"
-                />
-                <span className="hidden sm:inline">Recommencer</span>
+                <ArrowCounterClockwise className="h-4 w-4 shrink-0" weight="bold" />
               </button>
             </div>
+            <button
+              type="button"
+              disabled={!canSwitchExercise}
+              onClick={() => void exam.goToAnotherExercise('next')}
+              title="Aller à l’exercice suivant"
+              aria-label="Aller à l’exercice suivant (ordre de la banque)"
+              className={cn(
+                'inline-flex size-8 shrink-0 cursor-pointer touch-manipulation items-center justify-center justify-self-end rounded-full border bg-white text-teal-700 shadow-sm transition-colors sm:size-9',
+                canSwitchExercise
+                  ? 'border-teal-200 hover:bg-teal-50 active:bg-teal-100'
+                  : 'border-muted text-muted-foreground cursor-not-allowed opacity-50'
+              )}
+            >
+              <SkipForward weight="bold" className="h-4 w-4" />
+            </button>
           </div>
 
-          <TabsContent
-            value="consigne"
-            className={cn('min-h-0 flex-1 overflow-y-auto', isTefTask ? 'p-0' : 'p-3 sm:p-4')}
-          >
-            <ConsigneTabContent
-              isTefTask={isTefTask}
-              exerciseImage={exerciseImage}
-              announcementText={announcementText}
-              showTefSkeleton={showTefSkeleton}
-              showExerciseSkeleton={showExerciseSkeleton}
-              showMicHint={showMicHint}
-            />
-          </TabsContent>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <TabsContent
+              value="consigne"
+              className={cn(
+                'mt-0 min-h-0 flex-1 overflow-y-auto outline-none',
+                isTefTask ? 'p-0' : 'p-3 sm:p-4'
+              )}
+            >
+              <ConsigneTabContent
+                isTefTask={isTefTask}
+                exerciseImage={exerciseImage}
+                announcementText={announcementText}
+                showTefSkeleton={showTefSkeleton}
+                showExerciseSkeleton={showExerciseSkeleton}
+                showMicHint={showMicHint}
+              />
+            </TabsContent>
 
-          <TabsContent
-            value="conseils"
-            className="min-h-0 flex-1 overflow-y-auto px-3 pt-0 pb-3 sm:px-4 sm:pb-4"
-          >
-            <ConseilsTabContent
-              report={displayReport}
-              previousReports={exam.previousReports}
-              isPreparingReport={isPreparingReport}
-              reportDeliveryError={exam.reportDeliveryError}
-              isReviewPhase={isReviewPhase}
-              viewingPreviousIndex={viewingPreviousIndex}
-              onSetViewingPreviousIndex={setViewingPreviousIndex}
-              practiceGuideMarkdown={exam.practiceGuideMarkdown}
-            />
-          </TabsContent>
+            <TabsContent
+              value="conseils"
+              className="mt-0 min-h-0 flex-1 overflow-y-auto px-3 pt-0 pb-3 outline-none sm:px-4 sm:pb-4"
+            >
+              <ConseilsTabContent
+                report={displayReport}
+                previousReports={exam.previousReports}
+                isPreparingReport={isPreparingReport}
+                reportDeliveryError={exam.reportDeliveryError}
+                isReviewPhase={isReviewPhase}
+                viewingPreviousIndex={viewingPreviousIndex}
+                onSetViewingPreviousIndex={setViewingPreviousIndex}
+                practiceGuideMarkdown={exam.practiceGuideMarkdown}
+              />
+            </TabsContent>
 
-          <TabsContent value="conversation" className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
-            <ConversationTabContent lines={exam.transcripts} />
-          </TabsContent>
+            <TabsContent
+              value="conversation"
+              className="mt-0 min-h-0 flex-1 overflow-y-auto p-3 outline-none sm:p-4"
+            >
+              <ConversationTabContent lines={exam.transcripts} />
+            </TabsContent>
+          </div>
         </Tabs>
 
         <div className="border-border/70 border-t bg-white/95 px-3 py-2 sm:px-4 sm:py-3">

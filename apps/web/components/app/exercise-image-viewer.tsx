@@ -1,7 +1,11 @@
 'use client';
 
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch';
-import { ArrowsClockwise, MagnifyingGlassMinus, MagnifyingGlassPlus } from '@phosphor-icons/react';
+import {
+  ArrowsClockwise,
+  MagnifyingGlassMinus,
+  MagnifyingGlassPlus,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ExerciseImageData } from '@/types/exercise-image';
 
