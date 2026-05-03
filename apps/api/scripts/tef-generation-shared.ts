@@ -5,7 +5,6 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
-import { parse } from "yaml";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -14,25 +13,13 @@ export const TEF_ROOT = join(CONFIG_DIR, "tef-exercices");
 
 export const STANDARD_PNG = /^TEF-(A|B)-(\d{2})\.png$/i;
 
-export const TEF_SECTION_A_INSTRUCTION_CLOSING = `
+/** Prepended to every `*.instructions.md` before `EXERCICE À UTILISER:` (per-section, editable). */
+const PREAMBLE_FILENAME = "_instructions-preamble.md";
 
----
-RAPPEL FINAL — Section A (prime sur toute phrase du bloc « EXERCICE À UTILISER » qui suggérerait un refus d’information) :
-
-Pendant l’appel, ne bloque pas l’échange en renvoyant le candidat à l’affiche, au site, à un courriel, à « appeler ailleurs » ou à un autre service comme seule réponse, ni en répétant que le détail « n’est pas sur l’annonce », « n’est pas écrit », « vous auriez dû lire » ou équivalent. Ce ton est pédagogiquement contre-productif et tue l’oral.
-
-À la place, reste entièrement dans le personnage : réponds aux questions, y compris lorsque le point ne figure pas clairement sur la fiche du candidat. Donne une information courte et crédible qu’un interlocuteur au téléphone fournirait, ou une suite naturelle (prise de note, vérification, « pour votre situation on fait comme ceci », rappel avec le détail, précision d’usage), en restant cohérent avec l’annonce et les faits de l’exercice. Les mentions « (illisible sur le scan) » indiquent ce que le candidat ne voit pas sur son document ; elles n’obligent pas à refuser la réponse : au téléphone tu peux préciser ces points comme le ferait le service.
-
-L’évaluation pourra noter dans le rapport si une question visait une info hors fiche ; pendant l’épreuve, le personnage accueille et répond sans moraliser sur la démarche à suivre.`;
-
-export const EXERCICE_MARKER = "\n\nEXERCICE À UTILISER:\n";
+/** Inserted between optional preamble and the exercise-specific body. */
+export const EXERCICE_HEADING = "EXERCICE À UTILISER:";
 
 const COMPLETION_TOKEN_BUDGET = 4096;
-
-export interface AgentYamlFragment {
-  baseInstructions: string;
-  instructions: string;
-}
 
 export function completionTokenParams(
   model: string,
@@ -54,16 +41,11 @@ export interface TefGenCliOptions {
   only: Set<string> | null;
   model: string;
   stub: boolean;
-  upgrade: boolean;
 }
 
-export function parseTefGenCliArgs(
-  argv: string[],
-  opts: { allowUpgrade: boolean },
-): TefGenCliOptions {
+export function parseTefGenCliArgs(argv: string[]): TefGenCliOptions {
   let force = false;
   let stub = false;
-  let upgrade = false;
   let model = "gpt-5.4-mini";
   const only = new Set<string>();
   let i = 0;
@@ -71,15 +53,7 @@ export function parseTefGenCliArgs(
     const a = argv[i]!;
     if (a === "--force") force = true;
     else if (a === "--stub") stub = true;
-    else if (a === "--upgrade") {
-      if (!opts.allowUpgrade) {
-        console.error(
-          "--upgrade is only supported by generate-tef-instructions.",
-        );
-        process.exit(1);
-      }
-      upgrade = true;
-    } else if (a === "--model" && argv[i + 1]) {
+    else if (a === "--model" && argv[i + 1]) {
       model = argv[++i]!;
     } else if (a === "--only") {
       i++;
@@ -96,44 +70,28 @@ export function parseTefGenCliArgs(
     only: only.size > 0 ? only : null,
     model,
     stub,
-    upgrade,
   };
 }
 
-function loadAgentYaml(section: "A" | "B"): AgentYamlFragment {
-  const taskType = section === "A" ? "tef-section-a" : "tef-section-b";
-  const configPath = join(CONFIG_DIR, "agents", `${taskType}.yml`);
-  const fileContent = readFileSync(configPath, "utf-8");
-  const config = parse(fileContent) as Record<string, unknown>;
-  const baseInstructions = config.baseInstructions;
-  const instructions = config.instructions;
-  if (
-    typeof baseInstructions !== "string" ||
-    typeof instructions !== "string"
-  ) {
-    throw new Error(
-      `Invalid agent YAML (need baseInstructions, instructions): ${taskType}.yml`,
-    );
+const instructionsPreambleCache: Partial<Record<"A" | "B", string>> = {};
+
+/** Shared prefix from `TEF-{A|B}/_instructions-preamble.md` (trimmed). */
+export function getInstructionsPreamble(section: "A" | "B"): string {
+  if (instructionsPreambleCache[section] !== undefined) {
+    return instructionsPreambleCache[section]!;
   }
-  return { baseInstructions, instructions };
+  const path = join(TEF_ROOT, `TEF-${section}`, PREAMBLE_FILENAME);
+  let text = "";
+  if (existsSync(path)) {
+    text = readFileSync(path, "utf-8").trim();
+  }
+  instructionsPreambleCache[section] = text;
+  return text;
 }
 
-function buildGenericRulesPrefix(section: "A" | "B"): string {
-  const { baseInstructions, instructions } = loadAgentYaml(section);
-  let prefix = `${baseInstructions.trimEnd()}\n\n${instructions.trimEnd()}`;
-  if (section === "A") {
-    prefix += TEF_SECTION_A_INSTRUCTION_CLOSING;
-  }
-  return prefix;
-}
-
-const genericPrefixCache: Partial<Record<"A" | "B", string>> = {};
-
-export function getGenericRulesPrefix(section: "A" | "B"): string {
-  if (!genericPrefixCache[section]) {
-    genericPrefixCache[section] = buildGenericRulesPrefix(section);
-  }
-  return genericPrefixCache[section]!;
+/** Warm the preamble cache (call before batches so edits mid-run are not seen). */
+export function primeInstructionsPreambleCache(section: "A" | "B"): void {
+  getInstructionsPreamble(section);
 }
 
 /** Full Realtime system prompt for one exercise (agent only — no candidate guide). */
@@ -141,22 +99,9 @@ export function wrapInstructionsPrompt(
   exerciseMarkdown: string,
   section: "A" | "B",
 ): string {
-  const generic = getGenericRulesPrefix(section);
-  return `${generic}${EXERCICE_MARKER}${exerciseMarkdown.trim()}`;
-}
-
-/**
- * Per-exercise fragment after `EXERCICE À UTILISER:` in an `.instructions.md`
- * file (used by `--upgrade` to re-merge YAML).
- */
-export function extractExerciseBodyFromInstructionsFile(
-  fileContent: string,
-): string {
-  const exIdx = fileContent.indexOf(EXERCICE_MARKER);
-  if (exIdx >= 0) {
-    return fileContent.slice(exIdx + EXERCICE_MARKER.length).trim();
-  }
-  return fileContent.trim();
+  const preamble = getInstructionsPreamble(section);
+  const pre = preamble.length > 0 ? `${preamble}\n\n` : "";
+  return `${pre}${EXERCICE_HEADING}\n${exerciseMarkdown.trim()}`;
 }
 
 export function stubExerciseFragment(id: string, section: "A" | "B"): string {

@@ -4,7 +4,7 @@
 
 Replace the prior TEF pipeline with:
 - Standard images `TEF-{section}-{num}.png`
-- **`TEF-*-NN.instructions.md`** — full Realtime system prompt (YAML merged by generation script + per-exercise body from vision)
+- **`TEF-*-NN.instructions.md`** — full Realtime system prompt (`_instructions-preamble.md` optional + `EXERCICE À UTILISER:` + per-exercise body from vision)
 - **`TEF-*-NN.conseils.md`** — candidate-facing preparation guide (vision); not sent to the model
 - Original images synced to the web app (`sync-tef`)
 - Runtime loads split files from `tef-exercices/` (see `ExerciseService`)
@@ -66,8 +66,8 @@ graph TD
 
 - **Location**: `apps/api/scripts/generate-tef-instructions.ts`
 - **npm script**: `"generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts"`
-- **Output**: `TEF-{section}-{num}.instructions.md` (full system prompt: section YAML + `EXERCICE À UTILISER:` + exercise-specific markdown from vision)
-- **Flags**: `--force`, `--upgrade` (re-merge YAML without vision), `--stub`, `--only`, `--model`
+- **Output**: `TEF-{section}-{num}.instructions.md` (optional `TEF-{section}/_instructions-preamble.md`, then `EXERCICE À UTILISER:`, then exercise-specific markdown from vision)
+- **Flags**: `--force`, `--stub`, `--only`, `--model`
 - Shared logic: `apps/api/scripts/tef-generation-shared.ts`
 
 ## Script 3: `generate-tef-conseils`
@@ -122,7 +122,7 @@ Removed fields: `title`, `annonce`, `consigne`, `generatedImagePath`, `generated
 
 ### `ExamSessionService.buildFullInstructions()`
 
-- For TEF tasks, returns `*.instructions.md` verbatim (already contains merged YAML + exercise block).
+- For TEF tasks, returns `*.instructions.md` verbatim (self-contained on disk).
 
 ## Shared Package Changes
 

@@ -1,28 +1,27 @@
 /**
- * Writes `TEF-A-NN.instructions.md` / `TEF-B-NN.instructions.md` (Realtime agent prompt:
- * YAML from tef-section-{a|b}.yml + EXERCICE À UTILISER + vision body from PNG).
+ * Writes `TEF-A-NN.instructions.md` / `TEF-B-NN.instructions.md` (Realtime agent prompt).
+ * Optional shared prefix: `TEF-{A|B}/_instructions-preamble.md`, then `EXERCICE À UTILISER:`,
+ * then vision-generated exercise body from PNG.
  *
- * Conseils (candidate tab) are generated separately: `generate-tef-conseils`.
+ * Conseils (candidate tab): `generate-tef-conseils`.
  *
  * Usage:
  *   pnpm generate-tef-instructions
  *   pnpm generate-tef-instructions -- --force
- *   pnpm generate-tef-instructions -- --upgrade   (re-merge YAML + existing exercise body, no vision)
  *   pnpm generate-tef-instructions -- --only TEF-A-01 TEF-B-02
  *   pnpm generate-tef-instructions -- --model gpt-4o
  *   pnpm generate-tef-instructions -- --stub      (placeholders without OPENAI_API_KEY)
  */
 import dotenv from "dotenv";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import OpenAI from "openai";
 import {
-  extractExerciseBodyFromInstructionsFile,
   generateExerciseFragmentForImage,
-  getGenericRulesPrefix,
   listStandardPngs,
   parseTefGenCliArgs,
   pathForInstructions,
+  primeInstructionsPreambleCache,
   stubExerciseFragment,
   wrapInstructionsPrompt,
 } from "./tef-generation-shared.js";
@@ -30,19 +29,13 @@ import {
 dotenv.config({ path: ".env.local" });
 
 async function main(): Promise<void> {
-  const { force, only, model, stub, upgrade } = parseTefGenCliArgs(
+  const { force, only, model, stub } = parseTefGenCliArgs(
     process.argv.slice(2),
-    { allowUpgrade: true },
   );
-
-  if (stub && upgrade) {
-    console.error("Use only one of --stub or --upgrade.");
-    process.exit(1);
-  }
 
   if (stub) {
     for (const section of ["A", "B"] as const) {
-      getGenericRulesPrefix(section);
+      primeInstructionsPreambleCache(section);
       for (const filename of listStandardPngs(section)) {
         const base = basename(filename, ".png");
         const id = base.toUpperCase();
@@ -61,31 +54,6 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (upgrade) {
-    let count = 0;
-    for (const section of ["A", "B"] as const) {
-      getGenericRulesPrefix(section);
-      for (const filename of listStandardPngs(section)) {
-        const base = basename(filename, ".png");
-        const id = base.toUpperCase();
-        if (only && !only.has(id)) continue;
-        const instPath = pathForInstructions(section, base);
-        if (!existsSync(instPath)) {
-          console.log(`Skip upgrade ${id} (no .instructions.md)`);
-          continue;
-        }
-        const raw = readFileSync(instPath, "utf-8");
-        const exerciseBody = extractExerciseBodyFromInstructionsFile(raw);
-        const full = wrapInstructionsPrompt(exerciseBody, section);
-        writeFileSync(instPath, full, "utf-8");
-        console.log(`Upgrade ${id}`);
-        count++;
-      }
-    }
-    console.log(`Upgrade done (${count} file(s)).`);
-    return;
-  }
-
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.error(
@@ -100,7 +68,7 @@ async function main(): Promise<void> {
   const jobs: Job[] = [];
 
   for (const section of ["A", "B"] as const) {
-    getGenericRulesPrefix(section);
+    primeInstructionsPreambleCache(section);
     for (const filename of listStandardPngs(section)) {
       const base = basename(filename, ".png");
       const id = base.toUpperCase();

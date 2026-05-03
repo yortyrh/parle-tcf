@@ -26,7 +26,6 @@ dotenv.config({ path: ".env.local" });
 async function main(): Promise<void> {
   const { force, only, model, stub } = parseTefGenCliArgs(
     process.argv.slice(2),
-    { allowUpgrade: false },
   );
 
   if (stub) {
