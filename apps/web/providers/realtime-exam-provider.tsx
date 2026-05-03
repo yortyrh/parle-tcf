@@ -359,7 +359,12 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         socketRef.current = socket;
         socket.emit(SOCKET_EVENTS.JOIN_SESSION, { sessionId: data.sessionId });
 
-        const instructions = `${data.agentConfig.instructions}\n\n--- Consigne d'accueil initiale (à respecter au démarrage) ---\n${data.agentConfig.greeting}`;
+        const taskType = data.exerciseData.taskType;
+        const isTefSection =
+          taskType === 'tef-section-a' || taskType === 'tef-section-b';
+        const instructions = isTefSection
+          ? data.agentConfig.instructions
+          : `${data.agentConfig.instructions}\n\n--- Consigne d'accueil initiale (à respecter au démarrage) ---\n${data.agentConfig.greeting}`;
 
         const finSession = tool({
           name: 'finSession',

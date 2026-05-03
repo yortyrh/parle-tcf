@@ -165,7 +165,7 @@ export class ExamSessionService {
     agentYaml: { baseInstructions: string; instructions: string },
     contentAppend: string | undefined,
   ): string {
-    // TEF: `tef-exercices` .md files are self-contained system prompts (YAML + EXERCICE À UTILISER + body).
+    // TEF: `tef-exercices` .md files are the full system prompt (YAML contributes nothing).
     if (
       (taskType === "tef-section-a" || taskType === "tef-section-b") &&
       contentAppend
@@ -233,7 +233,10 @@ export class ExamSessionService {
       practiceGuideMarkdown,
       agentConfig: {
         instructions,
-        greeting: agentYaml.greeting,
+        greeting:
+          taskType === "tef-section-a" || taskType === "tef-section-b"
+            ? ""
+            : agentYaml.greeting,
         voice,
         model,
         allowInterruptions: agentYaml.settings.allowInterruptions,
