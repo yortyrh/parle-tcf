@@ -165,7 +165,7 @@ export class ExamSessionService {
     agentYaml: { baseInstructions: string; instructions: string },
     contentAppend: string | undefined,
   ): string {
-    // TEF: `tef-exercices` .md files are the full system prompt (YAML contributes nothing).
+    // TEF: `tef-exercices` *.instructions.md is the full system prompt (YAML contributes nothing).
     if (
       (taskType === "tef-section-a" || taskType === "tef-section-b") &&
       contentAppend

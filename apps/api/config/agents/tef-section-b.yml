@@ -1,6 +1,6 @@
 # TEF Canada — Section B (Expression Orale)
 # Runtime: Realtime prompt = contenu du fichier markdown de l'exercice uniquement
-# (apps/api/config/tef-exercices/TEF-B/TEF-B-NN.md). Pas de consigne LLM dans ce YAML.
+# (apps/api/config/tef-exercices/TEF-B/TEF-B-NN.instructions.md). Pas de consigne LLM dans ce YAML.
 
 name: "TEF Section B - Argumentation et conviction"
 description: "Le candidat présente une annonce à un(e) ami(e) et essaie de le/la convaincre"

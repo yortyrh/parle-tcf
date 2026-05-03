@@ -1,6 +1,6 @@
 # TEF Canada — Section A (Expression Orale)
 # Runtime: Realtime prompt = contenu du fichier markdown de l'exercice uniquement
-# (apps/api/config/tef-exercices/TEF-A/TEF-A-NN.md). Pas de consigne LLM dans ce YAML.
+# (apps/api/config/tef-exercices/TEF-A/TEF-A-NN.instructions.md). Pas de consigne LLM dans ce YAML.
 
 name: "TEF Section A - Demande d'informations"
 description: "Le candidat a lu une annonce et téléphone pour obtenir des informations"

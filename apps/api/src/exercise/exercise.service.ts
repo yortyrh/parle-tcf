@@ -30,9 +30,9 @@ export interface TefExercise {
   id: string;
   section: "A" | "B";
   filename: string;
-  /** Full raw .md content (agent instructions only — guide stripped at load time). */
+  /** Agent prompt from `TEF-*-NN.instructions.md`. */
   instructions: string;
-  /** Markdown guide for the candidate (Conseils tab). Never sent to the agent. */
+  /** Candidate guide from `TEF-*-NN.conseils.md` or section default. Never sent to the agent. */
   practiceGuide: string | null;
 }
 
@@ -52,7 +52,8 @@ export function splitTefPracticeGuide(raw: string): {
   return { agentInstructions, practiceGuide: guide || null };
 }
 
-const TEF_MD = /^TEF-[AB]-\d{2}\.md$/i;
+/** Per-exercise agent prompt file (paired with `.conseils.md` + `.png`). */
+const TEF_INSTRUCTIONS_MD = /^TEF-[AB]-\d{2}\.instructions\.md$/i;
 
 @Injectable()
 export class ExerciseService implements OnModuleDestroy {
@@ -196,11 +197,11 @@ export class ExerciseService implements OnModuleDestroy {
         continue;
       }
       const mdNames = readdirSync(dir)
-        .filter((f) => TEF_MD.test(f))
+        .filter((f) => TEF_INSTRUCTIONS_MD.test(f))
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
       for (const mdName of mdNames) {
-        const base = mdName.replace(/\.md$/i, "");
+        const base = mdName.replace(/\.instructions\.md$/i, "");
         const pngName = `${base}.png`;
         const pngPath = join(dir, pngName);
         if (!existsSync(pngPath)) {
@@ -208,16 +209,19 @@ export class ExerciseService implements OnModuleDestroy {
           continue;
         }
         try {
-          const raw = readFileSync(join(dir, mdName), "utf-8");
-          const { agentInstructions, practiceGuide: inlineGuide } =
-            splitTefPracticeGuide(raw);
+          const instructions = readFileSync(join(dir, mdName), "utf-8").trim();
+          const conseilsPath = join(dir, `${base}.conseils.md`);
+          let inlineGuide: string | null = null;
+          if (existsSync(conseilsPath)) {
+            inlineGuide = readFileSync(conseilsPath, "utf-8").trim() || null;
+          }
           const practiceGuide =
             inlineGuide ?? this.loadDefaultPracticeGuide(section);
           exercises.push({
             id: base,
             section,
             filename: pngName,
-            instructions: agentInstructions,
+            instructions,
             practiceGuide,
           });
         } catch (e) {
@@ -228,7 +232,7 @@ export class ExerciseService implements OnModuleDestroy {
 
     if (exercises.length === 0) {
       this.logger.warn(
-        "No TEF exercises found; add TEF-A-NN.md + TEF-A-NN.png under config/tef-exercices/",
+        "No TEF exercises found; add TEF-A-NN.instructions.md, TEF-A-NN.conseils.md, TEF-A-NN.png under config/tef-exercices/",
       );
     }
 

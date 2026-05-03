@@ -16,6 +16,7 @@
     "rename-tef": "tsx scripts/rename-tef-images.ts",
     "generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts",
     "sync-tef": "tsx scripts/sync-tef-to-web.ts",
+    "split-tef-markdown": "tsx scripts/split-tef-markdown.ts",
     "test": "vitest"
   },
   "engines": {
