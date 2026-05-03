@@ -24,10 +24,7 @@ export function WelcomeView({
   initialSelectedTaskType = null,
 }: WelcomeViewProps) {
   const [selectedTaskType, setSelectedTaskType] = useState<string | null>(() => {
-    if (
-      initialSelectedTaskType &&
-      tasks.some((t) => t.taskType === initialSelectedTaskType)
-    ) {
+    if (initialSelectedTaskType && tasks.some((t) => t.taskType === initialSelectedTaskType)) {
       return initialSelectedTaskType;
     }
     return null;

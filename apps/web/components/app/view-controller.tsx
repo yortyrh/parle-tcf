@@ -1,7 +1,7 @@
 'use client';
 
 import type { MutableRefObject } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { AppConfig, Task } from '@/app-config';
 import { SessionView } from '@/components/app/session-view';
@@ -68,16 +68,19 @@ export function ViewController({
     }
   }, [exam.isConnected, exam.isRestarting, router, welcomeHref]);
 
-  const startSession = (taskType: string, exerciseId?: string) => {
-    const task = appConfig.tasks.find((t) => t.taskType === taskType);
-    if (task) {
-      connectTaskTypeRef.current = taskType;
-      connectExerciseIdRef.current = exerciseId;
-      setSelectedTask(task);
-      onTaskSelect(taskType);
-      void exam.start(taskType, exerciseId);
-    }
-  };
+  const startSession = useCallback(
+    (taskType: string, exerciseId?: string) => {
+      const task = appConfig.tasks.find((t) => t.taskType === taskType);
+      if (task) {
+        connectTaskTypeRef.current = taskType;
+        connectExerciseIdRef.current = exerciseId;
+        setSelectedTask(task);
+        onTaskSelect(taskType);
+        void exam.start(taskType, exerciseId);
+      }
+    },
+    [appConfig.tasks, connectExerciseIdRef, connectTaskTypeRef, exam, onTaskSelect]
+  );
 
   const handleWelcomeStart = (taskType: string) => {
     if (routeByTask && welcomeHref) {
@@ -104,7 +107,7 @@ export function ViewController({
 
     autoConnectAttemptKeyRef.current = key;
     void startSession(initialTaskType, initialExerciseId);
-  }, [initialTaskType, initialExerciseId, exam.isConnected, exam.isConnecting]);
+  }, [initialTaskType, initialExerciseId, exam.isConnected, exam.isConnecting, startSession]);
 
   if (!exam.isConnected) {
     if (exam.isConnecting || exam.isRestarting) {
