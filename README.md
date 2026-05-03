@@ -115,7 +115,7 @@ pnpm --filter @yorty-tcf/shared <script>
 | --- | --- |
 | `dev` / `build` / `start` | NestJS |
 | `generate-db` | TCF CSV → SQLite (`config/tcf-exercises.db`) |
-| `rename-tef`, `generate-tef-instructions`, `sync-tef` | TEF content pipeline (`config/tef-exercices/` → `.md` instructions + images under `apps/web/public/`) |
+| `rename-tef`, `generate-tef-instructions`, `generate-tef-conseils`, `sync-tef` | TEF content pipeline (`config/tef-exercices/` → `.instructions.md` / `.conseils.md` + images under `apps/web/public/`) |
 | `lint`, `typecheck`, `format` | Quality |
 
 Examples:

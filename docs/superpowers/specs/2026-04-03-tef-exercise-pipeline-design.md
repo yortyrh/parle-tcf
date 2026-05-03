@@ -2,11 +2,12 @@
 
 ## Summary
 
-Replace the current TEF exercise pipeline (Vision extraction to JSON + generated images) with a simpler architecture:
-- Rename source images to a standardized naming scheme (`TEF-{section}-{num}.png`)
-- Generate per-exercise `.md` instruction files using a reasoning model (editable by devs)
-- Serve original images directly (full-width, scrollable) instead of generated images
-- Load exercise data from `.md` files instead of `tef-exercises.json`
+Replace the prior TEF pipeline with:
+- Standard images `TEF-{section}-{num}.png`
+- **`TEF-*-NN.instructions.md`** — full Realtime system prompt (YAML merged by generation script + per-exercise body from vision)
+- **`TEF-*-NN.conseils.md`** — candidate-facing preparation guide (vision); not sent to the model
+- Original images synced to the web app (`sync-tef`)
+- Runtime loads split files from `tef-exercices/` (see `ExerciseService`)
 
 ## Architecture
 
@@ -14,20 +15,25 @@ Replace the current TEF exercise pipeline (Vision extraction to JSON + generated
 graph TD
   subgraph pipeline ["Scripts Pipeline (one-time / on-demand)"]
     rename["rename-tef-images"]
-    generate["generate-tef-instructions"]
+    genInst["generate-tef-instructions"]
+    genCons["generate-tef-conseils"]
     sync["sync-tef-to-web"]
-    rename --> generate
-    generate --> sync
+    rename --> genInst
+    rename --> genCons
+    genInst --> sync
+    genCons --> sync
   end
 
   subgraph api ["API Runtime"]
     exerciseSvc["ExerciseService"]
     sessionSvc["ExamSessionService"]
     yaml["tef-section-a.yml / tef-section-b.yml"]
-    mdFiles["TEF-A-01.md, TEF-A-02.md, ..."]
-    exerciseSvc -->|"reads .md files"| mdFiles
-    sessionSvc -->|"loads YAML"| yaml
-    sessionSvc -->|"concatenates"| exerciseSvc
+    instMd["TEF-A-01.instructions.md, …"]
+    consMd["TEF-A-01.conseils.md, …"]
+    exerciseSvc -->|"reads"| instMd
+    exerciseSvc -->|"reads"| consMd
+    sessionSvc -->|"loads YAML metadata"| yaml
+    sessionSvc -->|"instructions from"| exerciseSvc
   end
 
   subgraph web ["Web App"]
@@ -39,8 +45,9 @@ graph TD
   end
 
   sync -->|"copies PNG"| publicImg
-  generate -->|"writes .md"| mdFiles
-  rename -->|"renames PNG in"| generate
+  genInst -->|"writes"| instMd
+  genCons -->|"writes"| consMd
+  rename -->|"renames PNG in"| genInst
 ```
 
 ## Script 1: `rename-tef-images`
@@ -59,40 +66,18 @@ graph TD
 
 - **Location**: `apps/api/scripts/generate-tef-instructions.ts`
 - **npm script**: `"generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts"`
-- **Behavior**:
-  - Scans `TEF-A/` and `TEF-B/` for `TEF-{section}-{num}.png` files
-  - For each image without a corresponding `.md` file (or with `--force`):
-    - Sends the image to GPT-4o (default; configurable via `--model` flag)
-    - System prompt instructs it to analyze the TEF exercise image and generate:
-      - Role description (who the Realtime agent plays)
-      - Announcement context (what the exercise is about)
-      - Known information (details the character should know)
-      - Candidate instructions (what the student is supposed to do)
-    - Section A: telephone conversation context
-    - Section B: friend conversation context
-    - Writes result as `TEF-{section}-{num}.md`
-  - Resume-friendly: skips existing `.md` files unless `--force`
-  - Saves after each generation to avoid losing work
+- **Output**: `TEF-{section}-{num}.instructions.md` (full system prompt: section YAML + `EXERCICE À UTILISER:` + exercise-specific markdown from vision)
+- **Flags**: `--force`, `--upgrade` (re-merge YAML without vision), `--stub`, `--only`, `--model`
+- Shared logic: `apps/api/scripts/tef-generation-shared.ts`
 
-### Generated `.md` structure
+## Script 3: `generate-tef-conseils`
 
-```markdown
-# TEF-A-01 - [Title derived from the image]
+- **Location**: `apps/api/scripts/generate-tef-conseils.ts`
+- **npm script**: `"generate-tef-conseils": "tsx scripts/generate-tef-conseils.ts"`
+- **Output**: `TEF-{section}-{num}.conseils.md` (candidate preparation guide from vision; not sent to Realtime)
+- **Flags**: `--force`, `--stub`, `--only`, `--model`
 
-## Role
-[Description of who the agent plays - e.g., receptionist, seller, employer]
-
-## Contexte de l'annonce
-[Full description of the announcement content visible in the image]
-
-## Informations connues
-[Bullet list of facts the character knows and can share when asked]
-
-## Consigne du candidat
-[What the candidate is supposed to do during this exercise]
-```
-
-## Script 3: `sync-tef-to-web`
+## Script 4: `sync-tef-to-web`
 
 - **Location**: `apps/api/scripts/sync-tef-to-web.ts`
 - **npm script**: `"sync-tef": "tsx scripts/sync-tef-to-web.ts"`
@@ -111,7 +96,8 @@ export interface TefExercise {
   id: string;           // "TEF-A-01"
   section: 'A' | 'B';
   filename: string;     // "TEF-A-01.png"
-  instructions: string; // Full .md content
+  instructions: string; // Full .instructions.md content (Realtime system prompt)
+  practiceGuide: string | null; // From .conseils.md or section default
 }
 ```
 
@@ -119,15 +105,14 @@ Removed fields: `title`, `annonce`, `consigne`, `generatedImagePath`, `generated
 
 ### `ExerciseService.loadTefExercises()`
 
-- Replaces JSON file reading with directory scanning
-- Scans `TEF-A/` and `TEF-B/` for `.md` files matching `TEF-{section}-{num}.md`
-- Reads each `.md` file content as `instructions`
-- Derives `id`, `section`, `filename` from the file name
-- Caches in memory (lazy-loaded, same pattern as today)
+- Scans `TEF-A/` and `TEF-B/` for `TEF-{section}-{num}.instructions.md`
+- Reads each file as `instructions`; reads optional `TEF-{section}-{num}.conseils.md` as `practiceGuide` (else section `_default-practice-guide.md`)
+- Pairs each exercise with `TEF-{section}-{num}.png`
+- Caches in memory (lazy-loaded)
 
 ### `ExamSessionService.buildExerciseData()`
 
-- For `tef-section-a` and `tef-section-b`: `content` = the `.md` instructions text
+- For `tef-section-a` and `tef-section-b`: `content` = the `.instructions.md` text
 - `description` = generic string per section ("Demande d'informations par telephone" for A, "Argumentation avec un(e) ami(e)" for B)
 
 ### `ExamSessionService.buildTefImagePayload()`
@@ -137,7 +122,7 @@ Removed fields: `title`, `annonce`, `consigne`, `generatedImagePath`, `generated
 
 ### `ExamSessionService.buildFullInstructions()`
 
-- Same concatenation pattern: `YAML.baseInstructions + YAML.instructions + "\n\nEXERCICE A UTILISER:\n" + md_content`
+- For TEF tasks, returns `*.instructions.md` verbatim (already contains merged YAML + exercise block).
 
 ## Shared Package Changes
 
@@ -195,15 +180,17 @@ Removed: `annonce`, `title`, `consigne`, `generatedImagePath`, `generatedImagePa
 - `clean-tef-dimension-images`
 - `reset-tef-images`
 
-### New scripts to add to `apps/api/package.json`
+### New scripts (`apps/api/package.json`)
+
 - `"rename-tef": "tsx scripts/rename-tef-images.ts"`
 - `"generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts"`
+- `"generate-tef-conseils": "tsx scripts/generate-tef-conseils.ts"`
 - `"sync-tef": "tsx scripts/sync-tef-to-web.ts"`
 
 ## Constraints
 
 - YAML files (`tef-section-a.yml`, `tef-section-b.yml`) keep general behavioral rules unchanged
-- The `.md` content is exercise-specific only (role, context, known info, consigne)
+- The exercise-specific block inside `*.instructions.md` is role, context, known info, consigne (from vision / manual edit)
 - Images are shown as-is without text extraction or overlay
 - The conversation starts immediately (Section A = phone call, Section B = friend conversation)
 - After the exam and report, the agent switches to coaching mode (unchanged from current YAML)

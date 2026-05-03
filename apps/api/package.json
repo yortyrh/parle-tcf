@@ -15,8 +15,8 @@
     "generate-db": "tsx scripts/csv-to-sqlite.ts",
     "rename-tef": "tsx scripts/rename-tef-images.ts",
     "generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts",
+    "generate-tef-conseils": "tsx scripts/generate-tef-conseils.ts",
     "sync-tef": "tsx scripts/sync-tef-to-web.ts",
-    "split-tef-markdown": "tsx scripts/split-tef-markdown.ts",
     "test": "vitest"
   },
   "engines": {

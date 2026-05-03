@@ -45,7 +45,7 @@ Environment: see `apps/web/.env.example` (`NEXT_PUBLIC_EXAM_API_URL`).
 
 Environment: see `apps/api/.env.example` (`OPENAI_API_KEY`, `PORT`, `CORS_ORIGINS`). Optional: `OPENAI_REALTIME_MODEL` overrides the concrete Realtime model when `service.yml` sets `llm.model` to `realtime` (see `ExamSessionService.resolveRealtimeModel`).
 
-TEF/TCF content scripts (run from `apps/api`): `generate-db`, `rename-tef`, `generate-tef-instructions`, `sync-tef` — see `apps/api/package.json`.
+TEF/TCF content scripts (run from `apps/api`): `generate-db`, `rename-tef`, `generate-tef-instructions`, `generate-tef-conseils`, `sync-tef` — see `apps/api/package.json`.
 
 ---
 

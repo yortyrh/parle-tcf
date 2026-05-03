@@ -36,22 +36,6 @@ export interface TefExercise {
   practiceGuide: string | null;
 }
 
-const GUIDE_MARKER = "<<<GUIDE_CANDIDAT>>>";
-
-/** Pure split: returns agent instructions before the marker and candidate guide after it. */
-export function splitTefPracticeGuide(raw: string): {
-  agentInstructions: string;
-  practiceGuide: string | null;
-} {
-  const idx = raw.indexOf(GUIDE_MARKER);
-  if (idx === -1) {
-    return { agentInstructions: raw.trim(), practiceGuide: null };
-  }
-  const agentInstructions = raw.slice(0, idx).trim();
-  const guide = raw.slice(idx + GUIDE_MARKER.length).trim();
-  return { agentInstructions, practiceGuide: guide || null };
-}
-
 /** Per-exercise agent prompt file (paired with `.conseils.md` + `.png`). */
 const TEF_INSTRUCTIONS_MD = /^TEF-[AB]-\d{2}\.instructions\.md$/i;
 
