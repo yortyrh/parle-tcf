@@ -32,7 +32,7 @@ export interface TefExercise {
   filename: string;
   /** Agent prompt from `TEF-*-NN.instructions.md`. */
   instructions: string;
-  /** Candidate guide from `TEF-*-NN.conseils.md` or section default. Never sent to the agent. */
+  /** Candidate guide from `TEF-*-NN.conseils.md` if present. Never sent to the agent. */
   practiceGuide: string | null;
 }
 
@@ -44,38 +44,9 @@ export class ExerciseService implements OnModuleDestroy {
   private readonly logger = new Logger(ExerciseService.name);
   private db: Database.Database | null = null;
   private tefCache: TefExercise[] | null = null;
-  private defaultGuideCache: Partial<Record<"A" | "B", string>> = {};
 
   private getConfigDir(): string {
     return getApiConfigDir();
-  }
-
-  private loadDefaultPracticeGuide(section: "A" | "B"): string | null {
-    if (this.defaultGuideCache[section] !== undefined) {
-      return this.defaultGuideCache[section] ?? null;
-    }
-    const path = join(
-      this.getConfigDir(),
-      "tef-exercices",
-      `TEF-${section}`,
-      "_default-practice-guide.md",
-    );
-    if (!existsSync(path)) {
-      this.defaultGuideCache[section] = undefined;
-      return null;
-    }
-    try {
-      const content = readFileSync(path, "utf-8").trim();
-      this.defaultGuideCache[section] = content || undefined;
-      return content || null;
-    } catch (e) {
-      this.logger.error(
-        `read _default-practice-guide.md section ${section}`,
-        e,
-      );
-      this.defaultGuideCache[section] = undefined;
-      return null;
-    }
   }
 
   private getDb(): Database.Database {
@@ -199,8 +170,7 @@ export class ExerciseService implements OnModuleDestroy {
           if (existsSync(conseilsPath)) {
             inlineGuide = readFileSync(conseilsPath, "utf-8").trim() || null;
           }
-          const practiceGuide =
-            inlineGuide ?? this.loadDefaultPracticeGuide(section);
+          const practiceGuide = inlineGuide;
           exercises.push({
             id: base,
             section,
@@ -236,7 +206,7 @@ export class ExerciseService implements OnModuleDestroy {
           section === "A"
             ? "Vous téléphonez pour obtenir des informations sur cette annonce."
             : "Vous présentez cette annonce à un(e) ami(e) et essayez de le/la convaincre.",
-        practiceGuide: this.loadDefaultPracticeGuide(section),
+        practiceGuide: null,
       };
     }
     if (exerciseId) {

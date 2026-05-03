@@ -4,7 +4,7 @@
 
 Replace the prior TEF pipeline with:
 - Standard images `TEF-{section}-{num}.png`
-- **`TEF-*-NN.instructions.md`** — full Realtime system prompt (`_instructions-preamble.md` optional + `EXERCICE À UTILISER:` + per-exercise body from vision)
+- **`TEF-*-NN.instructions.md`** — full Realtime system prompt (optional prefix from `INSTRUCTIONS_PREFIX.md` per section, then vision-generated body as JSON `prompt`)
 - **`TEF-*-NN.conseils.md`** — candidate-facing preparation guide (vision); not sent to the model
 - Original images synced to the web app (`sync-tef`)
 - Runtime loads split files from `tef-exercices/` (see `ExerciseService`)
@@ -66,7 +66,7 @@ graph TD
 
 - **Location**: `apps/api/scripts/generate-tef-instructions.ts`
 - **npm script**: `"generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts"`
-- **Output**: `TEF-{section}-{num}.instructions.md` (optional `TEF-{section}/_instructions-preamble.md`, then `EXERCICE À UTILISER:`, then exercise-specific markdown from vision)
+- **Output**: `TEF-{section}-{num}.instructions.md` (optional blocks `## Section A` / `## Section B` in `tef-exercices/INSTRUCTIONS_PREFIX.md`, then exercise-specific markdown from the model)
 - **Flags**: `--force`, `--stub`, `--only`, `--model`
 - Shared logic: `apps/api/scripts/tef-generation-shared.ts`
 
@@ -97,7 +97,7 @@ export interface TefExercise {
   section: 'A' | 'B';
   filename: string;     // "TEF-A-01.png"
   instructions: string; // Full .instructions.md content (Realtime system prompt)
-  practiceGuide: string | null; // From .conseils.md or section default
+  practiceGuide: string | null; // From .conseils.md only (null if missing)
 }
 ```
 
@@ -106,7 +106,7 @@ Removed fields: `title`, `annonce`, `consigne`, `generatedImagePath`, `generated
 ### `ExerciseService.loadTefExercises()`
 
 - Scans `TEF-A/` and `TEF-B/` for `TEF-{section}-{num}.instructions.md`
-- Reads each file as `instructions`; reads optional `TEF-{section}-{num}.conseils.md` as `practiceGuide` (else section `_default-practice-guide.md`)
+- Reads each file as `instructions`; reads `TEF-{section}-{num}.conseils.md` as `practiceGuide` when present (else `null`)
 - Pairs each exercise with `TEF-{section}-{num}.png`
 - Caches in memory (lazy-loaded)
 

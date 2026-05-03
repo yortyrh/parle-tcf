@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Task } from '@/app-config';
@@ -12,10 +12,32 @@ interface WelcomeViewProps {
   onStartCall: (taskType: string) => void;
   tasks: Task[];
   homeHref?: string;
+  /** Pré-sélection (ex. slug `/tef/tef-section-a`) pour activer « Commencer » sans re-cliquer la carte. */
+  initialSelectedTaskType?: string | null;
 }
 
-export function WelcomeView({ startButtonText, onStartCall, tasks, homeHref }: WelcomeViewProps) {
-  const [selectedTaskType, setSelectedTaskType] = useState<string | null>(null);
+export function WelcomeView({
+  startButtonText,
+  onStartCall,
+  tasks,
+  homeHref,
+  initialSelectedTaskType = null,
+}: WelcomeViewProps) {
+  const [selectedTaskType, setSelectedTaskType] = useState<string | null>(() => {
+    if (
+      initialSelectedTaskType &&
+      tasks.some((t) => t.taskType === initialSelectedTaskType)
+    ) {
+      return initialSelectedTaskType;
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (!initialSelectedTaskType) return;
+    if (!tasks.some((t) => t.taskType === initialSelectedTaskType)) return;
+    setSelectedTaskType(initialSelectedTaskType);
+  }, [initialSelectedTaskType, tasks]);
 
   const handleStartCall = () => {
     if (selectedTaskType !== null) {

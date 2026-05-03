@@ -1,7 +1,6 @@
 /**
- * Writes `TEF-A-NN.instructions.md` / `TEF-B-NN.instructions.md` (Realtime agent prompt).
- * Optional shared prefix: `TEF-{A|B}/_instructions-preamble.md`, then `EXERCICE À UTILISER:`,
- * then vision-generated exercise body from PNG.
+ * Writes `TEF-A-NN.instructions.md` / `TEF-B-NN.instructions.md` (Realtime system prompt as plain text).
+ * Generation: Responses API with `gpt-5.5`, reasoning effort `medium`, image + meta-question → JSON `{ prompt }`, then optional prefix from `config/tef-exercices/INSTRUCTIONS_PREFIX.md`.
  *
  * Conseils (candidate tab): `generate-tef-conseils`.
  *
@@ -9,7 +8,7 @@
  *   pnpm generate-tef-instructions
  *   pnpm generate-tef-instructions -- --force
  *   pnpm generate-tef-instructions -- --only TEF-A-01 TEF-B-02
- *   pnpm generate-tef-instructions -- --model gpt-4o
+ *   pnpm generate-tef-instructions -- --model gpt-5.5
  *   pnpm generate-tef-instructions -- --stub      (placeholders without OPENAI_API_KEY)
  */
 import dotenv from "dotenv";
@@ -17,13 +16,12 @@ import { existsSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import OpenAI from "openai";
 import {
-  generateExerciseFragmentForImage,
+  generateTefInstructionsForImage,
   listStandardPngs,
   parseTefGenCliArgs,
   pathForInstructions,
-  primeInstructionsPreambleCache,
   stubExerciseFragment,
-  wrapInstructionsPrompt,
+  wrapTefInstructionsMarkdown,
 } from "./tef-generation-shared.js";
 
 dotenv.config({ path: ".env.local" });
@@ -35,7 +33,6 @@ async function main(): Promise<void> {
 
   if (stub) {
     for (const section of ["A", "B"] as const) {
-      primeInstructionsPreambleCache(section);
       for (const filename of listStandardPngs(section)) {
         const base = basename(filename, ".png");
         const id = base.toUpperCase();
@@ -45,8 +42,11 @@ async function main(): Promise<void> {
           console.log(`Skip stub ${id} (exists)`);
           continue;
         }
-        const full = wrapInstructionsPrompt(stubExerciseFragment(id, section), section);
-        writeFileSync(outPath, full, "utf-8");
+        writeFileSync(
+          outPath,
+          wrapTefInstructionsMarkdown(stubExerciseFragment(id, section), section),
+          "utf-8",
+        );
         console.log(`Stub ${id}`);
       }
     }
@@ -68,7 +68,6 @@ async function main(): Promise<void> {
   const jobs: Job[] = [];
 
   for (const section of ["A", "B"] as const) {
-    primeInstructionsPreambleCache(section);
     for (const filename of listStandardPngs(section)) {
       const base = basename(filename, ".png");
       const id = base.toUpperCase();
@@ -92,15 +91,18 @@ async function main(): Promise<void> {
   for (const { section, filename, id, base } of jobs) {
     const outPath = pathForInstructions(section, base);
     try {
-      console.log(`  ${id} — generating exercise…`);
-      const fragment = await generateExerciseFragmentForImage(
+      console.log(`  ${id} — generating…`);
+      const markdown = await generateTefInstructionsForImage(
         client,
         section,
         filename,
         model,
       );
-      const full = wrapInstructionsPrompt(fragment, section);
-      writeFileSync(outPath, full, "utf-8");
+      writeFileSync(
+        outPath,
+        wrapTefInstructionsMarkdown(markdown, section),
+        "utf-8",
+      );
       console.log(`  ✓ ${id}`);
     } catch (e) {
       console.error(`  ✗ ${id}`, e);

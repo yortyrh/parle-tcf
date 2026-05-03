@@ -2,7 +2,7 @@
 
 How exam content is managed: YAML agent prompts, TCF/TEF exercises, and images.
 
-**Language:** This file is documentation for maintainers (English). **Per-task agent YAML** (`baseInstructions`, `instructions`, `greeting`) for **TCF** tasks and **TEF `*.instructions.md`** under `apps/api/config/tef-exercices/` should stay in **French** where they contain candidate/character-facing content. For TEF, each `TEF-*-NN.instructions.md` is the **full** Realtime **system** prompt (see also optional `TEF-A/_instructions-preamble.md` / `TEF-B/_instructions-preamble.md`). **`*.conseils.md`** are candidate-facing only and are not sent to the model.
+**Language:** This file is documentation for maintainers (English). **Per-task agent YAML** (`baseInstructions`, `instructions`, `greeting`) for **TCF** tasks and **TEF `*.instructions.md`** under `apps/api/config/tef-exercices/` should stay in **French** where they contain candidate/character-facing content. For TEF, each `TEF-*-NN.instructions.md` is the **full** Realtime **system** prompt: optional shared prefix from **`INSTRUCTIONS_PREFIX.md`** (per section), then model-generated exercise body. **`*.conseils.md`** are candidate-facing only and are not sent to the model.
 
 ## Examiner configuration (YAML)
 
@@ -47,12 +47,12 @@ pnpm --filter @yorty-tcf/api run generate-db
 
 ### TEF (sections A and B)
 
-- **Source**: `apps/api/config/tef-exercices/TEF-A/` and `TEF-B/` — for each item: `TEF-A-01.png`, `TEF-A-01.instructions.md`, and optionally `TEF-A-01.conseils.md` (same pattern for `TEF-B`).
-- **Self-contained agent prompts**: Each `*.instructions.md` is the **full** Realtime **system** prompt for that exercise. Optional shared prefix per section: **`TEF-A/_instructions-preamble.md`** / **`TEF-B/_instructions-preamble.md`** (maintainer-edited); the generator prepends it, then the line `EXERCICE À UTILISER:`, then the exercise-specific body. The API sends the `*.instructions.md` file verbatim as `agentConfig.instructions`. TEF task YAML (`tef-section-*.yml`) supplies **metadata only** (`name`, `description`, `settings`, `greeting`) — not the long system prompt.
+- **Source**: `apps/api/config/tef-exercices/TEF-A/` and `TEF-B/` — for each item: `TEF-A-01.png`, `TEF-A-01.instructions.md`, and `TEF-A-01.conseils.md` (same pattern for `TEF-B`). Without `*.conseils.md`, the “Conseils” tab has no markdown for that exercise.
+- **Self-contained agent prompts**: Each `*.instructions.md` on disk is the full Realtime **system** prompt: `generate-tef-instructions` prepends the block for that section from **`apps/api/config/tef-exercices/INSTRUCTIONS_PREFIX.md`** (`## Section A` / `## Section B`), then the vision-generated body. The API sends the file as `agentConfig.instructions`. TEF task YAML (`tef-section-*.yml`) supplies **metadata only** (`name`, `description`, `settings`, `greeting`) — not the long system prompt.
 - **Conseils**: `*.conseils.md` powers the candidate “Conseils” tab only (`practiceGuideMarkdown`); it is never sent to the model.
 - **Images served to the browser**: copied to `apps/web/public/tef-exercices/` via `sync-tef`.
-- **Test / edit one exercise**: Open an `*.instructions.md` or edit the section preamble file, then re-run generation with `--force` on affected PNGs if you use the scripts.
-- **Changing the shared preamble**: Edit `_instructions-preamble.md`, then regenerate instructions for all exercises that should pick up the change:
+- **Test / edit one exercise**: Edit `INSTRUCTIONS_PREFIX.md` or an `*.instructions.md`, then re-run generation with `--force` on affected PNGs if you use the scripts.
+- **Changing the shared instruction prefix**: Edit `INSTRUCTIONS_PREFIX.md`, then regenerate instructions for all exercises that should pick up the change:
 
   ```bash
   pnpm --filter @yorty-tcf/api run generate-tef-instructions -- --force
@@ -68,7 +68,7 @@ Run from the monorepo root with `@yorty-tcf/api`:
 | --- | --- |
 | `generate-db` | TCF CSV → SQLite |
 | `rename-tef` | Rename scan PNGs to `TEF-{A\|B}-NN.png` (dry-run; `--apply` to write) |
-| `generate-tef-instructions` | Vision → exercise body in **`TEF-*-NN.instructions.md`**, after optional **`_instructions-preamble.md`** and `EXERCICE À UTILISER:`. `--stub` without `OPENAI_API_KEY`. `--force` overwrites and re-runs vision. |
+| `generate-tef-instructions` | Vision → body in **`TEF-*-NN.instructions.md`**, with optional prefix from **`INSTRUCTIONS_PREFIX.md`**. `--stub` without `OPENAI_API_KEY`. `--force` overwrites and re-runs vision. |
 | `generate-tef-conseils` | Vision → **`TEF-*-NN.conseils.md`** (candidate guide). `--stub` / `--force` as above. |
 | `sync-tef` | Copy PNGs to `apps/web/public/tef-exercices/` |
 

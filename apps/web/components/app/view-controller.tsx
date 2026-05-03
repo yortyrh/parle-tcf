@@ -2,7 +2,7 @@
 
 import type { MutableRefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { AppConfig, Task } from '@/app-config';
 import { SessionView } from '@/components/app/session-view';
 import { TefExerciseImageSkeleton } from '@/components/app/tef-exercise-image-skeleton';
@@ -35,10 +35,12 @@ export function ViewController({
 }: ViewControllerProps) {
   const exam = useRealtimeExam();
   const router = useRouter();
+  const pathname = usePathname();
   const [selectedTask, setSelectedTask] = useState<Task | null>(() =>
     initialTaskType ? (appConfig.tasks.find((t) => t.taskType === initialTaskType) ?? null) : null
   );
-  const autoConnectFired = useRef(false);
+  /** Dernière route pour laquelle on a tenté une auto-connexion (évite boucles si l’appel échoue). */
+  const autoConnectAttemptKeyRef = useRef<string | null>(null);
   const wasConnectedRef = useRef(false);
   const isMountedRef = useRef(true);
   const endRef = useRef(exam.end);
@@ -79,18 +81,30 @@ export function ViewController({
 
   const handleWelcomeStart = (taskType: string) => {
     if (routeByTask && welcomeHref) {
-      router.push(`${welcomeHref}/${taskType}`);
+      const targetPath = `${welcomeHref}/${taskType}`;
+      if (pathname === targetPath || pathname === `${targetPath}/`) {
+        void startSession(taskType, initialExerciseId);
+        return;
+      }
+      router.push(targetPath);
     } else {
       startSession(taskType);
     }
   };
 
   useEffect(() => {
-    if (autoConnectFired.current || !initialTaskType || exam.isConnected) return;
-    autoConnectFired.current = true;
-    startSession(initialTaskType, initialExerciseId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!initialTaskType) {
+      autoConnectAttemptKeyRef.current = null;
+      return;
+    }
+    if (exam.isConnected || exam.isConnecting) return;
+
+    const key = `${initialTaskType}:${initialExerciseId ?? ''}`;
+    if (autoConnectAttemptKeyRef.current === key) return;
+
+    autoConnectAttemptKeyRef.current = key;
+    void startSession(initialTaskType, initialExerciseId);
+  }, [initialTaskType, initialExerciseId, exam.isConnected, exam.isConnecting]);
 
   if (!exam.isConnected) {
     if (exam.isConnecting || exam.isRestarting) {
@@ -104,6 +118,7 @@ export function ViewController({
         onStartCall={handleWelcomeStart}
         tasks={appConfig.tasks}
         homeHref={homeHref}
+        initialSelectedTaskType={initialTaskType ?? null}
       />
     );
   }

@@ -1,8 +1,9 @@
 /**
  * Shared helpers for TEF vision pipelines (instructions vs conseils).
+ * Instruction files are Realtime **text-only** system prompts; vision is used only when generating them.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 
@@ -11,15 +12,19 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 export const CONFIG_DIR = join(__dirname, "../config");
 export const TEF_ROOT = join(CONFIG_DIR, "tef-exercices");
 
+/** Fichier unique : blocs `## Section A` / `## Section B` préfixés aux `*.instructions.md` générés. */
+export const TEF_INSTRUCTIONS_PREFIX_FILE = join(TEF_ROOT, "INSTRUCTIONS_PREFIX.md");
+
 export const STANDARD_PNG = /^TEF-(A|B)-(\d{2})\.png$/i;
 
-/** Prepended to every `*.instructions.md` before `EXERCICE À UTILISER:` (per-section, editable). */
-const PREAMBLE_FILENAME = "_instructions-preamble.md";
-
-/** Inserted between optional preamble and the exercise-specific body. */
-export const EXERCICE_HEADING = "EXERCICE À UTILISER:";
+/** Question unique envoyée au modèle (avec l’image) pour produire le prompt Realtime. */
+export const TEF_INSTRUCTIONS_META_QUESTION =
+  "Quel est le meilleur prompt pour indiquer à OpenAI Realtime de se dérouler comme l'évaluateur qui évalue l'étudiante dans le cadre de cet exercice?";
 
 const COMPLETION_TOKEN_BUDGET = 4096;
+
+/** Budget sortie pour la génération d’instructions (prompt système potentiellement long). */
+const TEF_INSTRUCTIONS_MAX_OUTPUT_TOKENS = 16_384;
 
 export function completionTokenParams(
   model: string,
@@ -46,7 +51,7 @@ export interface TefGenCliOptions {
 export function parseTefGenCliArgs(argv: string[]): TefGenCliOptions {
   let force = false;
   let stub = false;
-  let model = "gpt-5.4-mini";
+  let model = "gpt-5.5";
   const only = new Set<string>();
   let i = 0;
   while (i < argv.length) {
@@ -73,57 +78,10 @@ export function parseTefGenCliArgs(argv: string[]): TefGenCliOptions {
   };
 }
 
-const instructionsPreambleCache: Partial<Record<"A" | "B", string>> = {};
-
-/** Shared prefix from `TEF-{A|B}/_instructions-preamble.md` (trimmed). */
-export function getInstructionsPreamble(section: "A" | "B"): string {
-  if (instructionsPreambleCache[section] !== undefined) {
-    return instructionsPreambleCache[section]!;
-  }
-  const path = join(TEF_ROOT, `TEF-${section}`, PREAMBLE_FILENAME);
-  let text = "";
-  if (existsSync(path)) {
-    text = readFileSync(path, "utf-8").trim();
-  }
-  instructionsPreambleCache[section] = text;
-  return text;
-}
-
-/** Warm the preamble cache (call before batches so edits mid-run are not seen). */
-export function primeInstructionsPreambleCache(section: "A" | "B"): void {
-  getInstructionsPreamble(section);
-}
-
-/** Full Realtime system prompt for one exercise (agent only — no candidate guide). */
-export function wrapInstructionsPrompt(
-  exerciseMarkdown: string,
-  section: "A" | "B",
-): string {
-  const preamble = getInstructionsPreamble(section);
-  const pre = preamble.length > 0 ? `${preamble}\n\n` : "";
-  return `${pre}${EXERCICE_HEADING}\n${exerciseMarkdown.trim()}`;
-}
-
 export function stubExerciseFragment(id: string, section: "A" | "B"): string {
-  const intro =
-    section === "A"
-      ? "Le candidat téléphone pour obtenir des informations. Tu décroches au téléphone."
-      : "Le candidat te présente une annonce pour te convaincre. Tu es son ami / sa amie ; tu ne connais pas l’annonce au départ.";
-  return `# ${id} — (à compléter)
+  return `# ${id} — brouillon
 
-> **Brouillon** : exécutez \`pnpm --filter @yorty-tcf/api run generate-tef-instructions -- --force\` (avec \`OPENAI_API_KEY\`) pour remplir l’exercice à partir de l’image.
-
-## Rôle
-${intro}
-
-## Contexte de l’annonce
-(À générer depuis l’image — voir \`config/tef-exercices/TEF-${section}/${id}.png\`.)
-
-## Informations que le personnage connaît
-- (À compléter : tarifs, horaires, lieux, conditions visibles sur l’annonce.)
-
-## Consigne du candidat
-(À compléter : consigne officielle visible sur l’image.)
+Exécutez \`pnpm --filter @yorty-tcf/api run generate-tef-instructions -- --force\` (avec \`OPENAI_API_KEY\`) pour générer les instructions depuis \`config/tef-exercices/TEF-${section}/${id}.png\`.
 `;
 }
 
@@ -142,12 +100,71 @@ export function listStandardPngs(section: "A" | "B"): string[] {
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
-const SECTION_CONTEXT: Record<"A" | "B", string> = {
-  A: `Section A — le candidat téléphone pour obtenir des informations sur l'annonce (conversation téléphonique). L'agent joue la personne qui décroche.`,
-  B: `Section B — le candidat présente l'annonce à un(e) ami(e) et tente de le/la convaincre. L'agent joue l'ami(e) qui ne connaît pas l'annonce au départ.`,
-};
+let instructionsPrefixBySection: Record<"A" | "B", string> | null = null;
 
-export async function generateExerciseFragmentForImage(
+/** Lit et met en cache les préfixes depuis `INSTRUCTIONS_PREFIX.md` (vide si fichier absent). */
+export function getTefInstructionsPrefixes(): Record<"A" | "B", string> {
+  if (instructionsPrefixBySection) return instructionsPrefixBySection;
+  if (!existsSync(TEF_INSTRUCTIONS_PREFIX_FILE)) {
+    instructionsPrefixBySection = { A: "", B: "" };
+    return instructionsPrefixBySection;
+  }
+  const raw = readFileSync(TEF_INSTRUCTIONS_PREFIX_FILE, "utf-8");
+  const aMatch = raw.match(
+    /^##\s*Section\s*A\s*\r?\n([\s\S]*?)(?=^##\s*Section\s*B\s*$)/m,
+  );
+  const bMatch = raw.match(/^##\s*Section\s*B\s*\r?\n([\s\S]*)$/m);
+  instructionsPrefixBySection = {
+    A: (aMatch?.[1] ?? "").trim(),
+    B: (bMatch?.[1] ?? "").trim(),
+  };
+  return instructionsPrefixBySection;
+}
+
+/** Préfixe + corps pour un `TEF-*-NN.instructions.md` final. */
+export function wrapTefInstructionsMarkdown(
+  body: string,
+  section: "A" | "B",
+): string {
+  const pre = getTefInstructionsPrefixes()[section];
+  const b = body.trim();
+  if (!pre) return b;
+  return `${pre}\n\n${b}`;
+}
+
+/** Invalide le cache (tests ou rejouer après édition du fichier sans redémarrer). */
+export function primeTefInstructionsPrefixCache(): void {
+  instructionsPrefixBySection = null;
+}
+
+export function parseTefInstructionsStructuredOutput(outputText: string): string {
+  const trimmed = outputText.trim();
+  const tryParse = (s: string): string => {
+    const data = JSON.parse(s) as { prompt?: unknown };
+    if (typeof data.prompt !== "string" || !data.prompt.trim()) {
+      throw new Error('Réponse JSON invalide : champ "prompt" manquant ou vide');
+    }
+    return data.prompt.trim();
+  };
+
+  try {
+    return tryParse(trimmed);
+  } catch {
+    const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fence?.[1]) {
+      return tryParse(fence[1].trim());
+    }
+    throw new Error(
+      "Impossible d’extraire le JSON : sortie du modèle inattendue (voir logs).",
+    );
+  }
+}
+
+/**
+ * Génère le markdown complet des instructions Realtime pour une fiche TEF (image PNG).
+ * Utilise l’API Responses (gpt-5.5 + effort medium conseillé), sortie JSON strict → champ `prompt`.
+ */
+export async function generateTefInstructionsForImage(
   client: OpenAI,
   section: "A" | "B",
   filename: string,
@@ -157,65 +174,54 @@ export async function generateExerciseFragmentForImage(
   const imageData = readFileSync(imagePath);
   const base64Image = imageData.toString("base64");
   const mimeType = "image/png";
-  const baseId = basename(filename, ".png");
+  const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-  const userPrompt = `Tu analyses une image d'exercice du TEF Canada (Expression Orale), ${SECTION_CONTEXT[section]}.
+  const useReasoning =
+    model.toLowerCase().startsWith("gpt-5.") ||
+    model.toLowerCase().startsWith("o1") ||
+    model.toLowerCase().startsWith("o3") ||
+    model.toLowerCase().startsWith("o4");
 
-Lis attentivement TOUT le texte visible sur l'image (annonce, consigne officielle du candidat, détails).
-
-Produis un fichier markdown en français qui sera inséré dans le bloc « EXERCICE À UTILISER » d'un prompt système complet. Donne UNIQUEMENT le contenu spécifique à CET exercice (comportement examen général est déjà fourni ailleurs).
-
-Structure EXACTE (titres en français, contenu riche et factuel) :
-
-# ${baseId} — [titre court de l'annonce]
-
-## Rôle
-[Une ou deux phrases : qui est l'agent, dans quel contexte il/elle répond.]
-
-## Contexte de l'annonce
-[Paragraphe(s) : résumer fidèlement le contenu de l'annonce visible sur l'image.]
-
-## Informations que le personnage connaît
-[Liste à puces : faits précis (tarifs, horaires, lieux, conditions) que l'agent peut donner SI le candidat les demande — pour la section B, c'est ce que l'ami peut découvrir au fil de la conversation si le candidat les mentionne ; ne pas tout dévoiler d'emblée côté ami.]
-
-## Consigne du candidat
-[Reprendre ou paraphraser la consigne officielle visible sur l'image pour le candidat.]
-
-Règles :
-- Ne pas mentionner « IA », « examen », « TEF » dans le contenu du markdown (c'est pour le moteur, pas pour le candidat).
-- Rester factuel par rapport à l'image ; si un détail est illisible, indique « (illisible sur le scan) ».
-${
-  section === "A"
-    ? `- Section A : dans « Informations que le personnage connaît », pour les détails absents ou illisibles sur l'image, liste ce que le personnage **peut quand même préciser au téléphone** (réponses courtes, cohérentes avec l'offre) : horaires plausibles, tarif indicatif, modalités d'inscription, etc. **Ne jamais** formuler une consigne du type « dire que ce n'est pas sur l'annonce », « renvoyer au site », « dire d'appeler un autre numéro » ou « refuser l'info » : l'oral doit rester fluide. Tu peux marquer « (illisible sur le scan) » pour ce que le **candidat** ne lit pas sur l'image, mais complète toujours par **ce que l'agent peut répondre en scène** si on l'interroge.\n`
-    : ""
-}- Réponds UNIQUEMENT avec le markdown, sans bloc de code, sans préambule.`;
-
-  const response = await client.chat.completions.create({
+  const response = await client.responses.create({
     model,
-    messages: [
+    ...(useReasoning ? { reasoning: { effort: "medium" } } : {}),
+    max_output_tokens: TEF_INSTRUCTIONS_MAX_OUTPUT_TOKENS,
+    instructions: `Tu réponds exclusivement selon le schéma JSON demandé.
+Le champ "prompt" doit contenir uniquement le texte brut des instructions système pour OpenAI Realtime, en français : prêt à être collé tel quel, sans préambule (« Voici… »), sans phrase d’introduction, sans blocs markdown (\`\`\`).`,
+    input: [
       {
         role: "user",
         content: [
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:${mimeType};base64,${base64Image}`,
-              detail: "high",
-            },
-          },
-          { type: "text", text: userPrompt },
+          { type: "input_image", image_url: dataUrl, detail: "high" },
+          { type: "input_text", text: TEF_INSTRUCTIONS_META_QUESTION },
         ],
       },
     ],
-    ...completionTokenParams(model),
+    text: {
+      format: {
+        type: "json_schema",
+        name: "tef_realtime_system_prompt",
+        strict: true,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["prompt"],
+          properties: {
+            prompt: {
+              type: "string",
+              description:
+                "Instructions système complètes pour OpenAI Realtime pour cet exercice TEF (texte seul).",
+            },
+          },
+        },
+      },
+    },
   });
 
-  const content = response.choices[0]?.message?.content?.trim();
-  if (!content) throw new Error("Empty model response");
+  const out = response.output_text?.trim();
+  if (!out) throw new Error("Réponse API vide (output_text)");
 
-  let md = content.replace(/^```markdown\n?/i, "").replace(/^```\n?/, "");
-  md = md.replace(/\n?```$/i, "").trim();
-  return md;
+  return parseTefInstructionsStructuredOutput(out);
 }
 
 const GUIDE_TOKEN_BUDGET = 4096;
