@@ -1,26 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getTefInstructionsPrefixes,
-  parseTefInstructionsStructuredOutput,
-  primeTefInstructionsPrefixCache,
-  wrapTefInstructionsMarkdown,
-} from "./tef-generation-shared.js";
-
-describe("TEF instructions prefix (INSTRUCTIONS_PREFIX.md)", () => {
-  it("expose un préfixe Section A avec le rappel agent Section A", () => {
-    primeTefInstructionsPrefixCache();
-    const pre = getTefInstructionsPrefixes().A;
-    expect(pre.length).toBeGreaterThan(0);
-    expect(pre).toContain("RAPPEL FINAL");
-  });
-
-  it("concatène préfixe et corps pour wrapTefInstructionsMarkdown", () => {
-    primeTefInstructionsPrefixCache();
-    const wrapped = wrapTefInstructionsMarkdown("Ligne unique d’exercice.", "A");
-    expect(wrapped.startsWith(getTefInstructionsPrefixes().A)).toBe(true);
-    expect(wrapped.endsWith("Ligne unique d’exercice.")).toBe(true);
-  });
-});
+import { parseTefInstructionsStructuredOutput } from "./tef-generation-shared.js";
 
 describe("parseTefInstructionsStructuredOutput", () => {
   it("extrait le champ prompt d’un JSON brut", () => {

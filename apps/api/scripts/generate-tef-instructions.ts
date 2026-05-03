@@ -1,6 +1,6 @@
 /**
  * Writes `TEF-A-NN.instructions.md` / `TEF-B-NN.instructions.md` (Realtime system prompt as plain text).
- * Generation: Responses API with `gpt-5.5`, reasoning effort `medium`, image + meta-question → JSON `{ prompt }`, then optional prefix from `config/tef-exercices/INSTRUCTIONS_PREFIX.md`.
+ * Generation: Responses API with `gpt-5.5`, reasoning effort `medium`, image + meta-question → JSON `{ prompt }` written as the full `*.instructions.md`.
  *
  * Conseils (candidate tab): `generate-tef-conseils`.
  *
@@ -21,7 +21,6 @@ import {
   parseTefGenCliArgs,
   pathForInstructions,
   stubExerciseFragment,
-  wrapTefInstructionsMarkdown,
 } from "./tef-generation-shared.js";
 
 dotenv.config({ path: ".env.local" });
@@ -44,7 +43,7 @@ async function main(): Promise<void> {
         }
         writeFileSync(
           outPath,
-          wrapTefInstructionsMarkdown(stubExerciseFragment(id, section), section),
+          stubExerciseFragment(id, section).trim(),
           "utf-8",
         );
         console.log(`Stub ${id}`);
@@ -98,11 +97,7 @@ async function main(): Promise<void> {
         filename,
         model,
       );
-      writeFileSync(
-        outPath,
-        wrapTefInstructionsMarkdown(markdown, section),
-        "utf-8",
-      );
+      writeFileSync(outPath, markdown.trim(), "utf-8");
       console.log(`  ✓ ${id}`);
     } catch (e) {
       console.error(`  ✗ ${id}`, e);

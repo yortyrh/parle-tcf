@@ -12,9 +12,6 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 export const CONFIG_DIR = join(__dirname, "../config");
 export const TEF_ROOT = join(CONFIG_DIR, "tef-exercices");
 
-/** Fichier unique : blocs `## Section A` / `## Section B` préfixés aux `*.instructions.md` générés. */
-export const TEF_INSTRUCTIONS_PREFIX_FILE = join(TEF_ROOT, "INSTRUCTIONS_PREFIX.md");
-
 export const STANDARD_PNG = /^TEF-(A|B)-(\d{2})\.png$/i;
 
 /** Question unique envoyée au modèle (avec l’image) pour produire le prompt Realtime. */
@@ -98,43 +95,6 @@ export function listStandardPngs(section: "A" | "B"): string[] {
   return readdirSync(dir)
     .filter((f) => STANDARD_PNG.test(f))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-}
-
-let instructionsPrefixBySection: Record<"A" | "B", string> | null = null;
-
-/** Lit et met en cache les préfixes depuis `INSTRUCTIONS_PREFIX.md` (vide si fichier absent). */
-export function getTefInstructionsPrefixes(): Record<"A" | "B", string> {
-  if (instructionsPrefixBySection) return instructionsPrefixBySection;
-  if (!existsSync(TEF_INSTRUCTIONS_PREFIX_FILE)) {
-    instructionsPrefixBySection = { A: "", B: "" };
-    return instructionsPrefixBySection;
-  }
-  const raw = readFileSync(TEF_INSTRUCTIONS_PREFIX_FILE, "utf-8");
-  const aMatch = raw.match(
-    /^##\s*Section\s*A\s*\r?\n([\s\S]*?)(?=^##\s*Section\s*B\s*$)/m,
-  );
-  const bMatch = raw.match(/^##\s*Section\s*B\s*\r?\n([\s\S]*)$/m);
-  instructionsPrefixBySection = {
-    A: (aMatch?.[1] ?? "").trim(),
-    B: (bMatch?.[1] ?? "").trim(),
-  };
-  return instructionsPrefixBySection;
-}
-
-/** Préfixe + corps pour un `TEF-*-NN.instructions.md` final. */
-export function wrapTefInstructionsMarkdown(
-  body: string,
-  section: "A" | "B",
-): string {
-  const pre = getTefInstructionsPrefixes()[section];
-  const b = body.trim();
-  if (!pre) return b;
-  return `${pre}\n\n${b}`;
-}
-
-/** Invalide le cache (tests ou rejouer après édition du fichier sans redémarrer). */
-export function primeTefInstructionsPrefixCache(): void {
-  instructionsPrefixBySection = null;
 }
 
 export function parseTefInstructionsStructuredOutput(outputText: string): string {

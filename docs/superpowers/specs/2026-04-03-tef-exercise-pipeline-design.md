@@ -4,7 +4,7 @@
 
 Replace the prior TEF pipeline with:
 - Standard images `TEF-{section}-{num}.png`
-- **`TEF-*-NN.instructions.md`** — full Realtime system prompt (optional prefix from `INSTRUCTIONS_PREFIX.md` per section, then vision-generated body as JSON `prompt`)
+- **`TEF-*-NN.instructions.md`** — full Realtime system prompt (vision-generated body as JSON `prompt`, no shared prefix)
 - **`TEF-*-NN.conseils.md`** — candidate-facing preparation guide (vision); not sent to the model
 - Original images synced to the web app (`sync-tef`)
 - Runtime loads split files from `tef-exercices/` (see `ExerciseService`)
@@ -66,7 +66,7 @@ graph TD
 
 - **Location**: `apps/api/scripts/generate-tef-instructions.ts`
 - **npm script**: `"generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts"`
-- **Output**: `TEF-{section}-{num}.instructions.md` (optional blocks `## Section A` / `## Section B` in `tef-exercices/INSTRUCTIONS_PREFIX.md`, then exercise-specific markdown from the model)
+- **Output**: `TEF-{section}-{num}.instructions.md` (exercise-specific markdown from the model only)
 - **Flags**: `--force`, `--stub`, `--only`, `--model`
 - Shared logic: `apps/api/scripts/tef-generation-shared.ts`
 
