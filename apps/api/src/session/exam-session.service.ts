@@ -174,7 +174,13 @@ export class ExamSessionService {
     }
     let full = `${agentYaml.baseInstructions}\n\n${agentYaml.instructions}`;
     if (contentAppend) {
-      full += `\n\nEXERCICE À UTILISER:\n${contentAppend}`;
+      // Tâche 1 reçoit une banque de questions de référence; les autres tâches reçoivent
+      // l'énoncé d'exercice à dérouler. Le libellé guide le modèle sur l'usage attendu.
+      const label =
+        taskType === "tache1"
+          ? "BANQUE DE QUESTIONS DE RÉFÉRENCE (à puiser, à varier, à ne JAMAIS lire ni énumérer au candidat)"
+          : "EXERCICE À UTILISER";
+      full += `\n\n${label}:\n${contentAppend}`;
     }
     return full;
   }
@@ -206,7 +212,7 @@ export class ExamSessionService {
         : undefined;
     const contentForInstructions =
       taskType === "tache1"
-        ? undefined
+        ? this.examConfig.loadInfoMarkdown("questions-tache1-entretien.md")
         : exerciseData.content && exerciseData.content.length > 0
           ? exerciseData.content
           : undefined;

@@ -42,6 +42,7 @@ export class ExamConfigService {
   private readonly logger = new Logger(ExamConfigService.name);
   private readonly agentCache = new Map<TaskType, AgentYamlConfig>();
   private serviceCache: ServiceYamlConfig | null = null;
+  private readonly markdownCache = new Map<string, string>();
 
   private getConfigDir(): string {
     return getApiConfigDir();
@@ -69,6 +70,27 @@ export class ExamConfigService {
     }
     this.serviceCache = config;
     return config;
+  }
+
+  /**
+   * Loads an auxiliary markdown file from `config/info/`. Cached per-path.
+   * Returns `undefined` (and logs a warning) if the file is missing, so callers
+   * can degrade gracefully when an optional reference document is absent.
+   */
+  loadInfoMarkdown(filename: string): string | undefined {
+    const cached = this.markdownCache.get(filename);
+    if (cached !== undefined) return cached;
+    const filePath = join(this.getConfigDir(), "info", filename);
+    try {
+      const content = readFileSync(filePath, "utf-8");
+      this.markdownCache.set(filename, content);
+      return content;
+    } catch (err) {
+      this.logger.warn(
+        `Could not load info markdown '${filename}': ${(err as Error).message}`,
+      );
+      return undefined;
+    }
   }
 
   private validateAgent(config: AgentYamlConfig, taskType: TaskType): void {
