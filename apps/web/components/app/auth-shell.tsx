@@ -22,6 +22,11 @@ export function AuthShell({ title, description, children, footer }: AuthShellPro
         )}
         {children}
         {footer && <div className="text-muted-foreground mt-5 text-center text-sm">{footer}</div>}
+        <p className="text-muted-foreground mt-4 text-center text-xs">
+          <Link href="/confidentialite" className="underline">
+            Confidentialité
+          </Link>
+        </p>
       </div>
     </main>
   );

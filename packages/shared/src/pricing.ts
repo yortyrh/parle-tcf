@@ -26,3 +26,21 @@ export function estimateCost(
     1_000_000
   );
 }
+
+/**
+ * Rough USD per minute of a Realtime conversation (audio in + out, context
+ * re-reads included), used only for the "before you start" estimate. The real
+ * cost is computed from token usage once the task is over.
+ */
+const REALTIME_USD_PER_MIN: Record<string, number> = {
+  "gpt-realtime-mini": 0.06,
+  "gpt-realtime": 0.3,
+};
+
+export function estimateSessionCost(
+  model: string,
+  speakingSeconds: number,
+): number | null {
+  const perMin = REALTIME_USD_PER_MIN[model];
+  return perMin === undefined ? null : (perMin * speakingSeconds) / 60;
+}

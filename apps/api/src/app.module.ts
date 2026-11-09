@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { LoggerModule } from "nestjs-pino";
 import { ORPCModule } from "@orpc/nest";
 import { AppController } from "./app.controller.js";
 import { AttemptsController } from "./attempts/attempts.controller.js";
@@ -14,6 +15,7 @@ import { ExamConfigService } from "./config/exam-config.service.js";
 import { CryptoModule } from "./crypto/crypto.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { ExerciseService } from "./exercise/exercise.service.js";
+import { loggerParams } from "./logging/logger.config.js";
 import { MailModule } from "./mail/mail.module.js";
 import { OpenAiRealtimeProvider } from "./providers/openai-realtime.provider.js";
 import { VOICE_PROVIDER } from "./providers/voice-provider.js";
@@ -24,6 +26,9 @@ import { SettingsController } from "./settings/settings.controller.js";
 
 @Module({
   imports: [
+    LoggerModule.forRoot(
+      loggerParams({ NODE_ENV: process.env.NODE_ENV ?? "development" }),
+    ),
     ORPCModule.forRoot({}),
     DatabaseModule,
     CryptoModule,

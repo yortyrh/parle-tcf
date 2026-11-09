@@ -6,6 +6,7 @@ const NAV = [
   { href: '/historique', label: 'Historique' },
   { href: '/progression', label: 'Progression' },
   { href: '/parametres', label: 'Paramètres' },
+  { href: '/confidentialite', label: 'Confidentialité' },
 ];
 
 export function PageShell({ title, children }: { title: string; children: React.ReactNode }) {

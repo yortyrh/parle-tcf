@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import "reflect-metadata";
-import { Logger } from "@nestjs/common";
+import { Logger } from "nestjs-pino";
 import { NestFactory } from "@nestjs/core";
 import { toNodeHandler } from "better-auth/node";
 import dotenv from "dotenv";
@@ -19,9 +19,8 @@ async function bootstrap(): Promise<void> {
   const { getEnv, parseCorsOrigins } = await import("./config/env.js");
 
   const env = getEnv();
-  const app = await NestFactory.create(AppModule, {
-    logger: ["error", "warn", "log"],
-  });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
 
   app.enableCors({ origin: parseCorsOrigins(env), credentials: true });
@@ -33,7 +32,7 @@ async function bootstrap(): Promise<void> {
     .all(`${AUTH_BASE_PATH}/*splat`, toNodeHandler(app.get(BETTER_AUTH)));
 
   await app.listen(env.PORT);
-  Logger.log(`listening on http://localhost:${env.PORT}`, "Bootstrap");
+  app.get(Logger).log(`listening on http://localhost:${env.PORT}`, "Bootstrap");
 }
 
 void bootstrap();

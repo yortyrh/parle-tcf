@@ -15,6 +15,7 @@ Earlier history of the web app (in French) lives in [`apps/web/CHANGELOG.md`](./
 - CEFR evaluation after each task (rubric v1, five criteria, corrected transcript with typed errors) via the Vercel AI SDK with the user's key; retries, failure state and `attempts.reevaluate`.
 - Overall level of a full exam (weighted median of the three tasks).
 - Result, history (filters, delete), progression and comparison pages.
+- Structured logging (pino) with secret redaction, privacy page, and a cost estimate before a full exam.
 - Cost estimate per attempt, daily-minutes and monthly-cost limits (`LIMIT_REACHED`).
 
 ### Changed

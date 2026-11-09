@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { TaskType } from '@parle-tcf/shared';
-import { TASK_DURATIONS } from '@parle-tcf/shared';
+import { TASK_DURATIONS, estimateSessionCost } from '@parle-tcf/shared';
 import { APP_CONFIG_DEFAULTS } from '@/app-config';
 import { PreparationView } from '@/components/app/preparation-view';
 import { SessionView } from '@/components/app/session-view';
@@ -12,9 +12,14 @@ import { ConnectingSkeleton } from '@/components/app/view-controller';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
 import { useRealtimeExamFatalToast } from '@/hooks';
+import { formatCost } from '@/lib/cefr';
 import { RealtimeExamProvider, useRealtimeExam } from '@/providers/realtime-exam-provider';
 
 const STEPS: TaskType[] = ['tache1', 'tache2', 'tache3'];
+const examCost = STEPS.reduce(
+  (sum, t) => sum + (estimateSessionCost('gpt-realtime-mini', TASK_DURATIONS[t].speakingS) ?? 0),
+  0
+);
 
 function formatDuration(seconds: number): string {
   const min = Math.floor(seconds / 60);
@@ -95,6 +100,10 @@ function ExamRunController() {
               );
             })}
           </ul>
+          <p className="text-muted-foreground text-xs">
+            Coût estimé : environ {formatCost(examCost)} avec le modèle par défaut (estimation
+            approximative ; le coût réel apparaît dans l&apos;historique).
+          </p>
           <p className="text-muted-foreground text-xs">
             Prévoyez un endroit au calme et autorisez le micro. Les sessions sont facturées sur
             votre clé OpenAI.
