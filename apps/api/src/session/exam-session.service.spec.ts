@@ -5,6 +5,7 @@ import { AttemptsService } from "../attempts/attempts.service.js";
 import { ExamConfigService } from "../config/exam-config.service.js";
 import { ExerciseService } from "../exercise/exercise.service.js";
 import { ProviderError } from "../providers/voice-provider.js";
+import { UsageService } from "../usage/usage.service.js";
 import { ProviderSettingsService } from "../settings/provider-settings.service.js";
 import {
   fakeVoiceProvider,
@@ -44,6 +45,7 @@ describe("ExamSessionService", () => {
       new ExamConfigService(),
       settings,
       attempts,
+      new UsageService(testDb.db),
       voice,
     );
     userId = await testDb.createUser();
@@ -82,6 +84,22 @@ describe("ExamSessionService", () => {
       exerciseId: "x-t2-2",
       status: "in_progress",
     });
+  });
+
+  it("refuses to start once the daily minutes limit is reached", async () => {
+    await settings.upsert(userId, { apiKey: KEY });
+    const first = await service.createSession(userId, {
+      taskType: "tache2",
+      mode: "practice",
+    });
+    await attempts.complete(userId, {
+      attemptId: first.attemptId,
+      lines: [],
+      durationS: 61 * 60,
+    });
+    await expect(
+      service.createSession(userId, { taskType: "tache2", mode: "practice" }),
+    ).rejects.toMatchObject({ code: "LIMIT_REACHED", status: 429 });
   });
 
   it("serves tâche 1 with its fixed interview row", async () => {

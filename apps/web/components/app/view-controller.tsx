@@ -55,6 +55,14 @@ export function ViewController({
     };
   }, []);
 
+  /** Last practice attempt saved in this session: its result page opens on hang-up. */
+  const lastResultRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (exam.attemptCompleted && exam.attemptId && exam.mode === 'practice') {
+      lastResultRef.current = exam.attemptId;
+    }
+  }, [exam.attemptCompleted, exam.attemptId, exam.mode]);
+
   useEffect(() => {
     if (exam.needsProviderKey) router.push('/parametres');
   }, [exam.needsProviderKey, router]);
@@ -69,7 +77,9 @@ export function ViewController({
       isMountedRef.current
     ) {
       wasConnectedRef.current = false;
-      router.replace(welcomeHref);
+      const resultId = lastResultRef.current;
+      lastResultRef.current = null;
+      router.replace(resultId ? `/resultats/${resultId}` : welcomeHref);
     }
   }, [exam.isConnected, exam.isRestarting, router, welcomeHref]);
 

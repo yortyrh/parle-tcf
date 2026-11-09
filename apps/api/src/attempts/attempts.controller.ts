@@ -1,4 +1,5 @@
 import { Controller, Req, UseGuards } from "@nestjs/common";
+import { ORPCError } from "@orpc/server";
 import { Implement, implement } from "@orpc/nest";
 import { currentUserId } from "../auth/current-user.js";
 import {
@@ -11,13 +12,21 @@ import {
   attemptsDeleteProcedure,
   attemptsGetProcedure,
   attemptsListProcedure,
+  attemptsReevaluateProcedure,
+  usageGetProcedure,
 } from "../contract/exam.contract.js";
+import { EvaluationService } from "../evaluation/evaluation.service.js";
+import { UsageService } from "../usage/usage.service.js";
 import { AttemptsService } from "./attempts.service.js";
 
 @Controller()
 @UseGuards(SessionAuthGuard)
 export class AttemptsController {
-  constructor(private readonly attempts: AttemptsService) {}
+  constructor(
+    private readonly attempts: AttemptsService,
+    private readonly evaluation: EvaluationService,
+    private readonly usage: UsageService,
+  ) {}
 
   @Implement(attemptsCheckpointProcedure)
   checkpoint(@Req() req: AuthenticatedRequest) {
@@ -33,6 +42,7 @@ export class AttemptsController {
     const userId = currentUserId(req);
     return implement(attemptsCompleteProcedure).handler(async ({ input }) => {
       await this.attempts.complete(userId, input);
+      this.evaluation.start(userId, input.attemptId);
       return { ok: true as const };
     });
   }
@@ -60,5 +70,23 @@ export class AttemptsController {
       await this.attempts.delete(userId, input.attemptId);
       return { ok: true as const };
     });
+  }
+
+  @Implement(attemptsReevaluateProcedure)
+  reevaluate(@Req() req: AuthenticatedRequest) {
+    const userId = currentUserId(req);
+    return implement(attemptsReevaluateProcedure).handler(async ({ input }) => {
+      const queued = await this.evaluation.requeue(userId, input.attemptId);
+      if (!queued) {
+        throw new ORPCError("NOT_FOUND", { message: "Tentative introuvable." });
+      }
+      return { ok: true as const };
+    });
+  }
+
+  @Implement(usageGetProcedure)
+  usageGet(@Req() req: AuthenticatedRequest) {
+    const userId = currentUserId(req);
+    return implement(usageGetProcedure).handler(() => this.usage.get(userId));
   }
 }

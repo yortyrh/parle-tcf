@@ -20,6 +20,7 @@
     "pnpm": ">=10.0.0"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.111",
     "@nestjs/common": "^11.1.9",
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-express": "^11.1.9",
@@ -29,6 +30,7 @@
     "@orpc/server": "^1.13.0",
     "@parle-tcf/db": "workspace:*",
     "@parle-tcf/shared": "workspace:*",
+    "ai": "^7.0.166",
     "better-auth": "^1.7.18",
     "nodemailer": "^7.0.13",
     "reflect-metadata": "^0.2.2",

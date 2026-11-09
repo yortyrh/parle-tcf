@@ -4,6 +4,8 @@ export { TCF_TASK_TYPES, TASK_DURATIONS } from "./task-types";
 export * from "./schemas/exam-session";
 export * from "./schemas/provider-settings";
 export * from "./schemas/attempts";
+export * from "./schemas/evaluation";
+export * from "./pricing";
 
 /** HTTP route of every API procedure (all POST + JSON, cookie session). */
 export const API_ROUTES = {
@@ -17,4 +19,6 @@ export const API_ROUTES = {
   attemptsList: "/attempts/list",
   attemptsGet: "/attempts/get",
   attemptsDelete: "/attempts/delete",
+  attemptsReevaluate: "/attempts/reevaluate",
+  usageGet: "/usage/get",
 } as const;

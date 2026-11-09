@@ -12,6 +12,10 @@ Earlier history of the web app (in French) lives in [`apps/web/CHANGELOG.md`](./
 - PostgreSQL persistence (`@parle-tcf/db`, Drizzle): exercise bank seed, exam runs, attempts and transcripts, scoped by user.
 - Official task timers (countdown), tâche 2 preparation, and a full-exam mode chaining the three tasks.
 - Transcript autosave (checkpoints) and save on task completion.
+- CEFR evaluation after each task (rubric v1, five criteria, corrected transcript with typed errors) via the Vercel AI SDK with the user's key; retries, failure state and `attempts.reevaluate`.
+- Overall level of a full exam (weighted median of the three tasks).
+- Result, history (filters, delete), progression and comparison pages.
+- Cost estimate per attempt, daily-minutes and monthly-cost limits (`LIMIT_REACHED`).
 
 ### Changed
 - The exercise bank moved from SQLite to PostgreSQL; `generate-db` is replaced by `db:seed`.

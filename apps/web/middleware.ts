@@ -20,5 +20,13 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/tcf/:path*', '/parametres/:path*', '/examen/:path*'],
+  matcher: [
+    '/tcf/:path*',
+    '/parametres/:path*',
+    '/examen/:path*',
+    '/resultats/:path*',
+    '/historique/:path*',
+    '/progression/:path*',
+    '/comparer/:path*',
+  ],
 };

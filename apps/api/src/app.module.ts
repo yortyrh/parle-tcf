@@ -4,6 +4,12 @@ import { AppController } from "./app.controller.js";
 import { AttemptsController } from "./attempts/attempts.controller.js";
 import { AttemptsService } from "./attempts/attempts.service.js";
 import { AuthModule } from "./auth/auth.module.js";
+import {
+  EvaluationService,
+  LANGUAGE_MODEL_FACTORY,
+  openAiModelFactory,
+} from "./evaluation/evaluation.service.js";
+import { UsageService } from "./usage/usage.service.js";
 import { ExamConfigService } from "./config/exam-config.service.js";
 import { CryptoModule } from "./crypto/crypto.module.js";
 import { DatabaseModule } from "./database/database.module.js";
@@ -36,6 +42,9 @@ import { SettingsController } from "./settings/settings.controller.js";
     ExamSessionService,
     ProviderSettingsService,
     AttemptsService,
+    EvaluationService,
+    UsageService,
+    { provide: LANGUAGE_MODEL_FACTORY, useValue: openAiModelFactory },
     { provide: VOICE_PROVIDER, useClass: OpenAiRealtimeProvider },
   ],
 })

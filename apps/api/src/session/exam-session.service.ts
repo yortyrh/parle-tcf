@@ -7,6 +7,7 @@ import type {
   TaskType,
 } from "@parle-tcf/shared";
 import { AttemptsService } from "../attempts/attempts.service.js";
+import { UsageService } from "../usage/usage.service.js";
 import { ProviderSettingsService } from "../settings/provider-settings.service.js";
 import {
   ProviderError,
@@ -29,6 +30,7 @@ export class ExamSessionService {
     private readonly examConfig: ExamConfigService,
     private readonly settings: ProviderSettingsService,
     private readonly attempts: AttemptsService,
+    private readonly usage: UsageService,
     @Inject(VOICE_PROVIDER) private readonly voiceProvider: VoiceProvider,
   ) {}
 
@@ -109,6 +111,8 @@ export class ExamSessionService {
 
     // Fails fast with PROVIDER_NOT_CONFIGURED before any other work.
     const provider = await this.settings.getConfigForUser(userId);
+
+    await this.usage.assertWithinLimits(userId);
 
     if (provider.provider !== "openai") {
       throw new ORPCError("BAD_REQUEST", {

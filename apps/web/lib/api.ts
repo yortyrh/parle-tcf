@@ -10,6 +10,7 @@ import {
   type ProviderSettings,
   type TestProviderSettingsOutput,
   type UpsertProviderSettingsInput,
+  type Usage,
 } from '@parle-tcf/shared';
 
 /** Base URL of the NestJS API (also hosts Better Auth under /api/auth). */
@@ -80,6 +81,9 @@ export const api = {
   listAttempts: (input: ListAttemptsInput = {}) =>
     call<ListAttemptsOutput>(API_ROUTES.attemptsList, input),
   getAttempt: (attemptId: string) => call<AttemptDetail>(API_ROUTES.attemptsGet, { attemptId }),
+  reevaluateAttempt: (attemptId: string) =>
+    call<{ ok: true }>(API_ROUTES.attemptsReevaluate, { attemptId }),
+  getUsage: () => call<Usage>(API_ROUTES.usageGet, {}),
   deleteAttempt: (attemptId: string) =>
     call<{ ok: true }>(API_ROUTES.attemptsDelete, { attemptId }),
 };

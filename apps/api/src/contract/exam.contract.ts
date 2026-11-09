@@ -11,6 +11,7 @@ import {
   listAttemptsOutputSchema,
   okOutputSchema,
   providerSettingsSchema,
+  usageSchema,
   testProviderSettingsOutputSchema,
   upsertProviderSettingsInputSchema,
 } from "@parle-tcf/shared";
@@ -51,6 +52,13 @@ export const attemptsDeleteProcedure = post(API_ROUTES.attemptsDelete)
   .input(attemptIdInputSchema)
   .output(okOutputSchema);
 
+export const attemptsReevaluateProcedure = post(API_ROUTES.attemptsReevaluate)
+  .input(attemptIdInputSchema)
+  .output(okOutputSchema);
+export const usageGetProcedure = post(API_ROUTES.usageGet)
+  .input(z.object({}).optional())
+  .output(usageSchema);
+
 export const examContract = populateContractRouterPaths({
   exam: { session: { create: createExamSessionProcedure } },
   settings: {
@@ -65,5 +73,7 @@ export const examContract = populateContractRouterPaths({
     list: attemptsListProcedure,
     get: attemptsGetProcedure,
     delete: attemptsDeleteProcedure,
+    reevaluate: attemptsReevaluateProcedure,
   },
+  usage: { get: usageGetProcedure },
 });

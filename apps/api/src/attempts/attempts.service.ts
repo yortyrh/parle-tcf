@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   examAttempts,
+  evaluations,
   examRuns,
   exercises,
   sql,
@@ -13,8 +14,11 @@ import {
   type Database,
   type DbExecutor,
 } from "@parle-tcf/db";
+import { estimateCost } from "@parle-tcf/shared";
 import type {
   AttemptDetail,
+  CefrLevel,
+  Evaluation,
   AttemptMode,
   AttemptSummary,
   CompleteAttemptInput,
@@ -35,7 +39,10 @@ export interface CreateAttemptParams {
   model: string;
 }
 
-function toSummary(row: AttemptRow): AttemptSummary {
+function toSummary(
+  row: AttemptRow,
+  globalLevel: string | null = null,
+): AttemptSummary {
   return {
     id: row.id,
     runId: row.runId,
@@ -48,6 +55,9 @@ function toSummary(row: AttemptRow): AttemptSummary {
     finishedAt: row.finishedAt?.toISOString() ?? null,
     durationS: row.durationS,
     model: row.model,
+    globalLevel: globalLevel as CefrLevel | null,
+    estimatedCostUsd:
+      row.estimatedCostUsd === null ? null : Number(row.estimatedCostUsd),
   };
 }
 
@@ -148,8 +158,15 @@ export class AttemptsService {
 
   async complete(userId: string, input: CompleteAttemptInput): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await this.findOwned(userId, input.attemptId, tx);
+      const attempt = await this.findOwned(userId, input.attemptId, tx);
       await this.saveLines(tx, input.attemptId, input.lines);
+      const cost = input.usage
+        ? estimateCost(
+            attempt.model,
+            input.usage.inputTokens,
+            input.usage.outputTokens,
+          )
+        : null;
       await tx
         .update(examAttempts)
         .set({
@@ -159,6 +176,8 @@ export class AttemptsService {
           realtimeMinutes: (input.durationS / 60).toFixed(2),
           inputTokens: input.usage?.inputTokens ?? null,
           outputTokens: input.usage?.outputTokens ?? null,
+          estimatedCostUsd: cost === null ? null : cost.toFixed(4),
+          evaluationStatus: "pending",
         })
         .where(
           and(
@@ -182,20 +201,27 @@ export class AttemptsService {
     );
     const [rows, [total]] = await Promise.all([
       this.db
-        .select()
+        .select({
+          attempt: examAttempts,
+          level: evaluations.globalLevel,
+        })
         .from(examAttempts)
+        .leftJoin(evaluations, eq(evaluations.attemptId, examAttempts.id))
         .where(where)
         .orderBy(desc(examAttempts.startedAt))
         .limit(limit)
         .offset(offset),
       this.db.select({ n: count() }).from(examAttempts).where(where),
     ]);
-    return { items: rows.map(toSummary), total: total?.n ?? 0 };
+    return {
+      items: rows.map((r) => toSummary(r.attempt, r.level)),
+      total: total?.n ?? 0,
+    };
   }
 
   async get(userId: string, attemptId: string): Promise<AttemptDetail> {
     const attempt = await this.findOwned(userId, attemptId);
-    const [lines, exercise] = await Promise.all([
+    const [lines, exercise, [evaluation]] = await Promise.all([
       this.db
         .select()
         .from(transcripts)
@@ -208,15 +234,34 @@ export class AttemptsService {
             .where(eq(exercises.id, attempt.exerciseId))
             .limit(1)
         : Promise.resolve([]),
+      this.db
+        .select()
+        .from(evaluations)
+        .where(eq(evaluations.attemptId, attemptId))
+        .limit(1),
     ]);
     return {
-      ...toSummary(attempt),
+      ...toSummary(attempt, evaluation?.globalLevel ?? null),
       exercisePrompt: exercise[0]?.prompt ?? null,
+      realtimeMinutes:
+        attempt.realtimeMinutes === null
+          ? null
+          : Number(attempt.realtimeMinutes),
+      evaluation: evaluation
+        ? {
+            globalLevel: evaluation.globalLevel as CefrLevel,
+            criteria: evaluation.levels as Evaluation["criteria"],
+            summary: evaluation.comments?.summary ?? "",
+            correctorModel: evaluation.correctorModel,
+            rubricVersion: evaluation.rubricVersion,
+          }
+        : null,
       transcript: lines.map((l) => ({
         seq: l.seq,
         speaker: l.speaker,
         text: l.text,
         correctedText: l.correctedText,
+        errors: l.errors,
       })),
     };
   }

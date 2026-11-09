@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { attemptModeSchema } from "./exam-session";
+import {
+  cefrLevelSchema,
+  evaluationSchema,
+  transcriptErrorSchema,
+} from "./evaluation";
 
 export const speakerSchema = z.enum(["examiner", "candidate"]);
 
@@ -60,13 +65,18 @@ export const attemptSummarySchema = z.object({
   finishedAt: z.string().nullable(),
   durationS: z.number().nullable(),
   model: z.string(),
+  globalLevel: cefrLevelSchema.nullable(),
+  estimatedCostUsd: z.number().nullable(),
 });
 
 export const attemptDetailSchema = attemptSummarySchema.extend({
   exercisePrompt: z.string().nullable(),
+  realtimeMinutes: z.number().nullable(),
+  evaluation: evaluationSchema.nullable(),
   transcript: z.array(
     transcriptLineSchema.extend({
       correctedText: z.string().nullable(),
+      errors: z.array(transcriptErrorSchema).nullable(),
     }),
   ),
 });
@@ -82,6 +92,14 @@ export const listAttemptsOutputSchema = z.object({
   items: z.array(attemptSummarySchema),
   total: z.number().int(),
 });
+
+export const usageSchema = z.object({
+  todayMinutes: z.number(),
+  dailyMinutesLimit: z.number(),
+  monthCostUsd: z.number(),
+  monthlyCostLimitUsd: z.number(),
+});
+export type Usage = z.infer<typeof usageSchema>;
 
 export const okOutputSchema = z.object({ ok: z.literal(true) });
 

@@ -51,6 +51,12 @@ export function WelcomeView({
         <Link href="/examen" className="text-primary underline">
           Examen complet
         </Link>
+        <Link href="/historique" className="text-muted-foreground hover:text-foreground underline">
+          Historique
+        </Link>
+        <Link href="/progression" className="text-muted-foreground hover:text-foreground underline">
+          Progression
+        </Link>
         <Link href="/parametres" className="text-muted-foreground hover:text-foreground underline">
           Paramètres
         </Link>

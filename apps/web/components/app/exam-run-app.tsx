@@ -118,11 +118,15 @@ function ExamRunController() {
         <div className="bg-card flex w-full max-w-md flex-col items-center gap-4 rounded-2xl border p-6 text-center shadow-lg">
           <h1 className="text-xl font-semibold">Examen terminé</h1>
           <p className="text-muted-foreground text-sm">
-            Vos trois tâches ont été enregistrées avec leur transcription.
+            Vos trois tâches sont enregistrées. Les évaluations arrivent en quelques secondes dans
+            l’historique.
           </p>
           <div className="flex gap-2">
             <Button variant="primary" onClick={() => setStep(null)}>
               Refaire un examen
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/historique">Voir l&apos;historique</Link>
             </Button>
             <Button asChild>
               <Link href="/tcf">Entraînement libre</Link>
