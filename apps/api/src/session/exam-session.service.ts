@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { ORPCError } from "@orpc/server";
 import { randomUUID } from "node:crypto";
 import type {
@@ -11,8 +11,7 @@ import { UsageService } from "../usage/usage.service.js";
 import { ProviderSettingsService } from "../settings/provider-settings.service.js";
 import {
   ProviderError,
-  VOICE_PROVIDER,
-  type VoiceProvider,
+  VoiceProviderRegistry,
 } from "../providers/voice-provider.js";
 import { ExamConfigService } from "../config/exam-config.service.js";
 import {
@@ -20,6 +19,11 @@ import {
   taskNumber,
   type TcfExerciseRow,
 } from "../exercise/exercise.service.js";
+
+/** Default Live API model; override per user or with GEMINI_LIVE_MODEL. */
+export const DEFAULT_GEMINI_LIVE_MODEL =
+  "gemini-2.5-flash-native-audio-preview-09-2025";
+const DEFAULT_GEMINI_VOICE = "Puck";
 
 @Injectable()
 export class ExamSessionService {
@@ -31,13 +35,19 @@ export class ExamSessionService {
     private readonly settings: ProviderSettingsService,
     private readonly attempts: AttemptsService,
     private readonly usage: UsageService,
-    @Inject(VOICE_PROVIDER) private readonly voiceProvider: VoiceProvider,
+    private readonly voices: VoiceProviderRegistry,
   ) {}
 
-  private resolveRealtimeModel(serviceModel: string): string {
-    if (serviceModel && serviceModel !== "realtime") {
-      return serviceModel;
+  private resolveRealtimeModel(
+    provider: "openai" | "gemini",
+    configured: string | null,
+    serviceModel: string,
+  ): string {
+    if (configured) return configured;
+    if (provider === "gemini") {
+      return process.env.GEMINI_LIVE_MODEL ?? DEFAULT_GEMINI_LIVE_MODEL;
     }
+    if (serviceModel && serviceModel !== "realtime") return serviceModel;
     return process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-mini";
   }
 
@@ -114,12 +124,6 @@ export class ExamSessionService {
 
     await this.usage.assertWithinLimits(userId);
 
-    if (provider.provider !== "openai") {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Ce fournisseur n'est pas encore pris en charge.",
-      });
-    }
-
     const tcf = await this.exercises.resolveExerciseForTask(
       taskType,
       exerciseId,
@@ -144,17 +148,22 @@ export class ExamSessionService {
       contentForInstructions,
     );
 
-    const voice = provider.voice ?? serviceYaml.llm.voice;
+    const voice =
+      provider.voice ??
+      (provider.provider === "gemini"
+        ? DEFAULT_GEMINI_VOICE
+        : serviceYaml.llm.voice);
     const model = this.resolveRealtimeModel(
-      provider.realtimeModel ?? serviceYaml.llm.model,
+      provider.provider,
+      provider.realtimeModel,
+      serviceYaml.llm.model,
     );
 
     let clientSecret: string;
     try {
-      clientSecret = await this.voiceProvider.mintClientSecret(
-        provider.apiKey,
-        { model, voice },
-      );
+      clientSecret = await this.voices
+        .get(provider.provider)
+        .mintClientSecret(provider.apiKey, { model, voice });
     } catch (error) {
       if (error instanceof ProviderError) {
         throw new ORPCError(
@@ -175,9 +184,11 @@ export class ExamSessionService {
       exerciseId: tcf?.id ?? null,
       task: taskNumber(taskType),
       model,
+      provider: provider.provider,
     });
 
     return {
+      provider: provider.provider,
       clientSecret,
       sessionId: randomUUID(),
       attemptId: attempt.id,

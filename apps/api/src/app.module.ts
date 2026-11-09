@@ -10,7 +10,7 @@ import { AuthModule } from "./auth/auth.module.js";
 import {
   EvaluationService,
   LANGUAGE_MODEL_FACTORY,
-  openAiModelFactory,
+  providerModelFactory,
 } from "./evaluation/evaluation.service.js";
 import { UsageService } from "./usage/usage.service.js";
 import { ExamConfigService } from "./config/exam-config.service.js";
@@ -19,8 +19,9 @@ import { DatabaseModule } from "./database/database.module.js";
 import { ExerciseService } from "./exercise/exercise.service.js";
 import { loggerParams } from "./logging/logger.config.js";
 import { MailModule } from "./mail/mail.module.js";
+import { GeminiLiveProvider } from "./providers/gemini-live.provider.js";
 import { OpenAiRealtimeProvider } from "./providers/openai-realtime.provider.js";
-import { VOICE_PROVIDER } from "./providers/voice-provider.js";
+import { VoiceProviderRegistry } from "./providers/voice-provider.js";
 import { ExamController } from "./session/exam.controller.js";
 import { ExamSessionService } from "./session/exam-session.service.js";
 import { ProviderSettingsService } from "./settings/provider-settings.service.js";
@@ -53,8 +54,17 @@ import { SettingsController } from "./settings/settings.controller.js";
     AttemptsService,
     EvaluationService,
     UsageService,
-    { provide: LANGUAGE_MODEL_FACTORY, useValue: openAiModelFactory },
-    { provide: VOICE_PROVIDER, useClass: OpenAiRealtimeProvider },
+    { provide: LANGUAGE_MODEL_FACTORY, useValue: providerModelFactory },
+    OpenAiRealtimeProvider,
+    GeminiLiveProvider,
+    {
+      provide: VoiceProviderRegistry,
+      inject: [OpenAiRealtimeProvider, GeminiLiveProvider],
+      useFactory: (
+        openai: OpenAiRealtimeProvider,
+        gemini: GeminiLiveProvider,
+      ) => new VoiceProviderRegistry([openai, gemini]),
+    },
   ],
 })
 export class AppModule {}

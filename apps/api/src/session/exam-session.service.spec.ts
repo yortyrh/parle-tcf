@@ -9,6 +9,7 @@ import { UsageService } from "../usage/usage.service.js";
 import { ProviderSettingsService } from "../settings/provider-settings.service.js";
 import {
   fakeVoiceProvider,
+  registryOf,
   testCipher,
   type FakeVoiceProvider,
 } from "../test-helpers.js";
@@ -38,7 +39,11 @@ describe("ExamSessionService", () => {
     await testDb.truncateAll();
     await seedExercises(testDb.db, parseExerciseCsv(CSV));
     voice = fakeVoiceProvider();
-    settings = new ProviderSettingsService(testDb.db, testCipher(), voice);
+    settings = new ProviderSettingsService(
+      testDb.db,
+      testCipher(),
+      registryOf(voice),
+    );
     attempts = new AttemptsService(testDb.db);
     service = new ExamSessionService(
       new ExerciseService(testDb.db),
@@ -46,7 +51,7 @@ describe("ExamSessionService", () => {
       settings,
       attempts,
       new UsageService(testDb.db),
-      voice,
+      registryOf(voice),
     );
     userId = await testDb.createUser();
   });
@@ -100,6 +105,34 @@ describe("ExamSessionService", () => {
     await expect(
       service.createSession(userId, { taskType: "tache2", mode: "practice" }),
     ).rejects.toMatchObject({ code: "LIMIT_REACHED", status: 429 });
+  });
+
+  it("mints through the Gemini backend with its default model and voice", async () => {
+    const gemini = fakeVoiceProvider("gemini");
+    const geminiService = new ExamSessionService(
+      new ExerciseService(testDb.db),
+      new ExamConfigService(),
+      settings,
+      attempts,
+      new UsageService(testDb.db),
+      registryOf(voice, gemini),
+    );
+    await settings.upsert(userId, {
+      provider: "gemini",
+      apiKey: "AIzaSyTestKey0123456789",
+    });
+    const out = await geminiService.createSession(userId, {
+      taskType: "tache2",
+      mode: "practice",
+    });
+    expect(out.provider).toBe("gemini");
+    expect(out.agentConfig.model).toContain("gemini");
+    expect(out.agentConfig.voice).toBe("Puck");
+    expect(voice.mintCalls).toHaveLength(0);
+    expect(gemini.mintCalls).toHaveLength(1);
+    expect((await attempts.get(userId, out.attemptId)).model).toContain(
+      "gemini",
+    );
   });
 
   it("serves tâche 1 with its fixed interview row", async () => {

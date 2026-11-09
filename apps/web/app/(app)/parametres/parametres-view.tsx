@@ -19,11 +19,14 @@ export function ParametresView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [busy, setBusy] = useState(false);
+  const [provider, setProvider] = useState<'openai' | 'gemini'>('openai');
   const [audio, setAudio] = useState<AudioStatus | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setSettings(await api.getSettings());
+      const loaded = await api.getSettings();
+      setSettings(loaded);
+      setProvider(loaded.provider);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Erreur de chargement.');
     }
@@ -58,7 +61,7 @@ export function ParametresView() {
     await run(
       async () => {
         const saved = await api.saveSettings({
-          provider: 'openai',
+          provider,
           ...(apiKey ? { apiKey } : {}),
           realtimeModel: String(form.get('realtimeModel') ?? '').trim() || null,
           voice: String(form.get('voice') ?? '').trim() || null,
@@ -161,11 +164,11 @@ export function ParametresView() {
       >
         <div>
           <h2 id="cle-api" className="font-medium">
-            Clé API OpenAI
+            Clé API {provider === 'gemini' ? 'Gemini' : 'OpenAI'}
           </h2>
           <p className="text-muted-foreground mt-1 text-sm">
             Elle est chiffrée côté serveur et ne vous est jamais renvoyée. Les sessions vocales sont
-            facturées sur votre compte OpenAI.
+            facturées sur votre compte {provider === 'gemini' ? 'Google AI' : 'OpenAI'}.
           </p>
         </div>
 
@@ -176,7 +179,11 @@ export function ParametresView() {
             <p className="text-sm" data-testid="key-status">
               {settings.configured ? (
                 <>
-                  Clé enregistrée : <span className="font-mono">sk-…{settings.last4}</span> ·{' '}
+                  Clé enregistrée :{' '}
+                  <span className="font-mono">
+                    {settings.provider === 'gemini' ? 'AIza' : 'sk-'}…{settings.last4}
+                  </span>{' '}
+                  ·{' '}
                   {settings.verifiedAt
                     ? `vérifiée le ${new Date(settings.verifiedAt).toLocaleString('fr-FR')}`
                     : 'pas encore vérifiée'}
@@ -188,6 +195,23 @@ export function ParametresView() {
 
             <form onSubmit={onSave} className="flex flex-col gap-3">
               <div>
+                <FieldLabel htmlFor="provider">Fournisseur</FieldLabel>
+                <select
+                  id="provider"
+                  className="bg-background w-full rounded-md border p-2 text-sm"
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value as 'openai' | 'gemini')}
+                >
+                  <option value="openai">OpenAI (Realtime)</option>
+                  <option value="gemini">Google Gemini (Live) — expérimental</option>
+                </select>
+                {settings.configured && provider !== settings.provider && (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Changer de fournisseur nécessite de saisir une nouvelle clé.
+                  </p>
+                )}
+              </div>
+              <div>
                 <FieldLabel htmlFor="apiKey">
                   {settings.configured ? 'Remplacer la clé (optionnel)' : 'Clé API'}
                 </FieldLabel>
@@ -197,8 +221,8 @@ export function ParametresView() {
                   type="password"
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="sk-…"
-                  required={!settings.configured}
+                  placeholder={provider === 'gemini' ? 'AIza…' : 'sk-…'}
+                  required={!settings.configured || provider !== settings.provider}
                 />
               </div>
               <details className="text-sm">
@@ -210,7 +234,11 @@ export function ParametresView() {
                       id="realtimeModel"
                       name="realtimeModel"
                       defaultValue={settings.realtimeModel ?? ''}
-                      placeholder="gpt-realtime-mini"
+                      placeholder={
+                        provider === 'gemini'
+                          ? 'gemini-2.5-flash-native-audio-preview-09-2025'
+                          : 'gpt-realtime-mini'
+                      }
                     />
                   </div>
                   <div>
@@ -219,7 +247,7 @@ export function ParametresView() {
                       id="voice"
                       name="voice"
                       defaultValue={settings.voice ?? ''}
-                      placeholder="marin"
+                      placeholder={provider === 'gemini' ? 'Puck' : 'marin'}
                     />
                   </div>
                   <div>
@@ -228,7 +256,7 @@ export function ParametresView() {
                       id="textModel"
                       name="textModel"
                       defaultValue={settings.textModel ?? ''}
-                      placeholder="gpt-4.1-mini"
+                      placeholder={provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4.1-mini'}
                     />
                   </div>
                 </div>

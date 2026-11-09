@@ -11,6 +11,8 @@ export const MODEL_PRICES: Record<string, ModelPrice> = {
   "gpt-4o": { inputPerM: 2.5, outputPerM: 10 },
   "gpt-4.1-mini": { inputPerM: 0.4, outputPerM: 1.6 },
   "gpt-4.1": { inputPerM: 2, outputPerM: 8 },
+  "gemini-2.5-flash": { inputPerM: 0.3, outputPerM: 2.5 },
+  "gemini-2.5-flash-lite": { inputPerM: 0.1, outputPerM: 0.4 },
 };
 
 /** Estimated cost in USD, or `null` when the model has no known price. */

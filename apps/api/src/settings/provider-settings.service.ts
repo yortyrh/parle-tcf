@@ -8,10 +8,7 @@ import type {
 } from "@parle-tcf/shared";
 import { SecretCipher } from "../crypto/secret-cipher.js";
 import { DATABASE } from "../database/database.tokens.js";
-import {
-  VOICE_PROVIDER,
-  type VoiceProvider,
-} from "../providers/voice-provider.js";
+import { VoiceProviderRegistry } from "../providers/voice-provider.js";
 
 export interface UserProviderConfig {
   apiKey: string;
@@ -40,7 +37,7 @@ export class ProviderSettingsService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly cipher: SecretCipher,
-    @Inject(VOICE_PROVIDER) private readonly voice: VoiceProvider,
+    private readonly voices: VoiceProviderRegistry,
   ) {}
 
   private async findRow(userId: string): Promise<Row | undefined> {
@@ -65,6 +62,16 @@ export class ProviderSettingsService {
     if (!existing && !input.apiKey) {
       throw new ORPCError("BAD_REQUEST", {
         message: "Une clé API est requise pour la première configuration.",
+      });
+    }
+
+    if (
+      existing &&
+      !input.apiKey &&
+      existing.provider !== (input.provider ?? "openai")
+    ) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Changer de fournisseur nécessite une nouvelle clé API.",
       });
     }
 
@@ -132,7 +139,9 @@ export class ProviderSettingsService {
 
   async test(userId: string): Promise<TestProviderSettingsOutput> {
     const config = await this.getConfigForUser(userId);
-    const result = await this.voice.verifyKey(config.apiKey);
+    const result = await this.voices
+      .get(config.provider)
+      .verifyKey(config.apiKey);
     if (result.ok) {
       await this.db
         .update(providerSettings)

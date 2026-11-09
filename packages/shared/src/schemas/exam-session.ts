@@ -30,6 +30,8 @@ export const agentConfigForClientSchema = z.object({
 });
 
 export const createExamSessionOutputSchema = z.object({
+  /** Voice backend the browser must connect to. */
+  provider: z.enum(["openai", "gemini"]).default("openai"),
   clientSecret: z.string(),
   sessionId: z.string(),
   /** Persisted attempt this session records into. */

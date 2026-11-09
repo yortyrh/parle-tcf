@@ -3,6 +3,7 @@ import { providerSettings } from "@parle-tcf/db";
 import { createTestDb, type TestDb } from "@parle-tcf/db/testing";
 import {
   fakeVoiceProvider,
+  registryOf,
   testCipher,
   type FakeVoiceProvider,
 } from "../test-helpers.js";
@@ -25,7 +26,11 @@ describe("ProviderSettingsService", () => {
   beforeEach(async () => {
     await testDb.truncateAll();
     voice = fakeVoiceProvider();
-    service = new ProviderSettingsService(testDb.db, testCipher(), voice);
+    service = new ProviderSettingsService(
+      testDb.db,
+      testCipher(),
+      registryOf(voice),
+    );
     alice = await testDb.createUser();
     bob = await testDb.createUser();
   });
@@ -103,5 +108,18 @@ describe("ProviderSettingsService", () => {
     voice.verifyResult = { ok: true };
     expect(await service.test(alice)).toEqual({ ok: true });
     expect((await service.get(alice)).verifiedAt).not.toBeNull();
+  });
+
+  it("requires a new key when the provider changes", async () => {
+    const user = await testDb.createUser("switch@test.local");
+    await service.upsert(user, { apiKey: "sk-test-0123456789abcdef" });
+    await expect(
+      service.upsert(user, { provider: "gemini", voice: "Puck" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    const saved = await service.upsert(user, {
+      provider: "gemini",
+      apiKey: "AIzaSyTestKey0123456789",
+    });
+    expect(saved.provider).toBe("gemini");
   });
 });

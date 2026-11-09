@@ -4,7 +4,7 @@ import { createTestDb, type TestDb } from "@parle-tcf/db/testing";
 import { examAttempts, examRuns, eq } from "@parle-tcf/db";
 import { AttemptsService } from "../attempts/attempts.service.js";
 import { ProviderSettingsService } from "../settings/provider-settings.service.js";
-import { fakeVoiceProvider, testCipher } from "../test-helpers.js";
+import { fakeVoiceProvider, registryOf, testCipher } from "../test-helpers.js";
 import { EvaluationService, locateErrors } from "./evaluation.service.js";
 
 const KEY = "sk-test-0123456789abcdef";
@@ -79,7 +79,7 @@ describe("EvaluationService", () => {
     settings = new ProviderSettingsService(
       testDb.db,
       testCipher(),
-      fakeVoiceProvider(),
+      registryOf(fakeVoiceProvider()),
     );
     await settings.upsert(userId, { apiKey: KEY });
     const a = await attempts.create({

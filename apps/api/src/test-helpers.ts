@@ -1,7 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { SecretCipher } from "./crypto/secret-cipher.js";
-import type {
-  MintClientSecretParams,
+import {
+  VoiceProviderRegistry,
+  type ProviderId,
+  type MintClientSecretParams,
   VerifyKeyResult,
   VoiceProvider,
 } from "./providers/voice-provider.js";
@@ -16,9 +18,15 @@ export interface FakeVoiceProvider extends VoiceProvider {
   mintError: Error | null;
 }
 
-export function fakeVoiceProvider(): FakeVoiceProvider {
+export function registryOf(...providers: VoiceProvider[]) {
+  return new VoiceProviderRegistry(providers);
+}
+
+export function fakeVoiceProvider(
+  id: ProviderId = "openai",
+): FakeVoiceProvider {
   const fake: FakeVoiceProvider = {
-    id: "openai",
+    id,
     mintCalls: [],
     verifyResult: { ok: true },
     mintError: null,

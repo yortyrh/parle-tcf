@@ -37,6 +37,7 @@ export interface CreateAttemptParams {
   exerciseId: string | null;
   task: number;
   model: string;
+  provider?: "openai" | "gemini";
 }
 
 function toSummary(
@@ -121,7 +122,7 @@ export class AttemptsService {
           mode: params.mode,
           exerciseId: params.exerciseId,
           task: params.task,
-          provider: "openai",
+          provider: params.provider ?? "openai",
           model: params.model,
         })
         .returning();

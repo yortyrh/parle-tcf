@@ -23,6 +23,7 @@ import { TASK_DURATIONS, TCF_TASK_TYPES } from '@parle-tcf/shared';
 import { toastAlert } from '@/components/ui/alert-toast';
 import { ApiError, api } from '@/lib/api';
 import { AttemptRecorder } from '@/lib/audio-recorder';
+import { GeminiLiveSession } from '@/lib/gemini-live';
 import {
   nextExerciseIdRandom,
   nextExerciseIdSequential,
@@ -200,6 +201,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const historySnapshotRef = useRef<RealtimeItem[]>([]);
   const assistantStreamBufRef = useRef<Record<string, string>>({});
   const recorderRef = useRef<AttemptRecorder | null>(null);
+  const geminiRef = useRef<GeminiLiveSession | null>(null);
   const finishTaskRef = useRef<() => Promise<void>>(async () => {});
   const restartExamRef = useRef<() => Promise<void>>(async () => {});
   const attemptIdRef = useRef<string | null>(null);
@@ -398,6 +400,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     setPreparation(null);
     sessionRef.current?.close();
     sessionRef.current = null;
+    geminiRef.current?.close();
+    geminiRef.current = null;
     stopUserVad();
     stopAgentVad();
     if (audioCtxRef.current) {
@@ -447,6 +451,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const flushTranscripts = useCallback(() => {
+    // Gemini sessions push their own transcript lines; there is no OpenAI history.
+    if (geminiRef.current) return;
     const base = transcriptLinesFromHistory(historySnapshotRef.current);
     pruneStreamBuffer(base, assistantStreamBufRef.current);
     const merged = mergeStreamingAssistantText(base, { ...assistantStreamBufRef.current });
@@ -561,21 +567,102 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
 
         const instructions = `${data.agentConfig.instructions}\n\n--- Consigne d'accueil initiale (à respecter au démarrage) ---\n${data.agentConfig.greeting}`;
 
+        const onFinSession = () => {
+          // The task is over: save it now, then close it once the farewell has played.
+          flushTranscripts();
+          void persistAttempt();
+          setSessionEnded(true);
+          setMicEnabledState(false);
+          mediaStreamRef.current?.getAudioTracks().forEach((t) => {
+            t.enabled = false;
+          });
+          setTimeout(() => void finishTaskRef.current(), FAREWELL_GRACE_MS);
+        };
+
+        if (data.provider === 'gemini') {
+          const geminiStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true },
+          });
+          if (isStale()) {
+            geminiStream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          geminiStream.getAudioTracks().forEach((t) => {
+            t.enabled = false;
+          });
+          mediaStreamRef.current = geminiStream;
+          const geminiRecorder = new AttemptRecorder();
+          recorderRef.current = geminiRecorder;
+          void api.getAudioStatus().then(
+            (status) => {
+              if (status.available && status.consent && recorderRef.current === geminiRecorder) {
+                geminiRecorder.start(geminiStream);
+              }
+            },
+            () => undefined
+          );
+          startUserVad(geminiStream);
+
+          const live = new GeminiLiveSession({
+            token: data.clientSecret,
+            model: data.agentConfig.model,
+            voice: data.agentConfig.voice,
+            instructions,
+            stream: geminiStream,
+            onLines: (lines) => {
+              if (geminiRef.current !== live) return;
+              transcriptsRef.current = lines;
+              setTranscripts(lines);
+            },
+            onAgentSpeaking: setAgentSpeaking,
+            onUsage: (usage) => {
+              usageRef.current = usage;
+            },
+            onTool: (name) => {
+              if (name === 'finSession') {
+                onFinSession();
+                setTimeout(() => void finishTaskRef.current(), FAREWELL_GRACE_MS);
+              } else {
+                void restartExamRef.current();
+              }
+            },
+            onError: (message) => {
+              if (geminiRef.current !== live) return;
+              setSessionError(message);
+              toastAlert({
+                title: 'Erreur pendant la session',
+                description: <p className="w-full text-sm">{message}</p>,
+              });
+            },
+            onClose: () => {
+              if (geminiRef.current !== live) return;
+              flushTranscripts();
+              void persistAttempt();
+              setIsConnected(false);
+            },
+          });
+          geminiRef.current = live;
+          await live.connect();
+          if (isStale()) {
+            live.close();
+            return;
+          }
+          live.sendText(
+            "Le candidat est prêt. Commence la session d'examen immédiatement en suivant ta consigne d'accueil et ton rôle d'examinateur."
+          );
+          taskStartedAtRef.current = Date.now();
+          setTimeUpAt(Date.now() + (TASK_DURATIONS[taskType as TaskType]?.speakingS ?? 0) * 1000);
+          setIsConnected(true);
+          return;
+        }
+
         const finSession = tool({
           name: 'finSession',
           description:
             "Signale la fin de la session d'examen. À appeler quand l'épreuve est terminée, après avoir dit au revoir.",
           parameters: z.object({}),
           execute: async () => {
-            // The task is over: save it now, then close it once the farewell has played.
-            flushTranscripts();
-            void persistAttempt();
-            setSessionEnded(true);
-            setMicEnabledState(false);
-            mediaStreamRef.current?.getAudioTracks().forEach((t) => {
-              t.enabled = false;
-            });
-            setTimeout(() => void finishTaskRef.current(), FAREWELL_GRACE_MS);
+            onFinSession();
             return FIN_SESSION_NEXT;
           },
         });
@@ -802,6 +889,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     flushTranscripts();
     await persistAttempt();
     sessionRef.current?.close();
+    geminiRef.current?.close();
     setMicEnabledState(false);
     mediaStreamRef.current?.getAudioTracks().forEach((t) => {
       t.enabled = false;
@@ -824,6 +912,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       return;
     }
     // Exam mode: let the examiner close the task, then stop the session.
+    geminiRef.current?.sendText(TIME_UP_MESSAGE);
     sessionRef.current?.sendMessage({
       type: 'message',
       role: 'user',

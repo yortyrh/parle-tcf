@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@google/genai": "^3.0.0",
     "@openai/agents": "^0.8.2",
     "@parle-tcf/shared": "workspace:*",
     "@phosphor-icons/react": "^2.1.8",

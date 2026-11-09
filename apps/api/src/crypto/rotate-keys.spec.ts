@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { providerSettings } from "@parle-tcf/db";
 import { createTestDb, type TestDb } from "@parle-tcf/db/testing";
-import { fakeVoiceProvider } from "../test-helpers.js";
+import { fakeVoiceProvider, registryOf } from "../test-helpers.js";
 import { ProviderSettingsService } from "../settings/provider-settings.service.js";
 import { rotateProviderKeys } from "./rotate-keys.js";
 import { SecretCipher } from "./secret-cipher.js";
@@ -24,7 +24,7 @@ describe("rotateProviderKeys", () => {
     await new ProviderSettingsService(
       testDb.db,
       v1,
-      fakeVoiceProvider(),
+      registryOf(fakeVoiceProvider()),
     ).upsert(userId, { apiKey: key });
 
     const both = new SecretCipher(`v1:${k1},v2:${k2}`, "v2");
@@ -44,7 +44,7 @@ describe("rotateProviderKeys", () => {
     const settings = new ProviderSettingsService(
       testDb.db,
       onlyV2,
-      fakeVoiceProvider(),
+      registryOf(fakeVoiceProvider()),
     );
     expect((await settings.getConfigForUser(userId)).apiKey).toBe(key);
   });

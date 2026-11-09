@@ -18,7 +18,7 @@ Monorepo (Turborepo + pnpm) for practising the **speaking test (expression orale
 ### Prerequisites
 
 - Docker & Docker Compose
-- An **OpenAI** API key per user, entered in the app (stored encrypted)
+- An **OpenAI** (or, experimentally, **Google Gemini**) API key per user, entered in the app (stored encrypted)
 
 ### Configuration
 

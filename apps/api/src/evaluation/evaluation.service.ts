@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output, type LanguageModel } from "ai";
 import {
@@ -27,14 +28,22 @@ import { loadRubric, RUBRIC_VERSION } from "./rubric.js";
 
 export const LANGUAGE_MODEL_FACTORY = Symbol("LANGUAGE_MODEL_FACTORY");
 export type LanguageModelFactory = (
+  provider: "openai" | "gemini",
   apiKey: string,
   modelId: string,
 ) => LanguageModel;
 
-export const openAiModelFactory: LanguageModelFactory = (apiKey, modelId) =>
-  createOpenAI({ apiKey })(modelId);
+export const providerModelFactory: LanguageModelFactory = (
+  provider,
+  apiKey,
+  modelId,
+) =>
+  provider === "gemini"
+    ? createGoogleGenerativeAI({ apiKey })(modelId)
+    : createOpenAI({ apiKey })(modelId);
 
 export const DEFAULT_TEXT_MODEL = "gpt-4o-mini";
+export const DEFAULT_GEMINI_TEXT_MODEL = "gemini-2.5-flash";
 const MAX_ATTEMPTS = 3; // first try + 2 retries
 const STALE_RUNNING_MS = 5 * 60_000;
 
@@ -160,10 +169,14 @@ export class EvaluationService implements OnModuleInit {
             .limit(1)
         : [];
 
-      const modelId = config.textModel ?? DEFAULT_TEXT_MODEL;
+      const modelId =
+        config.textModel ??
+        (config.provider === "gemini"
+          ? DEFAULT_GEMINI_TEXT_MODEL
+          : DEFAULT_TEXT_MODEL);
       const startedAt = Date.now();
       const result = await this.run(
-        this.modelFactory(config.apiKey, modelId),
+        this.modelFactory(config.provider, config.apiKey, modelId),
         buildPrompt(attempt.task, exercise?.prompt ?? null, lines),
       );
       const latencyMs = Date.now() - startedAt;
