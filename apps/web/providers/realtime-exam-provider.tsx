@@ -27,7 +27,6 @@ import {
   nextExerciseIdSequential,
   previousExerciseIdSequential,
 } from '@/lib/next-exercise-id';
-import { extractPartialReportFromToolArgs } from '@/lib/report-stream';
 import { type ExamTranscriptLine, transcriptLinesFromHistory } from '@/lib/transcript-from-history';
 import { mergeStreamingAssistantText, pruneStreamBuffer } from '@/lib/transcript-merge';
 
@@ -71,10 +70,10 @@ function syncExerciseUrl(taskType: string, exerciseId?: string): void {
 }
 
 const FIN_SESSION_NEXT =
-  "CHANGEMENT DE RÔLE — L'examen est terminé. Tu es maintenant un coach/professeur bienveillant. Étape obligatoire : appelle l'outil envoiRapport avec le rapport markdown complet (points forts, points à améliorer, exemples de reformulation). Ensuite, aide le candidat à comprendre ses erreurs. Sois généreux en explications mais concis — pose des questions au candidat pour qu'il reste le protagoniste.";
+  "L'épreuve est terminée. Dis simplement au revoir au candidat en une phrase, sans rapport ni commentaire.";
 
-const ENVOI_RAPPORT_NEXT =
-  'Le rapport a été envoyé. Le micro du candidat sera réactivé automatiquement. Restez disponible pour répondre aux questions du candidat sur le rapport et son évaluation.';
+/** Delay letting the examiner's farewell play before the task is closed. */
+const FAREWELL_GRACE_MS = 6000;
 
 const RECOMMENCER_TEST_NEXT =
   "L'épreuve a été réinitialisée. Recommence immédiatement comme examinateur au tout début : suis exactement la consigne d'accueil initiale, sans résumer la tentative précédente.";
@@ -112,7 +111,7 @@ export interface RealtimeExamContextValue {
   isRestarting: boolean;
   fatalError: string | null;
   /** Erreur session/outil (ex. échec d’envoi du rapport) — affichée à la place du loader infini */
-  reportDeliveryError: string | null;
+  sessionError: string | null;
   start: (taskType: string, exerciseId?: string, options?: StartOptions) => Promise<void>;
   end: () => void;
   micEnabled: boolean;
@@ -124,10 +123,6 @@ export interface RealtimeExamContextValue {
   /** Normalised audio level 0-1, updated every animation frame */
   userAudioLevelRef: React.RefObject<number>;
   exerciseData: ExerciseData | null;
-  report: string | null;
-  reportStreaming: string | null;
-  previousReports: string[];
-  archiveReportAndReset: () => void;
   sessionEnded: boolean;
   resetSessionEnd: () => void;
   transcripts: ExamTranscriptLine[];
@@ -154,14 +149,11 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const [fatalError, setFatalError] = useState<string | null>(null);
-  const [reportDeliveryError, setReportDeliveryError] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [micEnabled, setMicEnabledState] = useState(false);
   const [agentSpeaking, setAgentSpeaking] = useState(false);
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [exerciseData, setExerciseData] = useState<ExerciseData | null>(null);
-  const [report, setReport] = useState<string | null>(null);
-  const [reportStreaming, setReportStreaming] = useState<string | null>(null);
-  const [previousReports, setPreviousReports] = useState<string[]>([]);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [transcripts, setTranscripts] = useState<ExamTranscriptLine[]>([]);
   const [orderedExerciseIds, setOrderedExerciseIds] = useState<string[]>([]);
@@ -184,6 +176,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const orderedExerciseIdsRef = useRef<string[]>([]);
   const historySnapshotRef = useRef<RealtimeItem[]>([]);
   const assistantStreamBufRef = useRef<Record<string, string>>({});
+  const finishTaskRef = useRef<() => Promise<void>>(async () => {});
   const restartExamRef = useRef<() => Promise<void>>(async () => {});
   const attemptIdRef = useRef<string | null>(null);
   const modeRef = useRef<AttemptMode>('practice');
@@ -383,15 +376,13 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
     setFatalError(null);
-    setReportDeliveryError(null);
+    setSessionError(null);
     setIsConnected(false);
     setIsConnecting(false);
     setMicEnabledState(false);
     setAgentSpeaking(false);
     setUserSpeaking(false);
     setExerciseData(null);
-    setReport(null);
-    setReportStreaming(null);
     setSessionEnded(false);
     setTranscripts([]);
     setOrderedExerciseIds([]);
@@ -416,16 +407,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     mediaStreamRef.current?.getAudioTracks().forEach((t) => {
       t.enabled = on;
     });
-  }, []);
-
-  const archiveReportAndReset = useCallback(() => {
-    setReport((current) => {
-      if (current) {
-        setPreviousReports((prev) => [...prev, current]);
-      }
-      return null;
-    });
-    setReportStreaming(null);
   }, []);
 
   const resetSessionEnd = useCallback(() => {
@@ -499,7 +480,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       const isStale = () => connectIdRef.current !== connectId;
       setFatalError(null);
       setNeedsProviderKey(false);
-      setReportDeliveryError(null);
+      setSessionError(null);
       setIsConnecting(true);
       attemptDoneRef.current = false;
       setAttemptCompleted(false);
@@ -550,10 +531,10 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         const finSession = tool({
           name: 'finSession',
           description:
-            "Signale la fin de la session d'examen. Doit être appelé AVANT envoiRapport pour couper le micro du candidat pendant la génération du rapport.",
+            "Signale la fin de la session d'examen. À appeler quand l'épreuve est terminée, après avoir dit au revoir.",
           parameters: z.object({}),
           execute: async () => {
-            // The exam part is over: save it now, before the coaching conversation starts.
+            // The task is over: save it now, then close it once the farewell has played.
             flushTranscripts();
             void persistAttempt();
             setSessionEnded(true);
@@ -561,25 +542,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
             mediaStreamRef.current?.getAudioTracks().forEach((t) => {
               t.enabled = false;
             });
+            setTimeout(() => void finishTaskRef.current(), FAREWELL_GRACE_MS);
             return FIN_SESSION_NEXT;
-          },
-        });
-
-        const envoiRapport = tool({
-          name: 'envoiRapport',
-          description: 'Envoie le rapport en format markdown à la fin de la session',
-          parameters: z.object({
-            report: z.string().describe('Le rapport à envoyer'),
-          }),
-          execute: async ({ report: reportText }) => {
-            setReportDeliveryError(null);
-            setReport(reportText);
-            setReportStreaming(null);
-            setMicEnabledState(true);
-            mediaStreamRef.current?.getAudioTracks().forEach((t) => {
-              t.enabled = true;
-            });
-            return ENVOI_RAPPORT_NEXT;
           },
         });
 
@@ -598,7 +562,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           name: 'Examinateur TCF',
           instructions,
           voice: data.agentConfig.voice,
-          tools: [finSession, envoiRapport, recommencerTest],
+          tools: [finSession, recommencerTest],
         });
 
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -673,12 +637,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
               usageRef.current.outputTokens += usage.output_tokens ?? 0;
             }
           }
-          if (event.type === 'function_call' && event.name === 'envoiRapport') {
-            const partial = extractPartialReportFromToolArgs(event.arguments ?? '');
-            if (partial !== null && partial.length > 0) {
-              setReportStreaming(partial);
-            }
-          }
           if (event.type === 'error') {
             const err = event as { error?: unknown };
             const msg =
@@ -694,7 +652,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         session.on('error', (payload: unknown) => {
           if (sessionRef.current !== session) return;
           const msg = messageFromSessionError(payload);
-          setReportDeliveryError(msg);
+          setSessionError(msg);
           toastAlert({
             title: 'Erreur pendant la session',
             description: <p className="w-full text-sm">{msg}</p>,
@@ -758,7 +716,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     const exerciseId = currentExerciseIdRef.current ?? exerciseData?.exerciseId;
     if (!taskType) return;
 
-    archiveReportAndReset();
     resetSessionEnd();
     setRestartSequence((current) => current + 1);
     setIsRestarting(true);
@@ -768,7 +725,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     } finally {
       setIsRestarting(false);
     }
-  }, [archiveReportAndReset, resetSessionEnd, end, connectToExam, exerciseData]);
+  }, [resetSessionEnd, end, connectToExam, exerciseData]);
 
   const goToAnotherExercise = useCallback(
     async (mode: 'next' | 'previous' | 'random') => {
@@ -784,7 +741,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
             ? previousExerciseIdSequential(ids, currentId)
             : nextExerciseIdRandom(ids, currentId);
 
-      archiveReportAndReset();
       resetSessionEnd();
       setRestartSequence((c) => c + 1);
       setIsRestarting(true);
@@ -795,7 +751,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         setIsRestarting(false);
       }
     },
-    [archiveReportAndReset, resetSessionEnd, end, connectToExam, exerciseData]
+    [resetSessionEnd, end, connectToExam, exerciseData]
   );
 
   const finishTask = useCallback(async () => {
@@ -807,6 +763,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       t.enabled = false;
     });
   }, [flushTranscripts, persistAttempt]);
+
+  finishTaskRef.current = finishTask;
 
   const onTimeUp = useCallback(() => {
     if (attemptDoneRef.current) return;
@@ -861,7 +819,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       isConnecting,
       isRestarting,
       fatalError,
-      reportDeliveryError,
+      sessionError,
       start,
       end,
       micEnabled,
@@ -871,10 +829,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       agentAudioLevelRef,
       userAudioLevelRef,
       exerciseData,
-      report,
-      reportStreaming,
-      previousReports,
-      archiveReportAndReset,
       sessionEnded,
       resetSessionEnd,
       transcripts,
@@ -899,7 +853,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       isConnecting,
       isRestarting,
       fatalError,
-      reportDeliveryError,
+      sessionError,
       start,
       end,
       micEnabled,
@@ -907,10 +861,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       agentSpeaking,
       userSpeaking,
       exerciseData,
-      report,
-      reportStreaming,
-      previousReports,
-      archiveReportAndReset,
       sessionEnded,
       resetSessionEnd,
       transcripts,

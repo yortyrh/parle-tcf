@@ -17,8 +17,8 @@ graph TD
 
 1. The browser calls `POST …/exam/session/create` (input and output typed by `@parle-tcf/shared`).
 2. The API loads the task YAML and the exercise (PostgreSQL), decrypts the signed-in user's own API key, calls `POST /v1/realtime/client_secrets`, and returns `clientSecret`, the exercise payload and the agent config (instructions, greeting, model, voice).
-3. The client creates a `RealtimeSession` (`@openai/agents/realtime`) over WebRTC. The tools `finSession`, `envoiRapport` and `recommencerTest` run **in the browser** and drive the UI.
-4. The report streams from transport events (partial `function_call` for `envoiRapport`) and is final when the tool runs. Nothing is persisted server-side yet.
+3. The client creates a `RealtimeSession` (`@openai/agents/realtime`) over WebRTC. The tools `finSession` and `recommencerTest` run **in the browser** and drive the UI.
+4. `finSession` saves the attempt and closes the task after the examiner's farewell. The examiner no longer grades or writes a report: a separate corrector (`apps/api/src/evaluation`) produces the CEFR evaluation from the saved transcript.
 
 ---
 

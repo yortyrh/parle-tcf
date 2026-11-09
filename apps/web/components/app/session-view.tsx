@@ -12,7 +12,6 @@ import {
   SkipForward,
 } from '@phosphor-icons/react/dist/ssr';
 import type { AppConfig, Task } from '@/app-config';
-import { ConseilsTabContent } from '@/components/app/conseils-tab-content';
 import { ConsigneTabContent } from '@/components/app/consigne-tab-content';
 import { ConversationTabContent } from '@/components/app/conversation-tab-content';
 import { TimerDisplay } from '@/components/app/timer-display';
@@ -22,7 +21,7 @@ import { useCountdown } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { useRealtimeExam } from '@/providers/realtime-exam-provider';
 
-type SessionTab = 'consigne' | 'conseils' | 'conversation';
+type SessionTab = 'consigne' | 'conversation';
 
 interface SessionViewProps {
   appConfig: AppConfig;
@@ -192,7 +191,6 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const exam = useRealtimeExam();
   const { secondsLeft } = useCountdown(exam.timeUpAt, exam.onTimeUp);
   const [sessionTab, setSessionTab] = useState<SessionTab>('consigne');
-  const [viewingPreviousIndex, setViewingPreviousIndex] = useState<number | null>(null);
   const [compactSessionFooter, setCompactSessionFooter] = useState(false);
   const [showEvaluatorFooterCaption, setShowEvaluatorFooterCaption] = useState(false);
 
@@ -200,18 +198,10 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const isTache2 = selectedTask?.taskType === 'tache2';
   const isTache3 = selectedTask?.taskType === 'tache3';
 
-  const displayReport = exam.report ?? exam.reportStreaming;
-  const isReviewPhase = exam.sessionEnded && !!exam.report;
-  const isPreparingReport =
-    exam.sessionEnded && !exam.report && !exam.reportStreaming && !exam.reportDeliveryError;
-  const isMicEnabled = !exam.sessionEnded || isReviewPhase;
+  const isMicEnabled = !exam.sessionEnded;
   const canUseMicShortcut = isMicEnabled && exam.isConnected;
 
-  const showMicHint =
-    (isTache1 || isTache2 || isTache3) &&
-    !exam.sessionEnded &&
-    !isPreparingReport &&
-    !exam.micEnabled;
+  const showMicHint = (isTache1 || isTache2 || isTache3) && !exam.sessionEnded && !exam.micEnabled;
 
   const announcementText =
     exam.exerciseData?.description || selectedTask?.description || 'Description de la tâche';
@@ -223,34 +213,16 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   }, [exam]);
 
   useEffect(() => {
-    setViewingPreviousIndex(null);
     setSessionTab('consigne');
   }, [exam.restartSequence]);
 
-  useEffect(() => {
-    const showReportTab =
-      (exam.reportStreaming != null && exam.reportStreaming.length > 0) ||
-      (exam.sessionEnded && !exam.report && !exam.reportStreaming && !exam.reportDeliveryError) ||
-      exam.report != null;
-    if (showReportTab) {
-      setSessionTab('conseils');
-    }
-  }, [exam.report, exam.reportStreaming, exam.reportDeliveryError, exam.sessionEnded]);
-
   /* Intentionally avoid depending on the whole `exam` object (context value) to limit re-runs. */
   useEffect(() => {
-    if (exam.sessionEnded && !exam.report) {
+    if (exam.sessionEnded) {
       exam.setMicEnabled(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- granular deps above
-  }, [exam.sessionEnded, exam.report, exam.setMicEnabled]);
-
-  useEffect(() => {
-    if (isReviewPhase) {
-      exam.setMicEnabled(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- granular deps above
-  }, [isReviewPhase, exam.setMicEnabled]);
+  }, [exam.sessionEnded, exam.setMicEnabled]);
 
   useEffect(() => {
     if (!canUseMicShortcut) return;
@@ -371,9 +343,6 @@ export function SessionView({ selectedTask }: SessionViewProps) {
               <TabsTrigger value="consigne" className="min-w-0 flex-1 sm:flex-none sm:px-5">
                 Consigne
               </TabsTrigger>
-              <TabsTrigger value="conseils" className="min-w-0 flex-1 sm:flex-none sm:px-5">
-                Conseils
-              </TabsTrigger>
               <TabsTrigger value="conversation" className="min-w-0 flex-1 sm:flex-none sm:px-5">
                 Conversation
               </TabsTrigger>
@@ -452,21 +421,6 @@ export function SessionView({ selectedTask }: SessionViewProps) {
                 announcementText={announcementText}
                 showExerciseSkeleton={showExerciseSkeleton}
                 showMicHint={showMicHint}
-              />
-            </TabsContent>
-
-            <TabsContent
-              value="conseils"
-              className="mt-0 min-h-0 flex-1 overflow-y-auto px-3 pt-0 pb-3 outline-none sm:px-4 sm:pb-4"
-            >
-              <ConseilsTabContent
-                report={displayReport}
-                previousReports={exam.previousReports}
-                isPreparingReport={isPreparingReport}
-                reportDeliveryError={exam.reportDeliveryError}
-                isReviewPhase={isReviewPhase}
-                viewingPreviousIndex={viewingPreviousIndex}
-                onSetViewingPreviousIndex={setViewingPreviousIndex}
               />
             </TabsContent>
 

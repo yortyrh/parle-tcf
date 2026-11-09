@@ -18,6 +18,7 @@ Earlier history of the web app (in French) lives in [`apps/web/CHANGELOG.md`](./
 - Cost estimate per attempt, daily-minutes and monthly-cost limits (`LIMIT_REACHED`).
 
 ### Changed
+- The examiner no longer writes a report (`envoiRapport`) nor coaches after the task; `finSession` closes the task and the separate corrector evaluates it.
 - The exercise bank moved from SQLite to PostgreSQL; `generate-db` is replaced by `db:seed`.
 - Sessions are minted with the signed-in user's key; `OPENAI_API_KEY` is no longer read by the API.
 
