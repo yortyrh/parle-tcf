@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: parle
       POSTGRES_DB: parle
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - parle-tcf-pgdata:/var/lib/postgresql/data
     networks:
