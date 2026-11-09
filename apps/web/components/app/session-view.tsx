@@ -18,7 +18,7 @@ import { ConversationTabContent } from '@/components/app/conversation-tab-conten
 import { TimerDisplay } from '@/components/app/timer-display';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useSessionTimer } from '@/hooks';
+import { useCountdown } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { useRealtimeExam } from '@/providers/realtime-exam-provider';
 
@@ -190,7 +190,7 @@ function SpeakingIndicator({
 
 export function SessionView({ selectedTask }: SessionViewProps) {
   const exam = useRealtimeExam();
-  const { elapsedSeconds, resetTimer } = useSessionTimer();
+  const { secondsLeft } = useCountdown(exam.timeUpAt, exam.onTimeUp);
   const [sessionTab, setSessionTab] = useState<SessionTab>('consigne');
   const [viewingPreviousIndex, setViewingPreviousIndex] = useState<number | null>(null);
   const [compactSessionFooter, setCompactSessionFooter] = useState(false);
@@ -223,10 +223,9 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   }, [exam]);
 
   useEffect(() => {
-    resetTimer();
     setViewingPreviousIndex(null);
     setSessionTab('consigne');
-  }, [exam.restartSequence, resetTimer]);
+  }, [exam.restartSequence]);
 
   useEffect(() => {
     const showReportTab =
@@ -340,7 +339,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
     />
   );
 
-  const footerTimer = <TimerDisplay elapsedSeconds={elapsedSeconds} compact />;
+  const footerTimer = <TimerDisplay remainingSeconds={secondsLeft ?? 0} compact />;
 
   const canSwitchExercise =
     exam.orderedExerciseIds.length > 0 && !exam.isConnecting && !exam.isRestarting;

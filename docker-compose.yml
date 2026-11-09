@@ -1,11 +1,46 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: parle-tcf-postgres
+    environment:
+      POSTGRES_USER: parle
+      POSTGRES_PASSWORD: parle
+      POSTGRES_DB: parle
+    ports:
+      - "5432:5432"
+    volumes:
+      - parle-tcf-pgdata:/var/lib/postgresql/data
+    networks:
+      - parle-tcf-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parle -d parle"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Local SMTP sink for verification and password-reset emails (UI on :8025).
+  mailpit:
+    image: axllent/mailpit:v1.33.0
+    container_name: parle-tcf-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - parle-tcf-network
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     container_name: parle-tcf-api
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://parle:parle@postgres:5432/parle
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (32+ chars)}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3001}
+      - WEB_URL=${WEB_URL:-http://localhost:3000}
+      - ENCRYPTION_KEYS=${ENCRYPTION_KEYS:?set ENCRYPTION_KEYS (v1:<base64 32 bytes>)}
+      - ENCRYPTION_KEY_CURRENT=${ENCRYPTION_KEY_CURRENT:-v1}
+      - SMTP_URL=${SMTP_URL:-smtp://mailpit:1025}
       - PORT=3001
       - NODE_ENV=production
       - CORS_ORIGINS=http://localhost:3000,http://web:3000
@@ -13,6 +48,9 @@ services:
       - ./apps/api/config:/app/apps/api/config:ro
     ports:
       - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - parle-tcf-network
@@ -50,6 +88,9 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  parle-tcf-pgdata:
 
 networks:
   parle-tcf-network:

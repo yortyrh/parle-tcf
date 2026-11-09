@@ -1,140 +1,99 @@
-import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
-import Database from "better-sqlite3";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { eq, exercises, sql, type Database } from "@parle-tcf/db";
 import type { TaskType } from "@parle-tcf/shared";
-import { getApiConfigDir } from "../paths.js";
+import { DATABASE } from "../database/database.tokens.js";
 
 export interface TcfExerciseRow {
   id: string;
-  taskType: "Tâche 2" | "Tâche 3";
+  task: number;
   content: string;
-  consigne?: string;
   url?: string;
   imageUrl?: string;
-  imagePath?: string;
   isImageBased: boolean;
 }
 
-interface ExerciseRow {
-  id: string;
-  taskType: string;
-  content: string;
-  url: string | null;
-  imageUrl: string | null;
-  imagePath: string | null;
-  isImageBased: number;
+/** Id of the fixed row standing for the Tâche 1 interview (see the seed). */
+export const TACHE1_EXERCISE_ID = "t1-entretien";
+
+const TASK_NUMBER: Record<TaskType, number> = {
+  tache1: 1,
+  tache2: 2,
+  tache3: 3,
+};
+
+export function taskNumber(taskType: TaskType): number {
+  return TASK_NUMBER[taskType];
 }
 
 @Injectable()
-export class ExerciseService implements OnModuleDestroy {
+export class ExerciseService {
   private readonly logger = new Logger(ExerciseService.name);
-  private db: Database.Database | null = null;
 
-  private getConfigDir(): string {
-    return getApiConfigDir();
-  }
+  constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  private getDb(): Database.Database {
-    if (!this.db) {
-      const dbPath = join(this.getConfigDir(), "tcf-exercises.db");
-      if (!existsSync(dbPath)) {
-        this.logger.warn(`SQLite not found at ${dbPath}; run pnpm generate-db`);
-      }
-      this.db = new Database(dbPath, { readonly: true, fileMustExist: false });
-    }
-    return this.db;
-  }
-
-  onModuleDestroy(): void {
-    this.db?.close();
-    this.db = null;
-  }
-
-  private rowToExercise(row: ExerciseRow): TcfExerciseRow {
+  private toRow(row: typeof exercises.$inferSelect): TcfExerciseRow {
     const exercise: TcfExerciseRow = {
       id: row.id,
-      taskType: row.taskType as "Tâche 2" | "Tâche 3",
-      content: row.content,
-      isImageBased: row.isImageBased === 1,
+      task: row.task,
+      content: row.prompt,
+      isImageBased: row.isImageBased,
     };
-    if (row.url) exercise.url = row.url;
+    if (row.sourceUrl) exercise.url = row.sourceUrl;
     if (row.imageUrl) exercise.imageUrl = row.imageUrl;
-    if (row.imagePath) exercise.imagePath = row.imagePath;
     return exercise;
   }
 
-  getRandomTcfExercise(taskType: "tache2" | "tache3"): TcfExerciseRow | null {
-    try {
-      const label = taskType === "tache2" ? "Tâche 2" : "Tâche 3";
-      const stmt = this.getDb().prepare<[string], ExerciseRow>(
-        "SELECT * FROM exercises WHERE taskType = ? ORDER BY RANDOM() LIMIT 1",
-      );
-      const row = stmt.get(label);
-      if (!row) {
-        this.logger.warn(`No exercises found for ${taskType}`);
-        return null;
-      }
-      return this.rowToExercise(row);
-    } catch (e) {
-      this.logger.error(`getRandomTcfExercise ${taskType}`, e);
+  async getRandomTcfExercise(
+    taskType: "tache2" | "tache3",
+  ): Promise<TcfExerciseRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(exercises)
+      .where(eq(exercises.task, taskNumber(taskType)))
+      .orderBy(sql`random()`)
+      .limit(1);
+    if (!row) {
+      this.logger.warn(`No exercises found for ${taskType}; run pnpm db:seed`);
       return null;
     }
+    return this.toRow(row);
   }
 
-  listOrderedExerciseIds(taskType: TaskType): string[] {
-    if (taskType === "tache1") {
-      return [];
-    }
-    if (taskType === "tache2" || taskType === "tache3") {
-      const label = taskType === "tache2" ? "Tâche 2" : "Tâche 3";
-      try {
-        const stmt = this.getDb().prepare<[string], { id: string }>(
-          "SELECT id FROM exercises WHERE taskType = ? ORDER BY LENGTH(id), id",
-        );
-        const rows = stmt.all(label);
-        return rows.map((r) => r.id);
-      } catch (e) {
-        this.logger.error(`listOrderedExerciseIds ${taskType}`, e);
-        return [];
-      }
-    }
-    return [];
+  /** Ids of a task's bank in a stable order (used by the "next exercise" navigation). */
+  async listOrderedExerciseIds(taskType: TaskType): Promise<string[]> {
+    if (taskType === "tache1") return [];
+    const rows = await this.db
+      .select({ id: exercises.id })
+      .from(exercises)
+      .where(eq(exercises.task, taskNumber(taskType)))
+      .orderBy(sql`length(${exercises.id})`, exercises.id);
+    return rows.map((r) => r.id);
   }
 
-  getExerciseById(id: string): TcfExerciseRow | null {
-    try {
-      const stmt = this.getDb().prepare<[string], ExerciseRow>(
-        "SELECT * FROM exercises WHERE id = ?",
-      );
-      const row = stmt.get(id);
-      if (!row) return null;
-      return this.rowToExercise(row);
-    } catch (e) {
-      this.logger.error(`getExerciseById ${id}`, e);
-      return null;
-    }
+  async getExerciseById(id: string): Promise<TcfExerciseRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(exercises)
+      .where(eq(exercises.id, id))
+      .limit(1);
+    return row ? this.toRow(row) : null;
   }
 
-  resolveExerciseForTask(
+  /**
+   * Picks the exercise for a task. A requested id must belong to that task;
+   * otherwise it is ignored (null) rather than silently serving another one.
+   */
+  async resolveExerciseForTask(
     taskType: TaskType,
     exerciseId?: string,
-  ): TcfExerciseRow | null {
+  ): Promise<TcfExerciseRow | null> {
     if (taskType === "tache1") {
-      return null;
+      return this.getExerciseById(TACHE1_EXERCISE_ID);
     }
-    if (taskType === "tache2") {
-      const ex = exerciseId
-        ? this.getExerciseById(exerciseId)
-        : this.getRandomTcfExercise("tache2");
-      return ex;
+    if (exerciseId) {
+      const found = await this.getExerciseById(exerciseId);
+      return found && found.task === taskNumber(taskType) ? found : null;
     }
-    if (taskType === "tache3") {
-      const ex = exerciseId
-        ? this.getExerciseById(exerciseId)
-        : this.getRandomTcfExercise("tache3");
-      return ex;
-    }
-    return null;
+    return this.getRandomTcfExercise(taskType);
   }
 }

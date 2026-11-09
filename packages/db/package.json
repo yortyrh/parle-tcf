@@ -1,0 +1,64 @@
+{
+  "name": "@parle-tcf/db",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "testing": [
+        "./dist/testing.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate && prettier --write --log-level warn migrations",
+    "db:migrate": "node --env-file-if-exists=../../apps/api/.env dist/migrate.js",
+    "db:seed": "node --env-file-if-exists=../../apps/api/.env dist/seed-exercises.js"
+  },
+  "dependencies": {
+    "csv-parse": "^5.6.0",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "@eslint/js": "^9.21.0",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.0",
+    "drizzle-kit": "^0.31.5",
+    "eslint": "^9.21.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.25.0",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "@electric-sql/pglite": ">=0.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@electric-sql/pglite": {
+      "optional": true
+    }
+  }
+}

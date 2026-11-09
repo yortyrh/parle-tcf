@@ -2,9 +2,15 @@ import { z } from "zod";
 
 export const taskTypeSchema = z.enum(["tache1", "tache2", "tache3"]);
 
+export const attemptModeSchema = z.enum(["practice", "full"]);
+
 export const createExamSessionInputSchema = z.object({
   taskType: taskTypeSchema,
   exerciseId: z.string().optional(),
+  /** `full` chains the three tasks of an exam under one run. */
+  mode: attemptModeSchema.default("practice"),
+  /** Existing run to attach to (full mode, tasks 2 and 3). */
+  runId: z.string().uuid().optional(),
 });
 
 export const exerciseDataPayloadSchema = z.object({
@@ -26,12 +32,20 @@ export const agentConfigForClientSchema = z.object({
 export const createExamSessionOutputSchema = z.object({
   clientSecret: z.string(),
   sessionId: z.string(),
+  /** Persisted attempt this session records into. */
+  attemptId: z.string().uuid(),
+  runId: z.string().uuid().nullable(),
   exerciseData: exerciseDataPayloadSchema,
   agentConfig: agentConfigForClientSchema,
   /** Ordered exercise ids for this task type (empty for tache1). Enables next/random navigation in the client. */
   orderedExerciseIds: z.array(z.string()).optional(),
 });
 
+export type AttemptMode = z.infer<typeof attemptModeSchema>;
+/** Input as sent by clients (defaults not yet applied). */
+export type CreateExamSessionRequest = z.input<
+  typeof createExamSessionInputSchema
+>;
 export type CreateExamSessionInput = z.infer<
   typeof createExamSessionInputSchema
 >;

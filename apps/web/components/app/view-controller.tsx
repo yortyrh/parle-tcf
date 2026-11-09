@@ -4,6 +4,7 @@ import type { MutableRefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { AppConfig, Task } from '@/app-config';
+import { PreparationView } from '@/components/app/preparation-view';
 import { SessionView } from '@/components/app/session-view';
 import { WelcomeView } from '@/components/app/welcome-view';
 import { useRealtimeExam } from '@/providers/realtime-exam-provider';
@@ -48,9 +49,15 @@ export function ViewController({
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      // Also lets the auto-connect effect run again when React StrictMode remounts.
+      autoConnectAttemptKeyRef.current = null;
       void endRef.current();
     };
   }, []);
+
+  useEffect(() => {
+    if (exam.needsProviderKey) router.push('/parametres');
+  }, [exam.needsProviderKey, router]);
 
   useEffect(() => {
     if (exam.isConnected) {
@@ -107,6 +114,16 @@ export function ViewController({
     void startSession(initialTaskType, initialExerciseId);
   }, [initialTaskType, initialExerciseId, exam.isConnected, exam.isConnecting, startSession]);
 
+  if (exam.preparation) {
+    return (
+      <PreparationView
+        secondsLeft={exam.preparation.secondsLeft}
+        exerciseText={exam.exerciseData?.content || exam.exerciseData?.description || ''}
+        onSkip={exam.skipPreparation}
+      />
+    );
+  }
+
   if (!exam.isConnected) {
     if (exam.isConnecting || exam.isRestarting) {
       return <ConnectingSkeleton />;
@@ -125,7 +142,7 @@ export function ViewController({
   return <SessionView appConfig={appConfig} selectedTask={selectedTask} />;
 }
 
-function ConnectingSkeleton() {
+export function ConnectingSkeleton() {
   return (
     <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-b from-slate-100/70 via-slate-50/40 to-white p-2 sm:p-4">
       <div className="border-border/70 bg-card/95 relative flex h-full w-full max-w-3xl animate-pulse flex-col overflow-hidden rounded-xl border border-solid shadow-xl ring-1 ring-black/5 backdrop-blur sm:rounded-2xl">

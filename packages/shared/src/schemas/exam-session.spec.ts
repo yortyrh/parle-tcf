@@ -17,6 +17,19 @@ describe("createExamSessionInputSchema", () => {
   it("makes exerciseId optional", () => {
     expect(createExamSessionInputSchema.parse({ taskType: "tache1" })).toEqual({
       taskType: "tache1",
+      mode: "practice",
     });
+  });
+});
+
+describe("TASK_DURATIONS", () => {
+  it("matches the official TCF Canada times", async () => {
+    const { TASK_DURATIONS } = await import("../task-types");
+    expect(TASK_DURATIONS.tache1).toEqual({ preparationS: 0, speakingS: 120 });
+    expect(TASK_DURATIONS.tache2).toEqual({
+      preparationS: 120,
+      speakingS: 210,
+    });
+    expect(TASK_DURATIONS.tache3).toEqual({ preparationS: 0, speakingS: 270 });
   });
 });

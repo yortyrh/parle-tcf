@@ -1,3 +1,3 @@
 export { useRealtimeExamFatalToast } from './useRealtimeExamFatalToast';
-export { useSessionTimer } from './useTimerControls';
+export { useCountdown } from './useCountdown';
 export { useDebugMode } from './useDebug';

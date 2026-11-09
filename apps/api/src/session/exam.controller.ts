@@ -1,19 +1,23 @@
-import { Controller } from "@nestjs/common";
+import { Controller, Req, UseGuards } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
-import type { CreateExamSessionInput } from "@parle-tcf/shared";
+import { currentUserId } from "../auth/current-user.js";
+import {
+  type AuthenticatedRequest,
+  SessionAuthGuard,
+} from "../auth/session-auth.guard.js";
 import { createExamSessionProcedure } from "../contract/exam.contract.js";
 import { ExamSessionService } from "./exam-session.service.js";
 
 @Controller()
+@UseGuards(SessionAuthGuard)
 export class ExamController {
   constructor(private readonly examSession: ExamSessionService) {}
 
   @Implement(createExamSessionProcedure)
-  createExamSession() {
-    return implement(createExamSessionProcedure).handler(
-      async ({ input }: { input: CreateExamSessionInput }) => {
-        return this.examSession.createSession(input);
-      },
+  createExamSession(@Req() req: AuthenticatedRequest) {
+    const userId = currentUserId(req);
+    return implement(createExamSessionProcedure).handler(({ input }) =>
+      this.examSession.createSession(userId, input),
     );
   }
 }

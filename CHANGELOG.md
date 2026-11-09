@@ -6,6 +6,18 @@ Earlier history of the web app (in French) lives in [`apps/web/CHANGELOG.md`](./
 
 ## [Unreleased]
 
+### Added
+- Accounts (Better Auth: email/password, optional GitHub/Google) with email verification and password reset.
+- Per-user OpenAI API key, encrypted with AES-256-GCM (versioned master keys, `rotate-keys` script); settings page with connection test.
+- PostgreSQL persistence (`@parle-tcf/db`, Drizzle): exercise bank seed, exam runs, attempts and transcripts, scoped by user.
+- Official task timers (countdown), tâche 2 preparation, and a full-exam mode chaining the three tasks.
+- Transcript autosave (checkpoints) and save on task completion.
+
+### Changed
+- The exercise bank moved from SQLite to PostgreSQL; `generate-db` is replaced by `db:seed`.
+- Sessions are minted with the signed-in user's key; `OPENAI_API_KEY` is no longer read by the API.
+
+
 ### Changed
 
 - Renamed the project to **parle-tcf** and the workspace scope to `@parle-tcf/*`.

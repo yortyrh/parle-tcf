@@ -3,36 +3,42 @@
 import { cn } from '@/lib/utils';
 
 interface TimerDisplayProps {
-  elapsedSeconds: number;
+  /** Seconds left on the official speaking time. */
+  remainingSeconds: number;
   className?: string;
   compact?: boolean;
 }
 
 /**
- * Displays session elapsed time as MM:SS (counting up).
+ * Displays the time left as MM:SS (counting down). Turns red in the last
+ * 30 seconds so the candidate can wrap up.
  */
-export function TimerDisplay({ elapsedSeconds, className, compact }: TimerDisplayProps) {
-  const minutes = Math.floor(elapsedSeconds / 60);
-  const seconds = elapsedSeconds % 60;
+export function TimerDisplay({ remainingSeconds, className, compact }: TimerDisplayProps) {
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  const urgent = remainingSeconds <= 30;
 
   return (
     <div
+      role="timer"
+      aria-label="Temps restant"
       className={cn(
         'flex items-center rounded-lg border bg-white/90 shadow-md backdrop-blur',
         compact ? 'border px-2 py-1 sm:px-2.5 sm:py-1.5' : 'px-4 py-2.5 sm:px-5 sm:py-3',
-        'border-primary/30 bg-primary/10',
+        urgent ? 'border-destructive/40 bg-destructive/10' : 'border-primary/30 bg-primary/10',
         className
       )}
     >
       <div className="flex items-center gap-2">
         {!compact && (
           <span className="text-[10px] font-medium tracking-wider text-gray-500 uppercase sm:text-xs">
-            Session
+            Temps restant
           </span>
         )}
         <span
           className={cn(
-            'text-primary font-mono font-bold tabular-nums',
+            'font-mono font-bold tabular-nums',
+            urgent ? 'text-destructive' : 'text-primary',
             compact ? 'text-base sm:text-lg' : 'text-2xl sm:text-3xl'
           )}
         >

@@ -10,13 +10,13 @@ graph TD
   Web --> API[NestJS apps/api]
   Web <--> OAI[OpenAI Realtime API - WebRTC]
   API --> OAI
-  API --> DB[(SQLite + YAML config)]
+  API --> DB[(PostgreSQL + YAML config)]
 ```
 
 ### Session flow
 
 1. The browser calls `POST …/exam/session/create` (input and output typed by `@parle-tcf/shared`).
-2. The API loads the task YAML and the exercise (SQLite), calls `POST /v1/realtime/client_secrets`, and returns `clientSecret`, the exercise payload and the agent config (instructions, greeting, model, voice).
+2. The API loads the task YAML and the exercise (PostgreSQL), decrypts the signed-in user's own API key, calls `POST /v1/realtime/client_secrets`, and returns `clientSecret`, the exercise payload and the agent config (instructions, greeting, model, voice).
 3. The client creates a `RealtimeSession` (`@openai/agents/realtime`) over WebRTC. The tools `finSession`, `envoiRapport` and `recommencerTest` run **in the browser** and drive the UI.
 4. The report streams from transport events (partial `function_call` for `envoiRapport`) and is final when the tool runs. Nothing is persisted server-side yet.
 
@@ -37,13 +37,13 @@ Environment: see `apps/web/.env.example` (`NEXT_PUBLIC_EXAM_API_URL`).
 
 - **Bootstrap**: `src/main.ts` — CORS (`CORS_ORIGINS`), `PORT` (default 3001).
 - **Exam session**: `src/session/` — OpenAI `client_secret` minting and config/exercise assembly.
-- **Data**: `src/exercise/exercise.service.ts` (SQLite, `config/tcf-exercises.db`), `src/config/exam-config.service.ts` (YAML and markdown under `apps/api/config/`).
+- **Data**: `src/exercise/exercise.service.ts` (Drizzle, table `exercises`; schema in `packages/db`), `src/config/exam-config.service.ts` (YAML and markdown under `apps/api/config/`).
 - **HTTP contract**: oRPC procedure exposed as `POST /exam/session/create` (`src/contract/`).
 - **Paths**: `src/paths.ts` resolves `apps/api/config` when `cwd` is the monorepo root (Docker).
 
 Environment: see `apps/api/.env.example` (`OPENAI_API_KEY`, `PORT`, `CORS_ORIGINS`). Optional: `OPENAI_REALTIME_MODEL` overrides the Realtime model when `service.yml` sets `llm.model` to `realtime` (see `ExamSessionService.resolveRealtimeModel`).
 
-Content script (run from `apps/api`): `generate-db` rebuilds the SQLite bank from `config/tcf-exercises.csv`.
+Content script: `pnpm --filter @parle-tcf/db db:seed` upserts `config/tcf-exercises.csv` into PostgreSQL (idempotent).
 
 ---
 

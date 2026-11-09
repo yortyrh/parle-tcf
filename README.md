@@ -1,6 +1,6 @@
 # parle-tcf — TCF speaking practice
 
-Monorepo (Turborepo + pnpm) for practising the **speaking test (expression orale) of the TCF** with an AI examiner. Voice runs over **OpenAI Realtime via direct WebRTC in the browser** (`@openai/agents`). A **NestJS API** mints the ephemeral `client_secret` and serves the exercise bank (SQLite) and the YAML prompts.
+Monorepo (Turborepo + pnpm) for practising the **speaking test (expression orale) of the TCF** with an AI examiner. Voice runs over **OpenAI Realtime via direct WebRTC in the browser** (`@openai/agents`). A **NestJS API** mints the ephemeral `client_secret` and serves the exercise bank (PostgreSQL) and the YAML prompts.
 
 > **Not official.** parle-tcf is an independent practice tool. It is not affiliated with, endorsed by, or connected to France Éducation international, and any level it shows is an estimate, not a TCF score.
 
@@ -47,7 +47,7 @@ For each service, set Railway **Root Directory** to empty (monorepo root), then 
 
 | Service | Role | Config file |
 | --- | --- | --- |
-| **API** | `client_secrets`, SQLite, YAML, CORS | `apps/api/railway.json` |
+| **API** | `client_secrets`, auth, PostgreSQL, YAML, CORS | `apps/api/railway.json` |
 | **Web** | UI, microphone, client-side Realtime session | `apps/web/railway.json` |
 
 ### Recommended order
@@ -105,7 +105,7 @@ Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` →
 | Script | Description |
 | --- | --- |
 | `dev` / `build` / `start` | NestJS |
-| `generate-db` | TCF CSV → SQLite (`config/tcf-exercises.db`) |
+| `db:seed` (`@parle-tcf/db`) | TCF CSV → PostgreSQL `exercises` table |
 | `lint`, `typecheck`, `format`, `test` | Quality |
 
 ### Web — `@parle-tcf/web` (`apps/web`)

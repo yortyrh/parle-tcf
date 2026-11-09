@@ -44,6 +44,17 @@ export function WelcomeView({
 
   return (
     <section className="relative flex w-full flex-col items-center justify-center overflow-y-auto p-3 text-center sm:p-6">
+      <nav
+        aria-label="Navigation principale"
+        className="absolute top-4 right-4 z-10 flex gap-4 text-sm"
+      >
+        <Link href="/examen" className="text-primary underline">
+          Examen complet
+        </Link>
+        <Link href="/parametres" className="text-muted-foreground hover:text-foreground underline">
+          Paramètres
+        </Link>
+      </nav>
       {homeHref && (
         <Link
           href={homeHref}

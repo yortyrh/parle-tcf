@@ -21,6 +21,7 @@
     "@radix-ui/react-toggle": "^1.1.9",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-virtual": "^3.13.23",
+    "better-auth": "^1.7.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "next": "15.5.14",
@@ -36,7 +37,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "vitest": "^3.2.4",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
@@ -51,6 +51,7 @@
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

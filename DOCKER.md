@@ -45,7 +45,7 @@ docker-compose up -d --build
 
 | Service | `railway.json` | Image |
 | --- | --- | --- |
-| **API** | `apps/api/railway.json` | Nest + `better-sqlite3` |
+| **API** | `apps/api/railway.json` | Nest + PostgreSQL (`DATABASE_URL`) |
 | **Web** | `apps/web/railway.json` | Next.js standalone |
 
 ### Typical sequence

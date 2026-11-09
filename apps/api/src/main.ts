@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import { toNodeHandler } from "better-auth/node";
 import dotenv from "dotenv";
-import { AppModule } from "./app.module.js";
 
 const _dir = dirname(fileURLToPath(import.meta.url));
 const localEnv = resolve(_dir, "..", ".env");
@@ -13,21 +13,27 @@ const rootEnv = resolve(_dir, "..", "..", "..", ".env");
 dotenv.config({ path: existsSync(localEnv) ? localEnv : rootEnv });
 
 async function bootstrap(): Promise<void> {
+  // Imported after dotenv so module-level env reads see the loaded values.
+  const { AppModule } = await import("./app.module.js");
+  const { AUTH_BASE_PATH, BETTER_AUTH } = await import("./auth/better-auth.js");
+  const { getEnv, parseCorsOrigins } = await import("./config/env.js");
+
+  const env = getEnv();
   const app = await NestFactory.create(AppModule, {
     logger: ["error", "warn", "log"],
   });
+  app.enableShutdownHooks();
 
-  const origins = process.env.CORS_ORIGINS?.split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  app.enableCors({
-    origin: origins && origins.length > 0 ? origins : true,
-    credentials: true,
-  });
+  app.enableCors({ origin: parseCorsOrigins(env), credentials: true });
 
-  const port = Number(process.env.PORT) || 3001;
-  await app.listen(port);
-  Logger.log(`listening on http://localhost:${port}`, "Bootstrap");
+  // Better Auth parses its own body, so it is mounted before Nest's parsers.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .all(`${AUTH_BASE_PATH}/*splat`, toNodeHandler(app.get(BETTER_AUTH)));
+
+  await app.listen(env.PORT);
+  Logger.log(`listening on http://localhost:${env.PORT}`, "Bootstrap");
 }
 
 void bootstrap();

@@ -1,15 +1,20 @@
 export type { TaskType } from "./task-types";
-export { TCF_TASK_TYPES } from "./task-types";
+export { TCF_TASK_TYPES, TASK_DURATIONS } from "./task-types";
 
-export {
-  taskTypeSchema,
-  createExamSessionInputSchema,
-  createExamSessionOutputSchema,
-  exerciseDataPayloadSchema,
-  agentConfigForClientSchema,
-} from "./schemas/exam-session";
-export type {
-  CreateExamSessionInput,
-  CreateExamSessionOutput,
-  ExerciseData,
-} from "./schemas/exam-session";
+export * from "./schemas/exam-session";
+export * from "./schemas/provider-settings";
+export * from "./schemas/attempts";
+
+/** HTTP route of every API procedure (all POST + JSON, cookie session). */
+export const API_ROUTES = {
+  sessionCreate: "/exam/session/create",
+  settingsGet: "/settings/get",
+  settingsUpsert: "/settings/upsert",
+  settingsDelete: "/settings/delete",
+  settingsTest: "/settings/test",
+  attemptsCheckpoint: "/attempts/checkpoint",
+  attemptsComplete: "/attempts/complete",
+  attemptsList: "/attempts/list",
+  attemptsGet: "/attempts/get",
+  attemptsDelete: "/attempts/delete",
+} as const;

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ORPCError } from "@orpc/server";
 import { randomUUID } from "node:crypto";
 import type {
@@ -6,9 +6,17 @@ import type {
   CreateExamSessionOutput,
   TaskType,
 } from "@parle-tcf/shared";
+import { AttemptsService } from "../attempts/attempts.service.js";
+import { ProviderSettingsService } from "../settings/provider-settings.service.js";
+import {
+  ProviderError,
+  VOICE_PROVIDER,
+  type VoiceProvider,
+} from "../providers/voice-provider.js";
 import { ExamConfigService } from "../config/exam-config.service.js";
 import {
   ExerciseService,
+  taskNumber,
   type TcfExerciseRow,
 } from "../exercise/exercise.service.js";
 
@@ -19,6 +27,9 @@ export class ExamSessionService {
   constructor(
     private readonly exercises: ExerciseService,
     private readonly examConfig: ExamConfigService,
+    private readonly settings: ProviderSettingsService,
+    private readonly attempts: AttemptsService,
+    @Inject(VOICE_PROVIDER) private readonly voiceProvider: VoiceProvider,
   ) {}
 
   private resolveRealtimeModel(serviceModel: string): string {
@@ -26,63 +37,6 @@ export class ExamSessionService {
       return serviceModel;
     }
     return process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-mini";
-  }
-
-  private async mintOpenAiClientSecret(params: {
-    model: string;
-    voice: string;
-  }): Promise<string> {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new ORPCError("INTERNAL_SERVER_ERROR", {
-        message: "OPENAI_API_KEY is not configured",
-      });
-    }
-
-    const body = {
-      session: {
-        type: "realtime",
-        model: params.model,
-        audio: {
-          output: { voice: params.voice },
-        },
-      },
-    };
-
-    const res = await fetch(
-      "https://api.openai.com/v1/realtime/client_secrets",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      },
-    );
-
-    const data = (await res.json()) as Record<string, unknown>;
-    if (!res.ok) {
-      this.logger.error("OpenAI client_secrets failed", data);
-      throw new ORPCError("BAD_GATEWAY", {
-        message: `OpenAI client_secrets: ${res.status}`,
-      });
-    }
-
-    const secret =
-      (typeof data.value === "string" && data.value) ||
-      (typeof (data as { client_secret?: { value?: string } }).client_secret
-        ?.value === "string" &&
-        (data as { client_secret: { value: string } }).client_secret.value);
-
-    if (!secret) {
-      this.logger.error("Unexpected client_secrets response", data);
-      throw new ORPCError("BAD_GATEWAY", {
-        message: "OpenAI client_secrets: missing ephemeral value",
-      });
-    }
-
-    return secret;
   }
 
   private buildExerciseData(
@@ -146,16 +100,33 @@ export class ExamSessionService {
   }
 
   async createSession(
+    userId: string,
     input: CreateExamSessionInput,
   ): Promise<CreateExamSessionOutput> {
-    const { taskType, exerciseId } = input;
+    const { taskType, exerciseId, mode, runId } = input;
     const agentYaml = this.examConfig.loadAgentConfig(taskType);
     const serviceYaml = this.examConfig.loadServiceConfig();
 
-    const tcf = this.exercises.resolveExerciseForTask(taskType, exerciseId);
+    // Fails fast with PROVIDER_NOT_CONFIGURED before any other work.
+    const provider = await this.settings.getConfigForUser(userId);
+
+    if (provider.provider !== "openai") {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Ce fournisseur n'est pas encore pris en charge.",
+      });
+    }
+
+    const tcf = await this.exercises.resolveExerciseForTask(
+      taskType,
+      exerciseId,
+    );
+    if (exerciseId && !tcf) {
+      throw new ORPCError("NOT_FOUND", { message: "Exercice introuvable." });
+    }
 
     const exerciseData = this.buildExerciseData(taskType, tcf);
-    const orderedExerciseIds = this.exercises.listOrderedExerciseIds(taskType);
+    const orderedExerciseIds =
+      await this.exercises.listOrderedExerciseIds(taskType);
     const contentForInstructions =
       taskType === "tache1"
         ? this.examConfig.loadInfoMarkdown("questions-tache1-entretien.md")
@@ -169,16 +140,44 @@ export class ExamSessionService {
       contentForInstructions,
     );
 
-    const voice = serviceYaml.llm.voice;
-    const model = this.resolveRealtimeModel(serviceYaml.llm.model);
+    const voice = provider.voice ?? serviceYaml.llm.voice;
+    const model = this.resolveRealtimeModel(
+      provider.realtimeModel ?? serviceYaml.llm.model,
+    );
 
-    const clientSecret = await this.mintOpenAiClientSecret({ model, voice });
+    let clientSecret: string;
+    try {
+      clientSecret = await this.voiceProvider.mintClientSecret(
+        provider.apiKey,
+        { model, voice },
+      );
+    } catch (error) {
+      if (error instanceof ProviderError) {
+        throw new ORPCError(
+          error.status === 401 ? "PROVIDER_KEY_REJECTED" : "BAD_GATEWAY",
+          {
+            status: error.status === 401 ? 422 : 502,
+            message: error.message,
+          },
+        );
+      }
+      throw error;
+    }
 
-    const sessionId = randomUUID();
+    const attempt = await this.attempts.create({
+      userId,
+      mode,
+      runId: runId ?? null,
+      exerciseId: tcf?.id ?? null,
+      task: taskNumber(taskType),
+      model,
+    });
 
     return {
       clientSecret,
-      sessionId,
+      sessionId: randomUUID(),
+      attemptId: attempt.id,
+      runId: attempt.runId,
       exerciseData,
       orderedExerciseIds,
       agentConfig: {

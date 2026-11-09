@@ -43,12 +43,12 @@ See [apps/api/config/SERVICE_CONFIG.md](./apps/api/config/SERVICE_CONFIG.md) for
 ## Exercise database (Tâches 2 and 3)
 
 - CSV source: **`apps/api/config/tcf-exercises.csv`** (columns `id,taskType,content,url,imageUrl,imagePath,isImageBased`)
-- Runtime SQLite: **`apps/api/config/tcf-exercises.db`**
+- Runtime store: PostgreSQL table **`exercises`**
 
 After changing the CSV:
 
 ```bash
-pnpm --filter @parle-tcf/api run generate-db
+pnpm --filter @parle-tcf/db db:seed
 ```
 
 ---
