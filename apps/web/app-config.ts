@@ -1,4 +1,4 @@
-import type { TaskType } from '@yorty-tcf/shared';
+import type { TaskType } from '@parle-tcf/shared';
 
 export interface Task {
   id: number | string;

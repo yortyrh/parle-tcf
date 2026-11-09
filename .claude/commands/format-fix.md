@@ -1,28 +1,24 @@
 # Format Fix
 
-Automatically fix formatting and linting for the yorty-tcf-livekit monorepo.
+Automatically fix formatting and linting for the parle-tcf monorepo (api + web + shared).
 
-## Step 1 — Fix agent
+## Step 1 — Fix
 
-```bash
-cd yorty-tcf-livekit-agent && pnpm format && pnpm lint:fix
-```
-
-## Step 2 — Fix web
+From the repo root (Turborepo runs every package):
 
 ```bash
-cd yorty-tcf-livekit-web && pnpm format && pnpm lint
+pnpm format && pnpm lint
 ```
 
-> **Note**: web has no `lint:fix`, only `pnpm lint` (next lint). Web lint errors that cannot be fixed automatically will be listed.
+> **Note**: there is no `lint:fix` script. Lint errors that Prettier cannot fix are listed for manual intervention.
 
-## Step 3 — Summary
+## Step 2 — Summary
 
 - List files modified by formatting/linting
 - Display remaining errors that require manual intervention
 - Indicate whether the code is ready to be committed
 
-## Step 4 — Re-stage files
+## Step 3 — Re-stage files
 
 If files were already staged or modified:
 

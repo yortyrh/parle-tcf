@@ -1,4 +1,4 @@
-import type { CreateExamSessionInput, CreateExamSessionOutput } from '@yorty-tcf/shared';
+import type { CreateExamSessionInput, CreateExamSessionOutput } from '@parle-tcf/shared';
 
 function getExamApiBase(): string {
   const base = process.env.NEXT_PUBLIC_EXAM_API_URL;

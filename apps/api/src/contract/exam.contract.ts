@@ -2,7 +2,7 @@ import { oc, populateContractRouterPaths } from "@orpc/contract";
 import {
   createExamSessionInputSchema,
   createExamSessionOutputSchema,
-} from "@yorty-tcf/shared";
+} from "@parle-tcf/shared";
 
 export const createExamSessionProcedure = oc
   .route({ method: "POST", path: "/exam/session/create" })

@@ -2,7 +2,7 @@
 # Turborepo monorepo build for the NestJS exam API.
 # Build context MUST be the repository root.
 
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24
 
 # --- Stage 1: Prune ---
 FROM node:${NODE_VERSION}-slim AS pruner
@@ -10,7 +10,7 @@ FROM node:${NODE_VERSION}-slim AS pruner
 RUN npm install -g pnpm@10 turbo@^2
 WORKDIR /app
 COPY . .
-RUN turbo prune @yorty-tcf/api --docker
+RUN turbo prune @parle-tcf/api --docker
 
 # --- Stage 2: Install ---
 FROM node:${NODE_VERSION}-slim AS installer
@@ -37,7 +37,7 @@ WORKDIR /app
 
 COPY --from=installer /app/ .
 COPY --from=pruner /app/out/full/ .
-RUN turbo run build --filter=@yorty-tcf/api
+RUN turbo run build --filter=@parle-tcf/api
 
 # --- Stage 4: Runner ---
 FROM node:${NODE_VERSION}-slim AS runner

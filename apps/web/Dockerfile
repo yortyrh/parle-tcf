@@ -2,15 +2,15 @@
 # Turborepo monorepo build for the Next.js web application.
 # Build context MUST be the repository root.
 
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24
 
-# --- Stage 1: Prune the monorepo to only what @yorty-tcf/web needs ---
+# --- Stage 1: Prune the monorepo to only what @parle-tcf/web needs ---
 FROM node:${NODE_VERSION}-alpine AS pruner
 
 RUN npm install -g pnpm@10 turbo@^2
 WORKDIR /app
 COPY . .
-RUN turbo prune @yorty-tcf/web --docker
+RUN turbo prune @parle-tcf/web --docker
 
 # --- Stage 2: Install dependencies ---
 FROM node:${NODE_VERSION}-alpine AS installer
@@ -35,7 +35,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Browser must know the public API URL at build time (inlined into the client bundle).
 ARG NEXT_PUBLIC_EXAM_API_URL=http://localhost:3001
 ENV NEXT_PUBLIC_EXAM_API_URL=$NEXT_PUBLIC_EXAM_API_URL
-RUN turbo run build --filter=@yorty-tcf/web
+RUN turbo run build --filter=@parle-tcf/web
 
 # --- Stage 4: Production runner ---
 FROM node:${NODE_VERSION}-alpine AS runner

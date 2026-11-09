@@ -70,7 +70,7 @@ docker-compose up -d --build
 
 ## Images
 
-- `apps/api/Dockerfile` — `turbo prune @yorty-tcf/api`, Nest build, `CMD node apps/api/dist/main.js`
-- `apps/web/Dockerfile` — `turbo prune @yorty-tcf/web`, Next standalone build, `ARG NEXT_PUBLIC_EXAM_API_URL`
+- `apps/api/Dockerfile` — `turbo prune @parle-tcf/api`, Nest build, `CMD node apps/api/dist/main.js`
+- `apps/web/Dockerfile` — `turbo prune @parle-tcf/web`, Next standalone build, `ARG NEXT_PUBLIC_EXAM_API_URL`
 
 Functional overview: [AGENTS.md](./AGENTS.md).

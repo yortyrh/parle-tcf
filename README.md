@@ -1,14 +1,16 @@
-# TCF/TEF — Oral exam practice platform
+# parle-tcf — TCF speaking practice
 
-Monorepo (Turborepo + pnpm) for TCF/TEF oral exam simulations with an AI examiner: **OpenAI Realtime over direct WebRTC in the browser** (`@openai/agents`), a **NestJS API** for secrets and data (SQLite exercises, YAML), and **optional Socket.io** for multi-tab scenarios.
+Monorepo (Turborepo + pnpm) for practising the **speaking test (expression orale) of the TCF** with an AI examiner. Voice runs over **OpenAI Realtime via direct WebRTC in the browser** (`@openai/agents`). A **NestJS API** mints the ephemeral `client_secret` and serves the exercise bank (SQLite) and the YAML prompts.
+
+> **Not official.** parle-tcf is an independent practice tool. It is not affiliated with, endorsed by, or connected to France Éducation international, and any level it shows is an estimate, not a TCF score.
 
 ## Project layout
 
 | Package | Role |
 | --- | --- |
 | **`apps/web`** | Next.js 15 — candidate UI, Realtime session, microphone, transcripts, report. |
-| **`apps/api`** | NestJS — OpenAI `client_secrets`, config/exercise loading, Socket.io gateway. |
-| **`packages/shared`** | Types, Zod schemas (session), socket events — `tsc` build → `dist/`. |
+| **`apps/api`** | NestJS — OpenAI `client_secrets`, YAML prompts and exercise loading (oRPC contract). |
+| **`packages/shared`** | Task types and Zod schemas for the session contract — `tsc` build → `dist/`. |
 
 ## Quick start (Docker Compose)
 
@@ -27,7 +29,7 @@ cp .env.example .env
 ### Run
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 - Web: **http://localhost** (host port 80 → container 3000).
@@ -39,23 +41,21 @@ The web image is built with `NEXT_PUBLIC_EXAM_API_URL` (see `docker-compose.yml`
 
 ## Railway
 
-### Target architecture
+Use **two** Railway services from the **same** Git repo: **API** (NestJS) and **Web** (Next.js). The Realtime examiner runs **in the browser** over WebRTC; the API only mints secrets and serves exercise data.
 
-Use **two** Railway services from the **same** Git repo: **API** (NestJS) and **Web** (Next.js). You do **not** need a third “agent” service: after the LiveKit decoupling, voice and the OpenAI Realtime agent run **in the browser** via WebRTC; the API only serves secrets, exercise data, and Socket.io.
-
-For each service, set Railway **Root Directory** to empty (monorepo root), then point to the config below (or the equivalent Dockerfile path):
+For each service, set Railway **Root Directory** to empty (monorepo root), then point to the config below:
 
 | Service | Role | Config file |
 | --- | --- | --- |
-| **API** | `client_secrets`, SQLite, YAML, CORS, Socket.io | `apps/api/railway.json` |
+| **API** | `client_secrets`, SQLite, YAML, CORS | `apps/api/railway.json` |
 | **Web** | UI, microphone, client-side Realtime session | `apps/web/railway.json` |
 
 ### Recommended order
 
 1. Create and deploy the **API** service; copy its public HTTPS URL (e.g. `https://xxx.up.railway.app`).
-2. Create the **Web** service with `NEXT_PUBLIC_EXAM_API_URL` set to that API URL (see below).
-3. On the **API**, set `CORS_ORIGINS` to the **Web** public URL (one or more origins, comma-separated). Without this, the browser blocks `fetch` from the front end.
-4. Rebuild **Web** if the API URL changes after the first build (the variable is fixed at **build** time for Next.js).
+2. Create the **Web** service with `NEXT_PUBLIC_EXAM_API_URL` set to that API URL.
+3. On the **API**, set `CORS_ORIGINS` to the **Web** public URL (comma-separated if several). Without it, the browser blocks the requests.
+4. Rebuild **Web** whenever the API URL changes: Next.js inlines the variable at **build** time.
 
 ### Variables per service
 
@@ -64,80 +64,63 @@ For each service, set Railway **Root Directory** to empty (monorepo root), then 
 | Variable | Required | Description |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Yes | Calls to `POST /v1/realtime/client_secrets` |
-| `CORS_ORIGINS` | Strongly recommended in prod | Front-end origins, e.g. `https://your-web.up.railway.app` (comma if several) |
+| `OPENAI_REALTIME_MODEL` | No | Realtime model when `service.yml` sets `llm.model: realtime` (default `gpt-realtime-mini`) |
+| `CORS_ORIGINS` | Strongly recommended in prod | Front-end origins, e.g. `https://your-web.up.railway.app` |
 | `PORT` | No | Railway often injects `PORT`; default 3001 locally |
 
-**Web service** — variables at **Docker / Railway build** time
+**Web service** — build-time variables
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `NEXT_PUBLIC_EXAM_API_URL` | Yes | **Public HTTPS** API URL as seen by the **browser** (not a Railway-internal-only URL for Internet clients) |
-
-The web Dockerfile accepts `NEXT_PUBLIC_EXAM_API_URL` as a build `ARG`; on Railway, define it on the **Web** service so it is passed into the build.
+| `NEXT_PUBLIC_EXAM_API_URL` | Yes | **Public HTTPS** API URL as seen by the **browser** |
 
 ---
 
 ## Local development (without Docker)
 
-From the repo root after `pnpm install`:
+Requires Node 24 (`.nvmrc`) and pnpm 10. From the repo root after `pnpm install`:
 
 | Command | Role |
 | --- | --- |
-| `pnpm dev` | Runs packages that expose `dev` (web + api via Turborepo). |
-| `pnpm build` | Monorepo build (`^build` for `@yorty-tcf/shared` then apps). |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Quality (see each package’s scripts). |
+| `pnpm dev` | Runs web + api via Turborepo. |
+| `pnpm build` | Monorepo build (`@parle-tcf/shared` first, then the apps). |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Quality checks in every package. |
 | `pnpm format` / `pnpm format:check` | Prettier. |
 
 Typical two terminals:
 
 ```bash
-pnpm --filter @yorty-tcf/api run dev    # http://localhost:3001
-pnpm --filter @yorty-tcf/web run dev    # http://localhost:3000
+pnpm --filter @parle-tcf/api run dev    # http://localhost:3001
+pnpm --filter @parle-tcf/web run dev    # http://localhost:3000
 ```
 
 Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` → `apps/web/.env.local` as needed.
-
-Target a single package:
-
-```bash
-pnpm --filter @yorty-tcf/api <script>
-pnpm --filter @yorty-tcf/web <script>
-pnpm --filter @yorty-tcf/shared <script>
-```
 
 ---
 
 ## Package scripts
 
-### API — `@yorty-tcf/api` (`apps/api`)
+### API — `@parle-tcf/api` (`apps/api`)
 
 | Script | Description |
 | --- | --- |
 | `dev` / `build` / `start` | NestJS |
 | `generate-db` | TCF CSV → SQLite (`config/tcf-exercises.db`) |
-| `rename-tef`, `generate-tef-instructions`, `generate-tef-conseils`, `sync-tef` | TEF content pipeline (`config/tef-exercices/` → `.instructions.md` / `.conseils.md` + images under `apps/web/public/`) |
-| `lint`, `typecheck`, `format` | Quality |
+| `lint`, `typecheck`, `format`, `test` | Quality |
 
-Examples:
-
-```bash
-pnpm --filter @yorty-tcf/api run generate-db
-pnpm --filter @yorty-tcf/api run sync-tef
-```
-
-### Web — `@yorty-tcf/web` (`apps/web`)
+### Web — `@parle-tcf/web` (`apps/web`)
 
 | Script | Description |
 | --- | --- |
 | `dev`, `build`, `start` | Next.js |
-| `lint`, `typecheck`, `format` | Quality |
+| `lint`, `typecheck`, `format`, `test` | Quality |
 
-### Shared — `@yorty-tcf/shared`
+### Shared — `@parle-tcf/shared` (`packages/shared`)
 
 | Script | Description |
 | --- | --- |
 | `build` | `tsc` → `dist/` |
-| `typecheck` | `tsc --noEmit` |
+| `lint`, `typecheck`, `format`, `test` | Quality |
 
 ---
 
@@ -150,4 +133,4 @@ pnpm --filter @yorty-tcf/api run sync-tef
 
 ### Language note
 
-Repository **documentation** is in **English** for contributors and sharing. **Exam content** (agent instructions in YAML, per-exercise `.md` under `apps/api/config/tef-exercices/`, and candidate-facing UI copy) stays in **French** where it supports TCF/TEF practice.
+Repository **documentation** is in **English**. **Exam content** (agent instructions in YAML, the Tâche 1 question bank, and candidate-facing UI copy) stays in **French**.

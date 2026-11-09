@@ -19,8 +19,6 @@ interface ConseilsTabContentProps {
   isReviewPhase: boolean;
   viewingPreviousIndex: number | null;
   onSetViewingPreviousIndex: (index: number | null) => void;
-  /** Markdown guide shown before the report is available (TEF sessions only). */
-  practiceGuideMarkdown?: string | null;
 }
 
 function MarkdownReport({ content }: { content: string }) {
@@ -48,7 +46,6 @@ export const ConseilsTabContent = React.memo(function ConseilsTabContent({
   isReviewPhase,
   viewingPreviousIndex,
   onSetViewingPreviousIndex,
-  practiceGuideMarkdown,
 }: ConseilsTabContentProps) {
   const fallbackReport =
     !report && previousReports.length > 0 ? previousReports[previousReports.length - 1] : null;
@@ -134,22 +131,6 @@ export const ConseilsTabContent = React.memo(function ConseilsTabContent({
   }
 
   if (!activeReport) {
-    if (practiceGuideMarkdown) {
-      return (
-        <div className="flex flex-col gap-4">
-          {topBar}
-          <div className="rounded-xl border border-amber-200/60 bg-amber-50/70 px-3 py-2 text-amber-900">
-            <p className="text-xs">
-              Aide à la préparation — en situation d&apos;examen, vous n&apos;utiliserez pas ces
-              listes.
-            </p>
-          </div>
-          <div className="prose prose-cyan prose-headings:text-cyan-800 prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-p:text-gray-700 prose-p:leading-relaxed prose-strong:font-semibold prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:leading-relaxed max-w-none text-sm">
-            <MarkdownReport content={practiceGuideMarkdown} />
-          </div>
-        </div>
-      );
-    }
     return (
       <div className="flex flex-col gap-4">
         {topBar}

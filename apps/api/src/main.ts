@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { IoAdapter } from "@nestjs/platform-socket.io";
 import dotenv from "dotenv";
 import { AppModule } from "./app.module.js";
 
@@ -17,7 +16,6 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: ["error", "warn", "log"],
   });
-  app.useWebSocketAdapter(new IoAdapter(app));
 
   const origins = process.env.CORS_ORIGINS?.split(",")
     .map((s) => s.trim())

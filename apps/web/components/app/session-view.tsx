@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowCounterClockwise,
   Headset,
@@ -11,7 +11,6 @@ import {
   SkipBack,
   SkipForward,
 } from '@phosphor-icons/react/dist/ssr';
-import type { ExerciseImagePayload } from '@yorty-tcf/shared';
 import type { AppConfig, Task } from '@/app-config';
 import { ConseilsTabContent } from '@/components/app/conseils-tab-content';
 import { ConsigneTabContent } from '@/components/app/consigne-tab-content';
@@ -22,16 +21,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSessionTimer } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { useRealtimeExam } from '@/providers/realtime-exam-provider';
-import type { ExerciseImageData } from '@/types/exercise-image';
-
-function mapExerciseImage(img: ExerciseImagePayload | null): ExerciseImageData | null {
-  if (!img) return null;
-  return {
-    id: img.id,
-    filename: img.filename,
-    section: img.section,
-  };
-}
 
 type SessionTab = 'consigne' | 'conseils' | 'conversation';
 
@@ -203,14 +192,10 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const exam = useRealtimeExam();
   const { elapsedSeconds, resetTimer } = useSessionTimer();
   const [sessionTab, setSessionTab] = useState<SessionTab>('consigne');
-  const [tefTransitionReady, setTefTransitionReady] = useState(false);
   const [viewingPreviousIndex, setViewingPreviousIndex] = useState<number | null>(null);
   const [compactSessionFooter, setCompactSessionFooter] = useState(false);
   const [showEvaluatorFooterCaption, setShowEvaluatorFooterCaption] = useState(false);
 
-  const exerciseImage = useMemo(() => mapExerciseImage(exam.exerciseImage), [exam.exerciseImage]);
-
-  const isTefTask = selectedTask?.taskType?.startsWith('tef') ?? false;
   const isTache1 = selectedTask?.taskType === 'tache1';
   const isTache2 = selectedTask?.taskType === 'tache2';
   const isTache3 = selectedTask?.taskType === 'tache3';
@@ -231,7 +216,6 @@ export function SessionView({ selectedTask }: SessionViewProps) {
   const announcementText =
     exam.exerciseData?.description || selectedTask?.description || 'Description de la tâche';
 
-  const showTefSkeleton = isTefTask && (!exerciseImage || !tefTransitionReady);
   const showExerciseSkeleton = !exam.exerciseData && (isTache2 || isTache3);
 
   const handleRestart = useCallback(() => {
@@ -294,16 +278,6 @@ export function SessionView({ selectedTask }: SessionViewProps) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [canUseMicShortcut, exam]);
-
-  useEffect(() => {
-    if (!isTefTask) {
-      setTefTransitionReady(true);
-      return;
-    }
-    setTefTransitionReady(false);
-    const timeout = setTimeout(() => setTefTransitionReady(true), 900);
-    return () => clearTimeout(timeout);
-  }, [isTefTask, selectedTask?.taskType]);
 
   useEffect(() => {
     const mqCompact = window.matchMedia('(min-width: 640px) and (max-height: 700px)');
@@ -473,16 +447,10 @@ export function SessionView({ selectedTask }: SessionViewProps) {
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <TabsContent
               value="consigne"
-              className={cn(
-                'mt-0 min-h-0 flex-1 overflow-y-auto outline-none',
-                isTefTask ? 'p-0' : 'p-3 sm:p-4'
-              )}
+              className="mt-0 min-h-0 flex-1 overflow-y-auto p-3 outline-none sm:p-4"
             >
               <ConsigneTabContent
-                isTefTask={isTefTask}
-                exerciseImage={exerciseImage}
                 announcementText={announcementText}
-                showTefSkeleton={showTefSkeleton}
                 showExerciseSkeleton={showExerciseSkeleton}
                 showMicHint={showMicHint}
               />
@@ -500,7 +468,6 @@ export function SessionView({ selectedTask }: SessionViewProps) {
                 isReviewPhase={isReviewPhase}
                 viewingPreviousIndex={viewingPreviousIndex}
                 onSetViewingPreviousIndex={setViewingPreviousIndex}
-                practiceGuideMarkdown={exam.practiceGuideMarkdown}
               />
             </TabsContent>
 

@@ -4,14 +4,12 @@ import { randomUUID } from "node:crypto";
 import type {
   CreateExamSessionInput,
   CreateExamSessionOutput,
-  ExerciseImagePayload,
   TaskType,
-} from "@yorty-tcf/shared";
+} from "@parle-tcf/shared";
 import { ExamConfigService } from "../config/exam-config.service.js";
 import {
   ExerciseService,
   type TcfExerciseRow,
-  type TefExercise,
 } from "../exercise/exercise.service.js";
 
 @Injectable()
@@ -90,7 +88,6 @@ export class ExamSessionService {
   private buildExerciseData(
     taskType: TaskType,
     tcf: TcfExerciseRow | null,
-    tef: TefExercise | null,
   ): CreateExamSessionOutput["exerciseData"] {
     if (taskType === "tache1") {
       return {
@@ -123,40 +120,10 @@ export class ExamSessionService {
         taskType,
       };
     }
-    if (taskType === "tef-section-a") {
-      return {
-        title: "TEF Section A - Demande d'informations",
-        description: "Demande d'informations par téléphone",
-        content: tef?.instructions ?? "",
-        exerciseId: tef?.id,
-        taskType,
-      };
-    }
-    if (taskType === "tef-section-b") {
-      return {
-        title: "TEF Section B - Argumentation",
-        description: "Argumentation avec un(e) ami(e)",
-        content: tef?.instructions ?? "",
-        exerciseId: tef?.id,
-        taskType,
-      };
-    }
     return {
       title: "Expression Orale",
       description: "Exercice d'expression orale",
       taskType,
-    };
-  }
-
-  private buildTefImagePayload(
-    tef: TefExercise,
-    section: "A" | "B",
-  ): ExerciseImagePayload {
-    return {
-      type: "exerciseImage",
-      id: tef.id,
-      filename: tef.filename,
-      section,
     };
   }
 
@@ -165,13 +132,6 @@ export class ExamSessionService {
     agentYaml: { baseInstructions: string; instructions: string },
     contentAppend: string | undefined,
   ): string {
-    // TEF: `tef-exercices` *.instructions.md is the full system prompt (YAML contributes nothing).
-    if (
-      (taskType === "tef-section-a" || taskType === "tef-section-b") &&
-      contentAppend
-    ) {
-      return contentAppend;
-    }
     let full = `${agentYaml.baseInstructions}\n\n${agentYaml.instructions}`;
     if (contentAppend) {
       // Tâche 1 reçoit une banque de questions de référence; les autres tâches reçoivent
@@ -192,24 +152,10 @@ export class ExamSessionService {
     const agentYaml = this.examConfig.loadAgentConfig(taskType);
     const serviceYaml = this.examConfig.loadServiceConfig();
 
-    const { tcf, tef } = this.exercises.resolveExerciseForTask(
-      taskType,
-      exerciseId,
-    );
+    const tcf = this.exercises.resolveExerciseForTask(taskType, exerciseId);
 
-    let exerciseImage: ExerciseImagePayload | null = null;
-    if (taskType === "tef-section-a" && tef) {
-      exerciseImage = this.buildTefImagePayload(tef, "A");
-    } else if (taskType === "tef-section-b" && tef) {
-      exerciseImage = this.buildTefImagePayload(tef, "B");
-    }
-
-    const exerciseData = this.buildExerciseData(taskType, tcf, tef);
+    const exerciseData = this.buildExerciseData(taskType, tcf);
     const orderedExerciseIds = this.exercises.listOrderedExerciseIds(taskType);
-    const practiceGuideMarkdown =
-      (taskType === "tef-section-a" || taskType === "tef-section-b") && tef
-        ? (tef.practiceGuide ?? undefined)
-        : undefined;
     const contentForInstructions =
       taskType === "tache1"
         ? this.examConfig.loadInfoMarkdown("questions-tache1-entretien.md")
@@ -234,15 +180,10 @@ export class ExamSessionService {
       clientSecret,
       sessionId,
       exerciseData,
-      exerciseImage,
       orderedExerciseIds,
-      practiceGuideMarkdown,
       agentConfig: {
         instructions,
-        greeting:
-          taskType === "tef-section-a" || taskType === "tef-section-b"
-            ? ""
-            : agentYaml.greeting,
+        greeting: agentYaml.greeting,
         voice,
         model,
         allowInterruptions: agentYaml.settings.allowInterruptions,

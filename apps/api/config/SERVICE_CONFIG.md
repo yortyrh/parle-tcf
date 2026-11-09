@@ -32,17 +32,13 @@ llm:
 - `nova` — female, energetic
 - `shimmer` — female, warm
 
-## Legacy sections
-
-`session` and `connection` in this YAML are **not** consumed by `ExamSessionService` today. They are retained from an earlier LiveKit-based agent layout. Safe to edit for human reference; removing them does not change current Realtime behavior as long as `llm.voice` and `llm.model` stay valid.
-
 ## Environment override
 
 Set **`OPENAI_REALTIME_MODEL`** in `apps/api/.env` (or the host environment) to pick a specific Realtime model when `llm.model` is `realtime`. See `ExamSessionService.resolveRealtimeModel` in `apps/api/src/session/exam-session.service.ts`.
 
 ## Where task prompts live
 
-Per-task instructions, greetings, and settings are in **`config/agents/{taskType}.yml`** (e.g. `tache2.yml`, `tef-section-a.yml`). See **[EXERCISES.md](../../../EXERCISES.md)** at the repo root.
+Per-task instructions, greetings, and settings are in **`config/agents/{taskType}.yml`** (`tache1.yml`, `tache2.yml`, `tache3.yml`). See **[EXERCISES.md](../../../EXERCISES.md)** at the repo root.
 
 ## Code references
 

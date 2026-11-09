@@ -12,7 +12,7 @@ interface WelcomeViewProps {
   onStartCall: (taskType: string) => void;
   tasks: Task[];
   homeHref?: string;
-  /** Pré-sélection (ex. slug `/tef/tef-section-a`) pour activer « Commencer » sans re-cliquer la carte. */
+  /** Pré-sélection (ex. slug `/tcf/tache2`) pour activer « Commencer » sans re-cliquer la carte. */
   initialSelectedTaskType?: string | null;
 }
 
@@ -66,7 +66,7 @@ export function WelcomeView({
         Sélectionnez une tâche pour commencer
       </p>
 
-      {/* Task selection cards — 2 columns for TEF, 3 for TCF */}
+      {/* Task selection cards */}
       <div
         className={cn(
           'mb-6 grid w-full max-w-2xl grid-cols-1 gap-3 px-2 sm:mb-8 sm:gap-4 sm:px-0',

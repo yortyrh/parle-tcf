@@ -23,7 +23,6 @@ export default async function TCFPage({ params }: TCFPageProps) {
   return (
     <App
       appConfig={APP_CONFIG_DEFAULTS}
-      homeHref="/"
       welcomeHref="/tcf"
       routeByTask
       initialTaskType={initialTaskType}

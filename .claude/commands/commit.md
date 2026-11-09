@@ -1,20 +1,14 @@
 # Smart Commit
 
-Create an intelligent git commit for the yorty-tcf-livekit monorepo (agent + web).
+Create an intelligent git commit for the parle-tcf monorepo (api + web + shared).
 
-## Step 1 — Format & Lint (REQUIRED)
+### Step 1 — Format & Lint (REQUIRED)
 
-Run in order:
-
-```bash
-cd yorty-tcf-livekit-agent && pnpm format && pnpm lint:fix
-```
+From the repo root:
 
 ```bash
-cd yorty-tcf-livekit-web && pnpm format && pnpm lint
+pnpm format && pnpm lint
 ```
-
-> **Note**: web has no `lint:fix`, only `pnpm lint` (next lint).
 
 - If errors persist after automatic fixes, list them and ask the user
 - After fixes, re-stage all modified files with `git add .`
@@ -22,25 +16,21 @@ cd yorty-tcf-livekit-web && pnpm format && pnpm lint
 ## Step 2 — Typecheck (REQUIRED)
 
 ```bash
-cd yorty-tcf-livekit-agent && pnpm typecheck
+pnpm typecheck
 ```
-
-> Web has no separate typecheck script.
 
 - If type errors are found, fix them before continuing
 
 ## Step 3 — Tests (REQUIRED)
 
 ```bash
-cd yorty-tcf-livekit-agent && pnpm test
+pnpm test
 ```
-
-> Web has no configured tests.
 
 - If tests fail, fix them and re-run
 - After fixes, re-stage with `git add .`
 
-## Step 4 — Analyze changes (in parallel)
+# Step 4 — Analyze changes (in parallel)
 
 - `git status` to see modified files
 - `git diff --staged` or `git diff` to see detailed changes

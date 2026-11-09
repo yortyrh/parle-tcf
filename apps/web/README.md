@@ -1,13 +1,13 @@
-# Web app (`@yorty-tcf/web`)
+# Web app (`@parle-tcf/web`)
 
-Next.js candidate UI for TCF/TEF oral practice.
+Next.js candidate UI for TCF speaking practice.
 
 ## Layout
 
 - `app/` — App Router pages and routes.
 - `components/` — UI components.
-- `content/` — Markdown content for TEF announcements where applicable.
-- `public/` — Exercise images and fonts.
+- `providers/` — the Realtime exam session (`realtime-exam-provider.tsx`).
+- `public/` — logo and fonts.
 
 ---
 

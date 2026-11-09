@@ -1,6 +1,6 @@
 import { Controller } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
-import type { CreateExamSessionInput } from "@yorty-tcf/shared";
+import type { CreateExamSessionInput } from "@parle-tcf/shared";
 import { createExamSessionProcedure } from "../contract/exam.contract.js";
 import { ExamSessionService } from "./exam-session.service.js";
 

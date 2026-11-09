@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: tcf-api
+    container_name: parle-tcf-api
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PORT=3001
@@ -15,7 +15,7 @@ services:
       - "3001:3001"
     restart: unless-stopped
     networks:
-      - tcf-network
+      - parle-tcf-network
     healthcheck:
       test:
         [
@@ -35,14 +35,14 @@ services:
       args:
         # Must be reachable from the host browser (not the Docker service hostname).
         NEXT_PUBLIC_EXAM_API_URL: http://localhost:3001
-    container_name: tcf-web
+    container_name: parle-tcf-web
     environment:
       - NODE_ENV=production
     ports:
       - "80:3000"
     restart: unless-stopped
     networks:
-      - tcf-network
+      - parle-tcf-network
     depends_on:
       - api
     healthcheck:
@@ -52,5 +52,5 @@ services:
       retries: 3
 
 networks:
-  tcf-network:
+  parle-tcf-network:
     driver: bridge

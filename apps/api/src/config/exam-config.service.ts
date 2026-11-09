@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
-import type { TaskType } from "@yorty-tcf/shared";
+import type { TaskType } from "@parle-tcf/shared";
 import { getApiConfigDir } from "../paths.js";
 
 export interface AgentYamlConfig {
@@ -17,7 +17,7 @@ export interface AgentYamlConfig {
   greeting: string;
 }
 
-/** Parsed `service.yml`. Only `llm` is required for Realtime session creation; other keys are legacy. */
+/** Parsed `service.yml`. Only `llm.model` and `llm.voice` are read for Realtime session creation. */
 export interface ServiceYamlConfig {
   llm: {
     provider?: string;
@@ -25,16 +25,6 @@ export interface ServiceYamlConfig {
     voice: string;
     modalities?: string[];
   };
-  session?: {
-    metricsEnabled?: boolean;
-    inputOptions?: { noiseCancellation?: string };
-  };
-  connection?: {
-    participantWaitTime?: number;
-    participantJoinPollIntervalMs?: number;
-    disconnectDelay?: number;
-  };
-  endExamMessage?: { instructions?: string };
 }
 
 @Injectable()

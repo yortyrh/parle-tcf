@@ -1,12 +1,6 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const taskTypeSchema = z.enum([
-  'tache1',
-  'tache2',
-  'tache3',
-  'tef-section-a',
-  'tef-section-b',
-]);
+export const taskTypeSchema = z.enum(["tache1", "tache2", "tache3"]);
 
 export const createExamSessionInputSchema = z.object({
   taskType: taskTypeSchema,
@@ -21,13 +15,6 @@ export const exerciseDataPayloadSchema = z.object({
   taskType: z.string().optional(),
 });
 
-export const exerciseImagePayloadSchema = z.object({
-  type: z.literal('exerciseImage'),
-  id: z.string(),
-  filename: z.string(),
-  section: z.enum(['A', 'B']),
-});
-
 export const agentConfigForClientSchema = z.object({
   instructions: z.string(),
   greeting: z.string(),
@@ -40,14 +27,15 @@ export const createExamSessionOutputSchema = z.object({
   clientSecret: z.string(),
   sessionId: z.string(),
   exerciseData: exerciseDataPayloadSchema,
-  exerciseImage: exerciseImagePayloadSchema.nullable(),
   agentConfig: agentConfigForClientSchema,
   /** Ordered exercise ids for this task type (empty for tache1). Enables next/random navigation in the client. */
   orderedExerciseIds: z.array(z.string()).optional(),
-  /** Markdown guide shown in the Conseils tab during a TEF session. Not sent to the agent. */
-  practiceGuideMarkdown: z.string().optional(),
 });
 
-export type CreateExamSessionInput = z.infer<typeof createExamSessionInputSchema>;
-export type CreateExamSessionOutput = z.infer<typeof createExamSessionOutputSchema>;
-export type ExerciseImagePayload = z.infer<typeof exerciseImagePayloadSchema>;
+export type CreateExamSessionInput = z.infer<
+  typeof createExamSessionInputSchema
+>;
+export type CreateExamSessionOutput = z.infer<
+  typeof createExamSessionOutputSchema
+>;
+export type ExerciseData = z.infer<typeof exerciseDataPayloadSchema>;

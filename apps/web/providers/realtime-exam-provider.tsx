@@ -9,7 +9,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { type Socket, io } from 'socket.io-client';
 import { z } from 'zod';
 import {
   OpenAIRealtimeWebRTC,
@@ -19,8 +18,8 @@ import {
   type TransportEvent,
   tool,
 } from '@openai/agents/realtime';
-import type { ExerciseData, ExerciseImagePayload, TaskType } from '@yorty-tcf/shared';
-import { SOCKET_EVENTS, TCF_TASK_TYPES, TEF_TASK_TYPES } from '@yorty-tcf/shared';
+import type { ExerciseData, TaskType } from '@parle-tcf/shared';
+import { TCF_TASK_TYPES } from '@parle-tcf/shared';
 import { toastAlert } from '@/components/ui/alert-toast';
 import { createExamSession } from '@/lib/exam-api';
 import {
@@ -43,22 +42,9 @@ function messageFromSessionError(payload: unknown): string {
   return 'Erreur Realtime';
 }
 
-function getExamApiBase(): string {
-  const base = process.env.NEXT_PUBLIC_EXAM_API_URL;
-  if (!base) return 'http://localhost:3001';
-  return base.replace(/\/$/, '');
-}
-
 function syncExerciseUrl(taskType: string, exerciseId?: string): void {
-  let base: string;
-  if ((TCF_TASK_TYPES as readonly string[]).includes(taskType)) {
-    base = '/tcf';
-  } else if ((TEF_TASK_TYPES as readonly string[]).includes(taskType)) {
-    base = '/tef';
-  } else {
-    return;
-  }
-  const segments = [base, taskType];
+  if (!(TCF_TASK_TYPES as readonly string[]).includes(taskType)) return;
+  const segments = ['/tcf', taskType];
   if (exerciseId) segments.push(exerciseId);
   const newUrl = segments.join('/');
   if (typeof window === 'undefined' || window.location.pathname === newUrl) return;
@@ -92,9 +78,6 @@ export interface RealtimeExamContextValue {
   /** Normalised audio level 0-1, updated every animation frame */
   userAudioLevelRef: React.RefObject<number>;
   exerciseData: ExerciseData | null;
-  exerciseImage: ExerciseImagePayload | null;
-  /** Markdown guide shown in Conseils tab before the report is available (TEF sessions only). */
-  practiceGuideMarkdown: string | null;
   report: string | null;
   reportStreaming: string | null;
   previousReports: string[];
@@ -130,8 +113,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const [agentSpeaking, setAgentSpeaking] = useState(false);
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [exerciseData, setExerciseData] = useState<ExerciseData | null>(null);
-  const [exerciseImage, setExerciseImage] = useState<ExerciseImagePayload | null>(null);
-  const [practiceGuideMarkdown, setPracticeGuideMarkdown] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [reportStreaming, setReportStreaming] = useState<string | null>(null);
   const [previousReports, setPreviousReports] = useState<string[]>([]);
@@ -144,7 +125,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const sessionRef = useRef<RealtimeSession | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
-  const socketRef = useRef<Socket | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const currentTaskTypeRef = useRef<string | null>(null);
   const currentExerciseIdRef = useRef<string | undefined>(undefined);
@@ -159,11 +139,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const agentVadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userAudioLevelRef = useRef<number>(0);
   const agentAudioLevelRef = useRef<number>(0);
-
-  const cleanupSocket = useCallback(() => {
-    socketRef.current?.disconnect();
-    socketRef.current = null;
-  }, []);
 
   function getSharedAudioCtx(): AudioContext {
     if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
@@ -280,8 +255,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     setAgentSpeaking(false);
     setUserSpeaking(false);
     setExerciseData(null);
-    setExerciseImage(null);
-    setPracticeGuideMarkdown(null);
     setReport(null);
     setReportStreaming(null);
     setSessionEnded(false);
@@ -292,8 +265,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     assistantStreamBufRef.current = {};
     setSessionId(null);
     sessionIdRef.current = null;
-    cleanupSocket();
-  }, [cleanupSocket, stopUserVad, stopAgentVad]);
+  }, [stopUserVad, stopAgentVad]);
 
   const setMicEnabled = useCallback((on: boolean) => {
     setMicEnabledState(on);
@@ -347,24 +319,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         if (data.exerciseData.taskType) {
           syncExerciseUrl(data.exerciseData.taskType, data.exerciseData.exerciseId);
         }
-        setExerciseImage(data.exerciseImage);
-        setPracticeGuideMarkdown(data.practiceGuideMarkdown ?? null);
 
-        const apiBase = getExamApiBase();
-        const socket = io(apiBase, {
-          path: '/socket.io',
-          transports: ['websocket'],
-          autoConnect: true,
-        });
-        socketRef.current = socket;
-        socket.emit(SOCKET_EVENTS.JOIN_SESSION, { sessionId: data.sessionId });
-
-        const sessionTaskType = data.exerciseData.taskType;
-        const isTefSection =
-          sessionTaskType === 'tef-section-a' || sessionTaskType === 'tef-section-b';
-        const instructions = isTefSection
-          ? data.agentConfig.instructions
-          : `${data.agentConfig.instructions}\n\n--- Consigne d'accueil initiale (à respecter au démarrage) ---\n${data.agentConfig.greeting}`;
+        const instructions = `${data.agentConfig.instructions}\n\n--- Consigne d'accueil initiale (à respecter au démarrage) ---\n${data.agentConfig.greeting}`;
 
         const finSession = tool({
           name: 'finSession',
@@ -377,7 +333,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
             mediaStreamRef.current?.getAudioTracks().forEach((t) => {
               t.enabled = false;
             });
-            socket.emit(SOCKET_EVENTS.SESSION_END, { sessionId: data.sessionId });
             return FIN_SESSION_NEXT;
           },
         });
@@ -392,10 +347,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
             setReportDeliveryError(null);
             setReport(reportText);
             setReportStreaming(null);
-            socket.emit(SOCKET_EVENTS.REPORT, {
-              sessionId: data.sessionId,
-              report: reportText,
-            });
             setMicEnabledState(true);
             mediaStreamRef.current?.getAudioTracks().forEach((t) => {
               t.enabled = true;
@@ -416,7 +367,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         });
 
         const agent = new RealtimeAgent({
-          name: 'Examinateur TCF/TEF',
+          name: 'Examinateur TCF',
           instructions,
           voice: data.agentConfig.voice,
           tools: [finSession, envoiRapport, recommencerTest],
@@ -562,16 +513,12 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const restartExam = useCallback(async () => {
     const taskType = currentTaskTypeRef.current ?? exerciseData?.taskType ?? null;
     const exerciseId = currentExerciseIdRef.current ?? exerciseData?.exerciseId;
-    const sessionId = sessionIdRef.current;
     if (!taskType) return;
 
     archiveReportAndReset();
     resetSessionEnd();
     setRestartSequence((current) => current + 1);
     setIsRestarting(true);
-    if (sessionId) {
-      socketRef.current?.emit(SOCKET_EVENTS.SESSION_RESTART, { sessionId });
-    }
     end();
     try {
       await connectToExam(taskType, exerciseId);
@@ -598,10 +545,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       resetSessionEnd();
       setRestartSequence((c) => c + 1);
       setIsRestarting(true);
-      const sid = sessionIdRef.current;
-      if (sid) {
-        socketRef.current?.emit(SOCKET_EVENTS.SESSION_RESTART, { sessionId: sid });
-      }
       end();
       try {
         await connectToExam(taskType, nextId);
@@ -636,8 +579,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       agentAudioLevelRef,
       userAudioLevelRef,
       exerciseData,
-      exerciseImage,
-      practiceGuideMarkdown,
       report,
       reportStreaming,
       previousReports,
@@ -664,8 +605,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       agentSpeaking,
       userSpeaking,
       exerciseData,
-      exerciseImage,
-      practiceGuideMarkdown,
       report,
       reportStreaming,
       previousReports,

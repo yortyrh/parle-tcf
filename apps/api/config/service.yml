@@ -10,17 +10,3 @@ llm:
   modalities:
     - "text"
     - "audio"
-
-# --- Legacy / unused by the current browser Realtime flow ---
-# The Nest API only requires llm.voice and llm.model when loading this file.
-# The blocks below are kept for reference (older LiveKit agent layout).
-
-session:
-  metricsEnabled: true
-  inputOptions:
-    noiseCancellation: "BackgroundVoiceCancellation"
-
-connection:
-  participantWaitTime: 15000
-  participantJoinPollIntervalMs: 200
-  disconnectDelay: 3000

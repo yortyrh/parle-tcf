@@ -1,5 +1,5 @@
 {
-  "name": "@yorty-tcf/api",
+  "name": "@parle-tcf/api",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -13,43 +13,35 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "generate-db": "tsx scripts/csv-to-sqlite.ts",
-    "rename-tef": "tsx scripts/rename-tef-images.ts",
-    "generate-tef-instructions": "tsx scripts/generate-tef-instructions.ts",
-    "generate-tef-conseils": "tsx scripts/generate-tef-conseils.ts",
-    "sync-tef": "tsx scripts/sync-tef-to-web.ts",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.9",
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-express": "^11.1.9",
-    "@nestjs/platform-socket.io": "^11.1.9",
-    "@nestjs/websockets": "^11.1.9",
     "@orpc/contract": "^1.13.0",
     "@orpc/nest": "^1.13.0",
     "@orpc/openapi": "^1.13.0",
     "@orpc/server": "^1.13.0",
-    "@yorty-tcf/shared": "workspace:*",
+    "@parle-tcf/shared": "workspace:*",
     "better-sqlite3": "^12.8.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "socket.io": "^4.8.1",
     "yaml": "^2.8.2",
-    "zod": "^3.25.76"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@nestjs/cli": "^11.0.14",
     "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.0",
-    "@types/node": "^22.18.11",
+    "@types/node": "^24.0.0",
     "dotenv": "^16.4.7",
     "eslint": "^9.21.0",
-    "openai": "^4.104.0",
     "prettier": "^3.4.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",

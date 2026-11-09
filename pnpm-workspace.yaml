@@ -3,13 +3,13 @@ packages:
   - "packages/*"
 
 onlyBuiltDependencies:
-  - '@ffmpeg-installer/darwin-x64'
+  - '@nestjs/core'
   - '@tailwindcss/oxide'
   - better-sqlite3
   - esbuild
-  - onnxruntime-node
-  - protobufjs
   - sharp
   - unrs-resolver
+
 patchedDependencies:
   '@openai/agents-core@0.8.2': patches/@openai__agents-core@0.8.2.patch
+  '@openai/agents-realtime@0.8.2': patches/@openai__agents-realtime@0.8.2.patch

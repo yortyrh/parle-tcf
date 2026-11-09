@@ -1,8 +1,8 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import Database from "better-sqlite3";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { TaskType } from "@yorty-tcf/shared";
+import type { TaskType } from "@parle-tcf/shared";
 import { getApiConfigDir } from "../paths.js";
 
 export interface TcfExerciseRow {
@@ -26,24 +26,10 @@ interface ExerciseRow {
   isImageBased: number;
 }
 
-export interface TefExercise {
-  id: string;
-  section: "A" | "B";
-  filename: string;
-  /** Agent prompt from `TEF-*-NN.instructions.md`. */
-  instructions: string;
-  /** Candidate guide from `TEF-*-NN.conseils.md` if present. Never sent to the agent. */
-  practiceGuide: string | null;
-}
-
-/** Per-exercise agent prompt file (paired with `.conseils.md` + `.png`). */
-const TEF_INSTRUCTIONS_MD = /^TEF-[AB]-\d{2}\.instructions\.md$/i;
-
 @Injectable()
 export class ExerciseService implements OnModuleDestroy {
   private readonly logger = new Logger(ExerciseService.name);
   private db: Database.Database | null = null;
-  private tefCache: TefExercise[] | null = null;
 
   private getConfigDir(): string {
     return getApiConfigDir();
@@ -113,16 +99,6 @@ export class ExerciseService implements OnModuleDestroy {
         return [];
       }
     }
-    if (taskType === "tef-section-a") {
-      return this.loadTefExercises()
-        .filter((ex) => ex.section === "A")
-        .map((ex) => ex.id);
-    }
-    if (taskType === "tef-section-b") {
-      return this.loadTefExercises()
-        .filter((ex) => ex.section === "B")
-        .map((ex) => ex.id);
-    }
     return [];
   }
 
@@ -140,116 +116,25 @@ export class ExerciseService implements OnModuleDestroy {
     }
   }
 
-  private loadTefExercises(): TefExercise[] {
-    if (this.tefCache) return this.tefCache;
-    const exercises: TefExercise[] = [];
-    const root = join(this.getConfigDir(), "tef-exercices");
-
-    for (const section of ["A", "B"] as const) {
-      const dir = join(root, `TEF-${section}`);
-      if (!existsSync(dir)) {
-        this.logger.warn(`TEF folder missing: ${dir}`);
-        continue;
-      }
-      const mdNames = readdirSync(dir)
-        .filter((f) => TEF_INSTRUCTIONS_MD.test(f))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-
-      for (const mdName of mdNames) {
-        const base = mdName.replace(/\.instructions\.md$/i, "");
-        const pngName = `${base}.png`;
-        const pngPath = join(dir, pngName);
-        if (!existsSync(pngPath)) {
-          this.logger.warn(`Skipping ${mdName}: missing ${pngName}`);
-          continue;
-        }
-        try {
-          const instructions = readFileSync(join(dir, mdName), "utf-8").trim();
-          const conseilsPath = join(dir, `${base}.conseils.md`);
-          let inlineGuide: string | null = null;
-          if (existsSync(conseilsPath)) {
-            inlineGuide = readFileSync(conseilsPath, "utf-8").trim() || null;
-          }
-          const practiceGuide = inlineGuide;
-          exercises.push({
-            id: base,
-            section,
-            filename: pngName,
-            instructions,
-            practiceGuide,
-          });
-        } catch (e) {
-          this.logger.error(`read ${mdName}`, e);
-        }
-      }
-    }
-
-    if (exercises.length === 0) {
-      this.logger.warn(
-        "No TEF exercises found; add TEF-A-NN.instructions.md, TEF-A-NN.conseils.md, TEF-A-NN.png under config/tef-exercices/",
-      );
-    }
-
-    this.tefCache = exercises;
-    return this.tefCache;
-  }
-
-  getTefExercise(section: "A" | "B", exerciseId?: string): TefExercise {
-    const all = this.loadTefExercises();
-    const filtered = all.filter((ex) => ex.section === section);
-    if (filtered.length === 0) {
-      return {
-        id: `TEF-${section}-00`,
-        section,
-        filename: `TEF-${section}-01.png`,
-        instructions:
-          section === "A"
-            ? "Vous téléphonez pour obtenir des informations sur cette annonce."
-            : "Vous présentez cette annonce à un(e) ami(e) et essayez de le/la convaincre.",
-        practiceGuide: null,
-      };
-    }
-    if (exerciseId) {
-      const normalized = exerciseId.trim();
-      const found = filtered.find(
-        (ex) =>
-          ex.id === normalized ||
-          ex.id.toLowerCase() === normalized.toLowerCase(),
-      );
-      if (found) return found;
-      this.logger.warn(
-        `TEF exercise not found: ${exerciseId} (section ${section})`,
-      );
-    }
-    const randomIndex = Math.floor(Math.random() * filtered.length);
-    return filtered[randomIndex]!;
-  }
-
   resolveExerciseForTask(
     taskType: TaskType,
     exerciseId?: string,
-  ): { tcf: TcfExerciseRow | null; tef: TefExercise | null } {
+  ): TcfExerciseRow | null {
     if (taskType === "tache1") {
-      return { tcf: null, tef: null };
+      return null;
     }
     if (taskType === "tache2") {
       const ex = exerciseId
         ? this.getExerciseById(exerciseId)
         : this.getRandomTcfExercise("tache2");
-      return { tcf: ex, tef: null };
+      return ex;
     }
     if (taskType === "tache3") {
       const ex = exerciseId
         ? this.getExerciseById(exerciseId)
         : this.getRandomTcfExercise("tache3");
-      return { tcf: ex, tef: null };
+      return ex;
     }
-    if (taskType === "tef-section-a") {
-      return { tcf: null, tef: this.getTefExercise("A", exerciseId) };
-    }
-    if (taskType === "tef-section-b") {
-      return { tcf: null, tef: this.getTefExercise("B", exerciseId) };
-    }
-    return { tcf: null, tef: null };
+    return null;
   }
 }

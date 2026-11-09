@@ -1,5 +1,5 @@
 {
-  "name": "yorty-tcf-livekit",
+  "name": "parle-tcf",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,25 +16,8 @@
     "turbo": "^2.9.4"
   },
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
   },
-  "packageManager": "pnpm@10.33.0",
-  "pnpm": {
-    "patchedDependencies": {
-      "@openai/agents-core@0.8.2": "patches/@openai__agents-core@0.8.2.patch",
-      "@openai/agents-realtime@0.8.2": "patches/@openai__agents-realtime@0.8.2.patch"
-    },
-    "onlyBuiltDependencies": [
-      "@ffmpeg-installer/darwin-x64",
-      "@nestjs/core",
-      "@tailwindcss/oxide",
-      "better-sqlite3",
-      "esbuild",
-      "onnxruntime-node",
-      "protobufjs",
-      "sharp",
-      "unrs-resolver"
-    ]
-  }
+  "packageManager": "pnpm@10.33.0"
 }
