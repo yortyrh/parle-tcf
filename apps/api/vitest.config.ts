@@ -5,5 +5,8 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.spec.ts"],
     passWithNoTests: true,
+    // PGlite cold start is slow when turbo runs every package in parallel.
+    hookTimeout: 60_000,
+    testTimeout: 30_000,
   },
 });

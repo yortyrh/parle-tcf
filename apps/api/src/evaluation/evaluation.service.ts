@@ -44,6 +44,33 @@ export interface EvaluationRunResult {
   outputTokens: number;
 }
 
+/** Up to 2 retries when the output is missing or does not match the schema. */
+export async function runEvaluation(
+  model: LanguageModel,
+  prompt: string,
+): Promise<EvaluationRunResult> {
+  let lastError: unknown;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  for (let i = 0; i < MAX_ATTEMPTS; i++) {
+    try {
+      const res = await generateText({
+        model,
+        system: loadRubric(),
+        prompt,
+        temperature: 0,
+        output: Output.object({ schema: evaluationOutputSchema }),
+      });
+      inputTokens += res.usage.inputTokens ?? 0;
+      outputTokens += res.usage.outputTokens ?? 0;
+      return { output: res.output, inputTokens, outputTokens };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Evaluation failed");
+}
+
 /** Locates each faulty excerpt inside the original text (first match). */
 export function locateErrors(
   text: string,
@@ -160,33 +187,8 @@ export class EvaluationService implements OnModuleInit {
     }
   }
 
-  /** Up to 2 retries when the output is missing or does not match the schema. */
-  async run(
-    model: LanguageModel,
-    prompt: string,
-  ): Promise<EvaluationRunResult> {
-    let lastError: unknown;
-    let inputTokens = 0;
-    let outputTokens = 0;
-    for (let i = 0; i < MAX_ATTEMPTS; i++) {
-      try {
-        const res = await generateText({
-          model,
-          system: loadRubric(),
-          prompt,
-          temperature: 0,
-          output: Output.object({ schema: evaluationOutputSchema }),
-        });
-        inputTokens += res.usage.inputTokens ?? 0;
-        outputTokens += res.usage.outputTokens ?? 0;
-        return { output: res.output, inputTokens, outputTokens };
-      } catch (error) {
-        lastError = error;
-      }
-    }
-    throw lastError instanceof Error
-      ? lastError
-      : new Error("Evaluation failed");
+  run(model: LanguageModel, prompt: string): Promise<EvaluationRunResult> {
+    return runEvaluation(model, prompt);
   }
 
   private async save(params: {
@@ -290,7 +292,7 @@ export class EvaluationService implements OnModuleInit {
   }
 }
 
-function buildPrompt(
+export function buildPrompt(
   task: number,
   exercisePrompt: string | null,
   lines: { seq: number; speaker: string; text: string }[],

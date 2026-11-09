@@ -1,0 +1,184 @@
+[
+  {
+    "id": "t3-a2",
+    "task": 3,
+    "prompt": "Pensez-vous que le télétravail devrait devenir la norme ? Donnez votre point de vue.",
+    "human": {
+      "globalLevel": "A2",
+      "criteria": {
+        "adequation": "A2",
+        "coherence": "A1",
+        "vocabulaire": "A2",
+        "grammaire": "A2",
+        "aisance": "A2"
+      }
+    },
+    "transcript": [
+      {
+        "seq": 0,
+        "speaker": "examiner",
+        "text": "Vous avez quatre minutes et demie."
+      },
+      {
+        "seq": 1,
+        "speaker": "candidate",
+        "text": "Moi je pense… le télétravail est bon. Je travaille à la maison, c'est bien. Je suis pas fatigué dans le transport. Et aussi… ma famille est contente. Mais des fois je suis seul, c'est pas bon."
+      }
+    ]
+  },
+  {
+    "id": "t3-b1",
+    "task": 3,
+    "prompt": "Pensez-vous que le télétravail devrait devenir la norme ? Donnez votre point de vue.",
+    "human": {
+      "globalLevel": "B1",
+      "criteria": {
+        "adequation": "B1",
+        "coherence": "B1",
+        "vocabulaire": "B1",
+        "grammaire": "B1",
+        "aisance": "B1"
+      }
+    },
+    "transcript": [
+      {
+        "seq": 0,
+        "speaker": "examiner",
+        "text": "Vous avez quatre minutes et demie."
+      },
+      {
+        "seq": 1,
+        "speaker": "candidate",
+        "text": "Je pense que le télétravail a des avantages, par exemple on ne perd pas de temps dans les transports et on peut mieux organiser sa journée. Par contre, il y a aussi des inconvénients parce qu'on se sent isolé de ses collègues. À mon avis, il faudrait travailler deux ou trois jours à la maison, mais pas toute la semaine."
+      }
+    ]
+  },
+  {
+    "id": "t3-b2",
+    "task": 3,
+    "prompt": "Pensez-vous que le télétravail devrait devenir la norme ? Donnez votre point de vue.",
+    "human": {
+      "globalLevel": "B2",
+      "criteria": {
+        "adequation": "B2",
+        "coherence": "B2",
+        "vocabulaire": "B2",
+        "grammaire": "B2",
+        "aisance": "B2"
+      }
+    },
+    "transcript": [
+      {
+        "seq": 0,
+        "speaker": "examiner",
+        "text": "Vous avez quatre minutes et demie."
+      },
+      {
+        "seq": 1,
+        "speaker": "candidate",
+        "text": "Je suis plutôt favorable au télétravail, à condition qu'il reste un choix et non une obligation. D'une part, il permet de gagner un temps considérable et de concilier plus facilement vie professionnelle et vie privée. D'autre part, il fragilise la cohésion d'équipe, ce qui peut nuire à la créativité. C'est pourquoi je défendrais un modèle hybride, qui garde les bénéfices de l'autonomie sans sacrifier le lien social."
+      }
+    ]
+  },
+  {
+    "id": "t3-c1",
+    "task": 3,
+    "prompt": "Pensez-vous que le télétravail devrait devenir la norme ? Donnez votre point de vue.",
+    "human": {
+      "globalLevel": "C1",
+      "criteria": {
+        "adequation": "C1",
+        "coherence": "C1",
+        "vocabulaire": "C1",
+        "grammaire": "C1",
+        "aisance": "C1"
+      }
+    },
+    "transcript": [
+      {
+        "seq": 0,
+        "speaker": "examiner",
+        "text": "Vous avez quatre minutes et demie."
+      },
+      {
+        "seq": 1,
+        "speaker": "candidate",
+        "text": "La question n'est pas tant de savoir si le télétravail doit devenir la norme que de déterminer à quelles conditions il sert réellement l'intérêt des salariés comme des organisations. Certes, l'autonomie qu'il procure est précieuse ; il n'en demeure pas moins qu'elle masque parfois une précarisation du lien collectif, dont les effets ne se mesurent qu'à long terme. Aussi plaiderais-je pour une approche négociée, au cas par cas, plutôt que pour une règle uniforme."
+      }
+    ]
+  },
+  {
+    "id": "t2-a2",
+    "task": 2,
+    "prompt": "Vous appelez une agence pour louer un appartement. Posez des questions sur le loyer, la durée du bail et les charges.",
+    "human": {
+      "globalLevel": "A2",
+      "criteria": {
+        "adequation": "A2",
+        "coherence": "A2",
+        "vocabulaire": "A2",
+        "grammaire": "A1",
+        "aisance": "A2"
+      }
+    },
+    "transcript": [
+      {
+        "seq": 0,
+        "speaker": "examiner",
+        "text": "Allô, agence Soleil, bonjour."
+      },
+      {
+        "seq": 1,
+        "speaker": "candidate",
+        "text": "Bonjour. Je veux louer un appartement. C'est combien le loyer ?"
+      },
+      {
+        "seq": 2,
+        "speaker": "examiner",
+        "text": "650 euros par mois."
+      },
+      {
+        "seq": 3,
+        "speaker": "candidate",
+        "text": "Ok. Et… le contrat c'est combien de temps ? Moi j'ai pas compris les charges."
+      }
+    ]
+  },
+  {
+    "id": "t2-b2",
+    "task": 2,
+    "prompt": "Vous appelez une agence pour louer un appartement. Posez des questions sur le loyer, la durée du bail et les charges.",
+    "human": {
+      "globalLevel": "B2",
+      "criteria": {
+        "adequation": "B2",
+        "coherence": "B2",
+        "vocabulaire": "B2",
+        "grammaire": "B2",
+        "aisance": "B2"
+      }
+    },
+    "transcript": [
+      {
+        "seq": 0,
+        "speaker": "examiner",
+        "text": "Allô, agence Soleil, bonjour."
+      },
+      {
+        "seq": 1,
+        "speaker": "candidate",
+        "text": "Bonjour madame, je vous appelle au sujet de l'appartement de deux pièces que vous proposez. Pourriez-vous m'indiquer le montant du loyer et me préciser si les charges sont comprises ?"
+      },
+      {
+        "seq": 2,
+        "speaker": "examiner",
+        "text": "650 euros, charges non comprises."
+      },
+      {
+        "seq": 3,
+        "speaker": "candidate",
+        "text": "D'accord. Et quelle est la durée du bail ? Serait-il possible de le résilier avant son terme si ma situation professionnelle changeait ?"
+      }
+    ]
+  }
+]

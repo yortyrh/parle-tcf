@@ -1,0 +1,39 @@
+# Runs the corrector evals when the evaluation code or rubric changes.
+name: Evals
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/src/evaluation/**"
+      - "apps/api/config/français/**"
+      - "apps/api/evals/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evals:
+    name: Corrector evals
+    runs-on: ubuntu-latest
+    # Secrets are not exposed to fork PRs: skip rather than fail.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @parle-tcf/shared build && pnpm --filter @parle-tcf/db build
+      - name: Run evals
+        env:
+          OPENAI_API_KEY_EVALS: ${{ secrets.OPENAI_API_KEY_EVALS }}
+        run: pnpm --filter @parle-tcf/api evals -- --model gpt-4o-mini --passes 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: evals-results
+          path: apps/api/evals/results.md

@@ -8,8 +8,9 @@ Monorepo (Turborepo + pnpm) for practising the **speaking test (expression orale
 
 | Package | Role |
 | --- | --- |
-| **`apps/web`** | Next.js 15 — candidate UI, Realtime session, microphone, transcripts, report. |
-| **`apps/api`** | NestJS — OpenAI `client_secrets`, YAML prompts and exercise loading (oRPC contract). |
+| **`apps/web`** | Next.js 15 — candidate UI, auth, Realtime session, results, history and progression. |
+| **`apps/api`** | NestJS — Better Auth, encrypted per-user API keys, `client_secrets`, attempts, CEFR evaluation, usage limits (oRPC contract). |
+| **`packages/db`** | Drizzle schema, migrations and exercise seed (PostgreSQL). |
 | **`packages/shared`** | Task types and Zod schemas for the session contract — `tsc` build → `dist/`. |
 
 ## Quick start (Docker Compose)
@@ -17,13 +18,13 @@ Monorepo (Turborepo + pnpm) for practising the **speaking test (expression orale
 ### Prerequisites
 
 - Docker & Docker Compose
-- **OpenAI** API key (`OPENAI_API_KEY`)
+- An **OpenAI** API key per user, entered in the app (stored encrypted)
 
 ### Configuration
 
 ```bash
 cp .env.example .env
-# Set OPENAI_API_KEY
+# Set BETTER_AUTH_SECRET, ENCRYPTION_KEYS (v1:<base64 of 32 bytes>) and ENCRYPTION_KEY_CURRENT
 ```
 
 ### Run
@@ -106,6 +107,8 @@ Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` →
 | --- | --- |
 | `dev` / `build` / `start` | NestJS |
 | `db:seed` (`@parle-tcf/db`) | TCF CSV → PostgreSQL `exercises` table |
+| `evals` | Corrector evals against `evals/dataset` (needs `OPENAI_API_KEY_EVALS`) |
+| `rotate-keys` | Re-encrypt stored API keys with the current master key |
 | `lint`, `typecheck`, `format`, `test` | Quality |
 
 ### Web — `@parle-tcf/web` (`apps/web`)
@@ -123,6 +126,14 @@ Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` →
 | `lint`, `typecheck`, `format`, `test` | Quality |
 
 ---
+
+## Evaluation quality
+
+`apps/api/evals` runs the corrector over a labelled dataset and reports exact/±1 agreement, per-criterion agreement, stability across passes, cost and latency (`evals/results.md`). The bundled dataset is **synthetic**; see `.github/workflows/evals.yml`.
+
+## Architecture decisions
+
+See [`docs/adr`](./docs/adr).
 
 ## Documentation
 

@@ -13,7 +13,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "vitest run",
-    "rotate-keys": "tsx scripts/rotate-keys.ts"
+    "rotate-keys": "tsx scripts/rotate-keys.ts",
+    "evals": "tsx evals/run.ts"
   },
   "engines": {
     "node": ">=24.0.0",
