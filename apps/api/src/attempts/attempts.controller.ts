@@ -15,6 +15,7 @@ import {
   attemptsReevaluateProcedure,
   usageGetProcedure,
 } from "../contract/exam.contract.js";
+import { AudioService } from "../audio/audio.service.js";
 import { EvaluationService } from "../evaluation/evaluation.service.js";
 import { UsageService } from "../usage/usage.service.js";
 import { AttemptsService } from "./attempts.service.js";
@@ -26,6 +27,7 @@ export class AttemptsController {
     private readonly attempts: AttemptsService,
     private readonly evaluation: EvaluationService,
     private readonly usage: UsageService,
+    private readonly audio: AudioService,
   ) {}
 
   @Implement(attemptsCheckpointProcedure)
@@ -67,6 +69,7 @@ export class AttemptsController {
   delete(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(attemptsDeleteProcedure).handler(async ({ input }) => {
+      await this.audio.deleteForAttempt(userId, input.attemptId);
       await this.attempts.delete(userId, input.attemptId);
       return { ok: true as const };
     });

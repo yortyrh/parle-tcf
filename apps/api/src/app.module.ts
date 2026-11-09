@@ -4,6 +4,8 @@ import { ORPCModule } from "@orpc/nest";
 import { AppController } from "./app.controller.js";
 import { AttemptsController } from "./attempts/attempts.controller.js";
 import { AttemptsService } from "./attempts/attempts.service.js";
+import { AudioController } from "./audio/audio.controller.js";
+import { AudioModule } from "./audio/audio.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import {
   EvaluationService,
@@ -33,6 +35,7 @@ import { SettingsController } from "./settings/settings.controller.js";
     DatabaseModule,
     CryptoModule,
     MailModule,
+    AudioModule,
     AuthModule,
   ],
   controllers: [
@@ -40,6 +43,7 @@ import { SettingsController } from "./settings/settings.controller.js";
     ExamController,
     SettingsController,
     AttemptsController,
+    AudioController,
   ],
   providers: [
     ExamConfigService,

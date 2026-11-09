@@ -1,6 +1,9 @@
 import {
   API_ROUTES,
   type AttemptDetail,
+  type AudioStatus,
+  type AudioUploadInput,
+  type AudioUploadOutput,
   type CheckpointAttemptInput,
   type CompleteAttemptInput,
   type CreateExamSessionOutput,
@@ -83,6 +86,12 @@ export const api = {
   getAttempt: (attemptId: string) => call<AttemptDetail>(API_ROUTES.attemptsGet, { attemptId }),
   reevaluateAttempt: (attemptId: string) =>
     call<{ ok: true }>(API_ROUTES.attemptsReevaluate, { attemptId }),
+  getAudioStatus: () => call<AudioStatus>(API_ROUTES.audioStatus, {}),
+  setAudioConsent: (consent: boolean) => call<AudioStatus>(API_ROUTES.audioSetConsent, { consent }),
+  getAudioUploadUrl: (input: AudioUploadInput) =>
+    call<AudioUploadOutput>(API_ROUTES.audioUploadUrl, input),
+  getAudioDownloadUrl: (attemptId: string) =>
+    call<{ url: string | null }>(API_ROUTES.audioDownloadUrl, { attemptId }),
   getUsage: () => call<Usage>(API_ROUTES.usageGet, {}),
   deleteAttempt: (attemptId: string) =>
     call<{ ok: true }>(API_ROUTES.attemptsDelete, { attemptId }),

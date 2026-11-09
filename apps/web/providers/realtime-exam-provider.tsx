@@ -22,6 +22,7 @@ import type { AttemptMode, ExerciseData, TaskType, TranscriptLine } from '@parle
 import { TASK_DURATIONS, TCF_TASK_TYPES } from '@parle-tcf/shared';
 import { toastAlert } from '@/components/ui/alert-toast';
 import { ApiError, api } from '@/lib/api';
+import { AttemptRecorder } from '@/lib/audio-recorder';
 import {
   nextExerciseIdRandom,
   nextExerciseIdSequential,
@@ -67,6 +68,28 @@ function syncExerciseUrl(taskType: string, exerciseId?: string): void {
   const newUrl = segments.join('/');
   if (typeof window === 'undefined' || window.location.pathname === newUrl) return;
   window.history.replaceState(null, '', newUrl);
+}
+
+/** Best effort: a failed upload never affects the attempt itself. */
+async function uploadRecording(
+  attemptId: string,
+  pending: Promise<Awaited<ReturnType<AttemptRecorder['stop']>>> | null
+): Promise<void> {
+  try {
+    const recording = await pending;
+    if (!recording) return;
+    const { url, contentType } = await api.getAudioUploadUrl({
+      attemptId,
+      contentType: recording.contentType,
+    });
+    await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: recording.blob,
+    });
+  } catch {
+    // The transcript and evaluation are unaffected.
+  }
 }
 
 const FIN_SESSION_NEXT =
@@ -176,6 +199,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const orderedExerciseIdsRef = useRef<string[]>([]);
   const historySnapshotRef = useRef<RealtimeItem[]>([]);
   const assistantStreamBufRef = useRef<Record<string, string>>({});
+  const recorderRef = useRef<AttemptRecorder | null>(null);
   const finishTaskRef = useRef<() => Promise<void>>(async () => {});
   const restartExamRef = useRef<() => Promise<void>>(async () => {});
   const attemptIdRef = useRef<string | null>(null);
@@ -315,7 +339,10 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
 
       const lines = toApiLines(transcriptsRef.current);
       const candidateSpoke = lines.some((l) => l.speaker === 'candidate');
+      const recorder = recorderRef.current;
+      recorderRef.current = null;
       if (!candidateSpoke) {
+        recorder?.discard();
         return api.deleteAttempt(id).then(
           () => undefined,
           () => undefined
@@ -325,6 +352,10 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       const durationS = Math.min(3600, Math.max(0, Math.round((Date.now() - startedAt) / 1000)));
       const { inputTokens, outputTokens } = usageRef.current;
       setAttemptCompleted(true);
+      // The recording is finalised now (before the mic tracks stop); a page unload
+      // cannot wait for an upload, so it is dropped in that case.
+      const recording = options.keepalive ? Promise.resolve(null) : (recorder?.stop() ?? null);
+      if (options.keepalive) recorder?.discard();
       return api
         .completeAttempt(
           {
@@ -336,7 +367,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           { keepalive: options.keepalive }
         )
         .then(
-          () => undefined,
+          () => uploadRecording(id, recording),
           () => {
             toastAlert({
               title: "Impossible d'enregistrer la tentative",
@@ -373,6 +404,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       void audioCtxRef.current.close().catch(() => {});
       audioCtxRef.current = null;
     }
+    recorderRef.current?.discard();
+    recorderRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
     setFatalError(null);
@@ -575,6 +608,17 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           t.enabled = false;
         });
         mediaStreamRef.current = stream;
+        // Recording only starts with explicit consent and server-side storage.
+        const recorder = new AttemptRecorder();
+        recorderRef.current = recorder;
+        void api.getAudioStatus().then(
+          (status) => {
+            if (status.available && status.consent && recorderRef.current === recorder) {
+              recorder.start(stream);
+            }
+          },
+          () => undefined
+        );
         startUserVad(stream);
 
         if (!audioElRef.current) {

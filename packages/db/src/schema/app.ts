@@ -181,3 +181,12 @@ export const usageLimits = pgTable("usage_limits", {
     scale: 2,
   }).notNull(),
 });
+
+/** Per-user preferences that are not credentials. */
+export const userPreferences = pgTable("user_preferences", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  /** Explicit opt-in to store the microphone recording of each attempt. */
+  audioConsentAt: timestamptz("audio_consent_at"),
+});

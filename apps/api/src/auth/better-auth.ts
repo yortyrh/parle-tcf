@@ -22,7 +22,11 @@ export function webLink(webUrl: string, path: string, token: string): string {
   return url.toString();
 }
 
-export function createAuth(db: Database, mail: MailService) {
+export function createAuth(
+  db: Database,
+  mail: MailService,
+  onBeforeUserDelete?: (userId: string) => Promise<void>,
+) {
   const env = getEnv();
 
   const socialProviders: Record<
@@ -82,7 +86,15 @@ export function createAuth(db: Database, mail: MailService) {
       },
     },
     // Lets users erase their account and every row hanging from it (ON DELETE CASCADE).
-    user: { deleteUser: { enabled: true } },
+    user: {
+      deleteUser: {
+        enabled: true,
+        // Recordings live outside the database: remove them before the cascade.
+        beforeDelete: async (target) => {
+          await onBeforeUserDelete?.(target.id);
+        },
+      },
+    },
     account: {
       accountLinking: { enabled: true, trustedProviders: ["github", "google"] },
     },

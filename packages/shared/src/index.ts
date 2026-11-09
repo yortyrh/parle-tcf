@@ -5,6 +5,7 @@ export * from "./schemas/exam-session";
 export * from "./schemas/provider-settings";
 export * from "./schemas/attempts";
 export * from "./schemas/evaluation";
+export * from "./schemas/audio";
 export * from "./pricing";
 
 /** HTTP route of every API procedure (all POST + JSON, cookie session). */
@@ -21,4 +22,8 @@ export const API_ROUTES = {
   attemptsDelete: "/attempts/delete",
   attemptsReevaluate: "/attempts/reevaluate",
   usageGet: "/usage/get",
+  audioStatus: "/audio/status",
+  audioSetConsent: "/audio/consent",
+  audioUploadUrl: "/audio/upload-url",
+  audioDownloadUrl: "/audio/download-url",
 } as const;

@@ -15,6 +15,7 @@ Earlier history of the web app (in French) lives in [`apps/web/CHANGELOG.md`](./
 - CEFR evaluation after each task (rubric v1, five criteria, corrected transcript with typed errors) via the Vercel AI SDK with the user's key; retries, failure state and `attempts.reevaluate`.
 - Overall level of a full exam (weighted median of the three tasks).
 - Result, history (filters, delete), progression and comparison pages.
+- Optional audio recording of each attempt (explicit consent, S3-compatible storage with signed URLs, playback on the result page, deleted with the attempt, on consent withdrawal and with the account).
 - Corrector evals (`pnpm --filter @parle-tcf/api evals`), a synthetic labelled dataset, an evals workflow, and ADRs in `docs/adr`.
 - Structured logging (pino) with secret redaction, privacy page, and a cost estimate before a full exam.
 - Cost estimate per attempt, daily-minutes and monthly-cost limits (`LIMIT_REACHED`).

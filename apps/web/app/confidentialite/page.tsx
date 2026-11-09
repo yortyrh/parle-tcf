@@ -26,8 +26,11 @@ export default function ConfidentialitePage() {
           Audio
         </h2>
         <p className="text-sm">
-          Votre voix est envoyée en direct à OpenAI avec votre propre clé pour la conversation.
-          parle-tcf ne conserve pas l’enregistrement audio : seule la transcription est gardée.
+          Votre voix est envoyée en direct à OpenAI avec votre propre clé pour la conversation. Par
+          défaut, seule la transcription est gardée. Si vous activez l’enregistrement audio dans les
+          paramètres (facultatif), votre micro est enregistré et stocké de façon privée ; il est
+          supprimé avec la tentative, si vous retirez votre consentement ou si vous supprimez votre
+          compte.
         </p>
       </section>
 

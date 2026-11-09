@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CRITERIA, CRITERION_LABELS, EVALUATION_DISCLAIMER } from '@parle-tcf/shared';
 import { LevelBadge } from '@/components/app/level-badge';
@@ -14,6 +14,14 @@ import { TASK_LABELS, formatCost, formatDuration } from '@/lib/cefr';
 export function ResultView({ attemptId }: { attemptId: string }) {
   const { attempt, error, refresh } = useAttempt(attemptId);
   const [retrying, setRetrying] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getAudioDownloadUrl(attemptId).then(
+      (r) => setAudioUrl(r.url),
+      () => undefined
+    );
+  }, [attemptId]);
 
   async function retry() {
     setRetrying(true);
@@ -65,6 +73,14 @@ export function ResultView({ attemptId }: { attemptId: string }) {
             Relancer l’évaluation
           </Button>
         </div>
+      )}
+
+      {audioUrl && (
+        <section aria-label="Réécouter l'enregistrement" className="mb-6">
+          <audio controls src={audioUrl} className="w-full">
+            Votre navigateur ne peut pas lire cet enregistrement.
+          </audio>
+        </section>
       )}
 
       {evaluation && (

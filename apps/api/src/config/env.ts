@@ -39,6 +39,13 @@ const envSchema = z.object({
   AUTH_EMAIL_VERIFICATION_ENABLED: bool.default(true),
   SMTP_URL: optionalString,
   MAIL_FROM: z.string().default("parle-tcf <no-reply@localhost>"),
+  /** S3-compatible storage (R2, MinIO, S3) for attempt recordings; unset = audio disabled. */
+  S3_BUCKET: optionalString,
+  S3_ENDPOINT: optionalString,
+  S3_REGION: z.string().default("auto"),
+  S3_ACCESS_KEY_ID: optionalString,
+  S3_SECRET_ACCESS_KEY: optionalString,
+  S3_FORCE_PATH_STYLE: bool.default(false),
   GITHUB_CLIENT_ID: optionalString,
   GITHUB_CLIENT_SECRET: optionalString,
   GOOGLE_CLIENT_ID: optionalString,

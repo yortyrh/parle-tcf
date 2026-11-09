@@ -3,6 +3,11 @@ import {
   API_ROUTES,
   attemptDetailSchema,
   attemptIdInputSchema,
+  audioDownloadOutputSchema,
+  audioStatusSchema,
+  audioUploadInputSchema,
+  audioUploadOutputSchema,
+  setAudioConsentInputSchema,
   checkpointAttemptInputSchema,
   completeAttemptInputSchema,
   createExamSessionInputSchema,
@@ -59,6 +64,19 @@ export const usageGetProcedure = post(API_ROUTES.usageGet)
   .input(z.object({}).optional())
   .output(usageSchema);
 
+export const audioStatusProcedure = post(API_ROUTES.audioStatus)
+  .input(z.object({}).optional())
+  .output(audioStatusSchema);
+export const audioSetConsentProcedure = post(API_ROUTES.audioSetConsent)
+  .input(setAudioConsentInputSchema)
+  .output(audioStatusSchema);
+export const audioUploadUrlProcedure = post(API_ROUTES.audioUploadUrl)
+  .input(audioUploadInputSchema)
+  .output(audioUploadOutputSchema);
+export const audioDownloadUrlProcedure = post(API_ROUTES.audioDownloadUrl)
+  .input(attemptIdInputSchema)
+  .output(audioDownloadOutputSchema);
+
 export const examContract = populateContractRouterPaths({
   exam: { session: { create: createExamSessionProcedure } },
   settings: {
@@ -76,4 +94,10 @@ export const examContract = populateContractRouterPaths({
     reevaluate: attemptsReevaluateProcedure,
   },
   usage: { get: usageGetProcedure },
+  audio: {
+    status: audioStatusProcedure,
+    setConsent: audioSetConsentProcedure,
+    uploadUrl: audioUploadUrlProcedure,
+    downloadUrl: audioDownloadUrlProcedure,
+  },
 });

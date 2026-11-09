@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { ProviderSettings } from '@parle-tcf/shared';
+import type { AudioStatus, ProviderSettings } from '@parle-tcf/shared';
 import { FieldLabel, FormError } from '@/components/app/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ export function ParametresView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [busy, setBusy] = useState(false);
+  const [audio, setAudio] = useState<AudioStatus | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -30,6 +31,7 @@ export function ParametresView() {
 
   useEffect(() => {
     void load();
+    api.getAudioStatus().then(setAudio, () => undefined);
   }, [load]);
 
   async function run<T>(action: () => Promise<T>, success?: (value: T) => Notice) {
@@ -96,6 +98,18 @@ export function ParametresView() {
         await load();
       },
       () => ({ kind: 'ok', text: 'Clé supprimée.' })
+    );
+  }
+
+  async function onAudioConsent(consent: boolean) {
+    await run(
+      async () => setAudio(await api.setAudioConsent(consent)),
+      () => ({
+        kind: 'ok',
+        text: consent
+          ? 'Enregistrement audio activé pour vos prochaines tentatives.'
+          : 'Enregistrement désactivé : vos enregistrements existants ont été supprimés.',
+      })
     );
   }
 
@@ -252,6 +266,31 @@ export function ParametresView() {
           </p>
         )}
       </section>
+
+      {audio?.available && (
+        <section
+          aria-labelledby="audio"
+          className="bg-card flex flex-col gap-3 rounded-xl border p-4"
+        >
+          <h2 id="audio" className="font-medium">
+            Enregistrement audio
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Facultatif. Si vous l&apos;activez, votre micro est enregistré pendant chaque tentative
+            afin que vous puissiez vous réécouter. Les enregistrements sont privés, supprimés avec
+            la tentative ou le compte, et tous effacés si vous désactivez l&apos;option.
+          </p>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={audio.consent}
+              disabled={busy}
+              onChange={(e) => void onAudioConsent(e.target.checked)}
+            />
+            J&apos;accepte l&apos;enregistrement de ma voix
+          </label>
+        </section>
+      )}
 
       <section
         className="bg-card flex flex-col gap-3 rounded-2xl border p-5"
