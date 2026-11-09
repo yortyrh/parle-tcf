@@ -1,12 +1,7 @@
-# Runs the corrector evals when the evaluation code or rubric changes.
+# Runs the corrector evals (manual trigger only).
 name: Evals
 
 on:
-  pull_request:
-    paths:
-      - "apps/api/src/evaluation/**"
-      - "apps/api/config/français/**"
-      - "apps/api/evals/**"
   workflow_dispatch:
 
 permissions:
