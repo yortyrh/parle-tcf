@@ -5,6 +5,8 @@ import type { AttemptDetail } from '@parle-tcf/shared';
 import { CRITERIA, CRITERION_LABELS } from '@parle-tcf/shared';
 import { LevelBadge } from '@/components/app/level-badge';
 import { PageShell } from '@/components/app/page-shell';
+import { EmptyState, ErrorState, ListSkeleton } from '@/components/app/states';
+import { Button } from '@/components/ui/button';
 import { useAttempt } from '@/hooks/useAttempt';
 import { TASK_LABELS } from '@/lib/cefr';
 import { canCompare } from '@/lib/exam-flow';
@@ -49,7 +51,7 @@ function Column({ attempt }: { attempt: AttemptDetail }) {
               </span>
               <p>{line.text}</p>
               {line.correctedText && line.correctedText !== line.text && (
-                <p className="text-xs text-emerald-700">→ {line.correctedText}</p>
+                <p className="text-success text-xs">→ {line.correctedText}</p>
               )}
             </li>
           ))}
@@ -63,22 +65,19 @@ function Comparison({ a, b }: { a: string; b: string }) {
   const left = useAttempt(a);
   const right = useAttempt(b);
   const error = left.error ?? right.error;
-  if (error)
-    return (
-      <p role="alert" className="text-destructive">
-        {error}
-      </p>
-    );
-  if (!left.attempt || !right.attempt) return <p role="status">Chargement…</p>;
+  if (error) return <ErrorState message={error} />;
+  if (!left.attempt || !right.attempt) return <ListSkeleton rows={6} />;
   if (!canCompare(left.attempt, right.attempt)) {
     return (
-      <p role="alert" className="text-muted-foreground">
-        Ces tentatives portent sur des sujets différents : seules deux tentatives du même sujet
-        peuvent être comparées.{' '}
-        <Link href="/historique" className="underline">
-          Retour à l’historique
-        </Link>
-      </p>
+      <EmptyState
+        title="Sujets différents"
+        description="Seules deux tentatives du même sujet peuvent être comparées."
+        action={
+          <Button asChild variant="secondary">
+            <Link href="/historique">Retour à l’historique</Link>
+          </Button>
+        }
+      />
     );
   }
   return (

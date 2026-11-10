@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { AttemptSummary, Usage } from '@parle-tcf/shared';
 import { LevelBadge } from '@/components/app/level-badge';
 import { PageShell } from '@/components/app/page-shell';
+import { EmptyState, ErrorState, ListSkeleton } from '@/components/app/states';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { TASK_LABELS, formatCost, formatDuration } from '@/lib/cefr';
@@ -14,6 +15,7 @@ const PAGE_SIZE = 20;
 
 export function HistoryView() {
   const [items, setItems] = useState<AttemptSummary[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [task, setTask] = useState<number | undefined>();
@@ -27,6 +29,7 @@ export function HistoryView() {
     try {
       const res = await api.listAttempts({ task, mode, limit: PAGE_SIZE, offset });
       setItems(res.items);
+      setLoaded(true);
       setTotal(res.total);
       setError(null);
     } catch (e) {
@@ -112,14 +115,22 @@ export function HistoryView() {
         )}
       </div>
 
-      {error && (
-        <p role="alert" className="text-destructive mb-3">
-          {error}
-        </p>
-      )}
+      {error && <ErrorState message={error} onRetry={() => void load()} className="mb-4" />}
 
-      {items.length === 0 && !error ? (
-        <p className="text-muted-foreground">Aucune tentative pour le moment.</p>
+      {!loaded && !error ? (
+        <ListSkeleton rows={6} />
+      ) : items.length === 0 && !error ? (
+        <EmptyState
+          title={
+            task || mode ? 'Aucune tentative avec ces filtres' : 'Aucune tentative pour le moment'
+          }
+          description="Chaque tâche passée apparaît ici avec son niveau, sa durée et son coût estimé."
+          action={
+            <Button asChild variant="primary">
+              <Link href="/tcf">S’entraîner</Link>
+            </Button>
+          }
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">

@@ -52,9 +52,9 @@ export function App({
   return (
     <RealtimeExamProvider>
       <AppSetup />
-      <main className="h-svh">
+      <div className="h-svh">
         <ViewController {...viewProps} />
-      </main>
+      </div>
       <Toaster />
     </RealtimeExamProvider>
   );

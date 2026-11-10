@@ -18,10 +18,7 @@ function HighlightedText({ line }: { line: Line }) {
         title={`${e.type} : ${e.explanation}`}
       >
         {line.text.slice(e.start, e.end)}
-        <span className="sr-only">
-          {' '}
-          (erreur de {e.type} : {e.explanation})
-        </span>
+        <span className="sr-only"> (erreur de {e.type})</span>
       </mark>
     );
     cursor = e.end;
@@ -38,20 +35,40 @@ export function TranscriptView({ lines, corrected }: { lines: Line[]; corrected:
         return (
           <li
             key={line.seq}
-            className={`rounded-lg border p-3 text-sm ${isCandidate ? 'bg-card' : 'bg-muted/40'}`}
+            className={`rounded-xl border p-4 text-sm ${isCandidate ? 'bg-card' : 'bg-muted/40'}`}
           >
             <p className="text-muted-foreground mb-1 text-xs font-semibold uppercase">
               {isCandidate ? 'Candidat' : 'Examinateur'}
             </p>
             {isCandidate && corrected ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <p>
-                  <HighlightedText line={line} />
-                </p>
-                <p className="text-green-800 dark:text-green-300">
-                  {line.correctedText ?? line.text}
-                </p>
-              </div>
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="text-muted-foreground mb-1 text-[11px] font-medium">
+                      Ce que vous avez dit
+                    </p>
+                    <p>
+                      <HighlightedText line={line} />
+                    </p>
+                  </div>
+                  <div className="sm:border-l sm:pl-3">
+                    <p className="text-muted-foreground mb-1 text-[11px] font-medium">
+                      Version corrigée
+                    </p>
+                    <p className="text-success">{line.correctedText ?? line.text}</p>
+                  </div>
+                </div>
+                {line.errors && line.errors.length > 0 && (
+                  <ul className="text-muted-foreground mt-3 space-y-1 border-t pt-2 text-xs">
+                    {line.errors.map((e, i) => (
+                      <li key={i}>
+                        <span className="text-foreground font-semibold capitalize">{e.type}</span> «{' '}
+                        {line.text.slice(e.start, e.end)} » : {e.explanation}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             ) : (
               <p>{line.text}</p>
             )}

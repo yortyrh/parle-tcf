@@ -40,9 +40,9 @@ const EvaluatorMarkdownBody = React.memo(function EvaluatorMarkdownBody({
     >
       <div
         className={cn(
-          'prose prose-sm prose-gray prose-headings:text-gray-900 prose-p:my-1 prose-p:text-gray-900',
+          'prose prose-sm dark:prose-invert prose-p:my-1 prose-p:text-inherit prose-headings:text-inherit',
           'prose-p:leading-snug prose-headings:my-1.5 prose-headings:text-sm prose-ul:my-1 prose-li:my-0',
-          'prose-strong:text-gray-950 prose-strong:font-semibold max-w-none text-sm'
+          'prose-strong:text-inherit prose-strong:font-semibold max-w-none text-sm'
         )}
       >
         <ReactMarkdown remarkPlugins={plugins}>{content}</ReactMarkdown>
@@ -60,7 +60,7 @@ const MessageBubble = React.memo(function MessageBubble({ item }: { item: ExamTr
       <div
         className={cn(
           'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold',
-          isLocal ? 'bg-cyan-700 text-white' : 'bg-teal-600 text-white'
+          isLocal ? 'bg-primary text-primary-foreground' : 'bg-foreground text-background'
         )}
       >
         {label[0]}
@@ -72,8 +72,8 @@ const MessageBubble = React.memo(function MessageBubble({ item }: { item: ExamTr
           className={cn(
             'max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug break-words',
             isLocal
-              ? 'rounded-tr-none bg-cyan-700 text-white'
-              : 'rounded-tl-none bg-gray-100 text-gray-900'
+              ? 'bg-primary text-primary-foreground rounded-tr-none'
+              : 'bg-muted text-foreground rounded-tl-none'
           )}
         >
           {isLocal ? item.text : <EvaluatorMarkdownBody content={item.text} />}

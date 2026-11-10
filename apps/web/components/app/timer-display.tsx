@@ -23,7 +23,7 @@ export function TimerDisplay({ remainingSeconds, className, compact }: TimerDisp
       role="timer"
       aria-label="Temps restant"
       className={cn(
-        'flex items-center rounded-lg border bg-white/90 shadow-md backdrop-blur',
+        'bg-card flex items-center rounded-lg border',
         compact ? 'border px-2 py-1 sm:px-2.5 sm:py-1.5' : 'px-4 py-2.5 sm:px-5 sm:py-3',
         urgent ? 'border-destructive/40 bg-destructive/10' : 'border-primary/30 bg-primary/10',
         className
@@ -31,7 +31,7 @@ export function TimerDisplay({ remainingSeconds, className, compact }: TimerDisp
     >
       <div className="flex items-center gap-2">
         {!compact && (
-          <span className="text-[10px] font-medium tracking-wider text-gray-500 uppercase sm:text-xs">
+          <span className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase sm:text-xs">
             Temps restant
           </span>
         )}

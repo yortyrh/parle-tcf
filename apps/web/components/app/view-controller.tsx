@@ -154,9 +154,13 @@ export function ViewController({
 
 export function ConnectingSkeleton() {
   return (
-    <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-b from-slate-100/70 via-slate-50/40 to-white p-2 sm:p-4">
+    <section
+      role="status"
+      aria-label="Connexion à l’examinateur…"
+      className="bg-background relative z-10 flex h-full w-full items-center justify-center overflow-hidden p-2 sm:p-4"
+    >
       <div className="border-border/70 bg-card/95 relative flex h-full w-full max-w-3xl animate-pulse flex-col overflow-hidden rounded-xl border border-solid shadow-xl ring-1 ring-black/5 backdrop-blur sm:rounded-2xl">
-        <div className="border-border/70 flex items-end border-b bg-white/60 px-3 pt-2">
+        <div className="flex items-end border-b px-3 pt-2">
           <div className="flex min-w-0 flex-1 gap-0">
             <div className="bg-muted/70 mb-0 h-9 min-w-0 flex-1 rounded-t-md sm:w-28 sm:flex-none" />
             <div className="bg-muted/70 mb-0 h-9 min-w-0 flex-1 rounded-t-md sm:w-24 sm:flex-none" />
@@ -167,25 +171,25 @@ export function ConnectingSkeleton() {
 
         <div className="flex min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
           <div className="flex min-h-0 w-full flex-col gap-3">
-            <div className="flex min-h-[88px] items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-50/60 px-4 py-3 shadow-sm">
+            <div className="border-primary/20 bg-primary/5 flex min-h-[88px] items-center justify-center rounded-xl border px-4 py-3 shadow-sm">
               <div className="w-full">
-                <div className="mb-2.5 h-4 w-3/4 rounded-md bg-cyan-200/60" />
-                <div className="mb-2 h-4 w-full rounded-md bg-cyan-200/60" />
-                <div className="mb-2 h-4 w-5/6 rounded-md bg-cyan-200/60" />
-                <div className="h-4 w-2/3 rounded-md bg-cyan-200/60" />
+                <div className="bg-primary/15 mb-2.5 h-4 w-3/4 rounded-md" />
+                <div className="bg-primary/15 mb-2 h-4 w-full rounded-md" />
+                <div className="bg-primary/15 mb-2 h-4 w-5/6 rounded-md" />
+                <div className="bg-primary/15 h-4 w-2/3 rounded-md" />
               </div>
             </div>
 
-            <div className="mt-auto rounded-xl border border-amber-200/60 bg-amber-50/60 px-4 py-3 shadow-sm">
-              <div className="mb-2 h-3.5 w-1/3 rounded-md bg-amber-200/70" />
-              <div className="mb-1.5 h-3 w-full rounded-md bg-amber-200/50" />
-              <div className="mb-1.5 h-3 w-5/6 rounded-md bg-amber-200/50" />
-              <div className="h-3 w-3/4 rounded-md bg-amber-200/50" />
+            <div className="border-highlight/30 bg-highlight-soft mt-auto rounded-xl border px-4 py-3 shadow-sm">
+              <div className="bg-highlight/20 mb-2 h-3.5 w-1/3 rounded-md" />
+              <div className="bg-highlight/20 mb-1.5 h-3 w-full rounded-md" />
+              <div className="bg-highlight/20 mb-1.5 h-3 w-5/6 rounded-md" />
+              <div className="bg-highlight/20 h-3 w-3/4 rounded-md" />
             </div>
           </div>
         </div>
 
-        <div className="border-border/70 border-t bg-white/95 px-3 py-2 sm:px-4 sm:py-3">
+        <div className="bg-card border-t px-3 py-2 sm:px-4 sm:py-3">
           <div className="mb-2 flex items-center justify-between">
             <div className="bg-muted h-9 w-16 rounded-md" />
             <div className="bg-muted h-4 w-10 rounded-md" />

@@ -19,18 +19,18 @@ export const ConsigneTabContent = React.memo(function ConsigneTabContent({
   return (
     <div className="flex h-full flex-col gap-3">
       {showExerciseSkeleton && (
-        <div className="flex min-h-[88px] animate-pulse items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-50/70 px-4 py-3 shadow-sm">
+        <div className="border-primary/20 bg-primary/5 flex min-h-[88px] animate-pulse items-center justify-center rounded-xl border px-4 py-3 shadow-sm">
           <div className="flex w-full flex-col items-center gap-2.5">
-            <div className="h-4 w-4/5 rounded-md bg-cyan-200/70" />
-            <div className="h-4 w-full rounded-md bg-cyan-200/70" />
-            <div className="h-4 w-3/5 rounded-md bg-cyan-200/70" />
+            <div className="bg-primary/15 h-4 w-4/5 rounded-md" />
+            <div className="bg-primary/15 h-4 w-full rounded-md" />
+            <div className="bg-primary/15 h-4 w-3/5 rounded-md" />
           </div>
         </div>
       )}
 
       {!showExerciseSkeleton && (
-        <div className="flex min-h-[88px] items-center justify-center rounded-xl border border-cyan-300/40 bg-cyan-50/70 px-4 py-3 shadow-sm">
-          <p className="text-center text-base leading-relaxed font-semibold text-cyan-700">
+        <div className="border-primary/20 bg-primary/5 flex min-h-[88px] items-center justify-center rounded-xl border px-4 py-3 shadow-sm">
+          <p className="text-primary text-center text-base leading-relaxed font-semibold">
             {announcementText}
           </p>
         </div>
@@ -50,20 +50,20 @@ export const ConsigneTabContent = React.memo(function ConsigneTabContent({
 
       {showMicHint &&
         (showExerciseSkeleton ? (
-          <div className="mt-auto rounded-xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 shadow-sm">
+          <div className="border-highlight/30 bg-highlight-soft mt-auto rounded-xl border px-4 py-3 shadow-sm">
             <div className="flex animate-pulse flex-col gap-2.5">
-              <div className="h-4 w-1/3 rounded-md bg-amber-200/80" />
-              <div className="h-4 w-full rounded-md bg-amber-200/80" />
-              <div className="h-4 w-5/6 rounded-md bg-amber-200/80" />
+              <div className="bg-highlight/20 h-4 w-1/3 rounded-md" />
+              <div className="bg-highlight/20 h-4 w-full rounded-md" />
+              <div className="bg-highlight/20 h-4 w-5/6 rounded-md" />
             </div>
           </div>
         ) : (
           <div
             role="status"
-            className="mt-auto rounded-xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 text-center text-amber-950 shadow-sm"
+            className="border-highlight/30 bg-highlight-soft text-foreground mt-auto rounded-xl border px-4 py-3 text-center shadow-sm"
           >
             <p className="text-sm font-semibold">Micro désactivé</p>
-            <p className="mt-1 text-sm text-amber-900/90">
+            <p className="text-muted-foreground mt-1 text-sm">
               L&apos;examinateur parle en premier pour expliquer l&apos;exercice ; le micro sert
               uniquement à ce qu&apos;il vous entende quand vous répondez. Activez-le dans la barre
               du bas lorsque vous êtes prêt·e à prendre la parole.

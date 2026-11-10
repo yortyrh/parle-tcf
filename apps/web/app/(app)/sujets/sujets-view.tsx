@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { ExerciseListItem, ExerciseSession } from '@parle-tcf/shared';
 import { PageShell } from '@/components/app/page-shell';
+import { EmptyState, ErrorState, ListSkeleton } from '@/components/app/states';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -143,6 +144,15 @@ export function SujetsView() {
             ? 'Impossible de charger les sujets.'
             : `${total} sujet${total > 1 ? 's' : ''}`}
       </p>
+
+      {status === 'loading' && items.length === 0 && <ListSkeleton rows={5} />}
+      {status === 'error' && <ErrorState message="Impossible de charger les sujets." />}
+      {status === 'ready' && total === 0 && (
+        <EmptyState
+          title="Aucun sujet trouvé"
+          description="Essayez un autre mot-clé, une autre tâche ou un autre mois."
+        />
+      )}
 
       <ul className="flex flex-col gap-2">
         {items.map((item) => (
