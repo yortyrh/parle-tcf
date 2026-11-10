@@ -53,7 +53,7 @@ For each service, set Railway **Root Directory** to empty (monorepo root), then 
 
 ### Recommended order
 
-1. Create and deploy the **API** service; copy its public HTTPS URL (e.g. `https://xxx.up.railway.app`).
+1. Create and deploy the **API** service (its pre-deploy step applies the database migrations); copy its public HTTPS URL (e.g. `https://xxx.up.railway.app`).
 2. Create the **Web** service with `NEXT_PUBLIC_EXAM_API_URL` set to that API URL.
 3. On the **API**, set `CORS_ORIGINS` to the **Web** public URL (comma-separated if several). Without it, the browser blocks the requests.
 4. Rebuild **Web** whenever the API URL changes: Next.js inlines the variable at **build** time.
@@ -81,30 +81,34 @@ For each service, set Railway **Root Directory** to empty (monorepo root), then 
 
 ---
 
-## Local development (without Docker)
+## Local development
 
-Requires Node 24 (`.nvmrc`) and pnpm 10. From the repo root after `pnpm install`:
-
-| Command                                                 | Role                                                                                |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `pnpm dev`                                              | Runs web + api via Turborepo.                                                       |
-| `pnpm build`                                            | Monorepo build (`@parle-tcf/shared` first, then the apps).                          |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test`            | Quality checks in every package.                                                    |
-| `pnpm format` / `pnpm format:check`                     | Prettier.                                                                           |
-| `pnpm verify`                                           | Full pipeline (format, lint, typecheck, tests, build).                              |
-| `pnpm push`                                             | Runs `verify`, then `git push` (plain `git push` is rejected by the pre-push hook). |
-| `pnpm db:migrate` / `pnpm db:seed` / `pnpm db:generate` | Apply migrations, seed exercises, generate a migration.                             |
-
-Typical two terminals:
+Requires Node 24 (`.nvmrc`), pnpm 10 and Docker (or Podman).
 
 ```bash
-pnpm --filter @parle-tcf/api run dev    # http://localhost:3001
-pnpm --filter @parle-tcf/web run dev    # http://localhost:3000
+pnpm install
+pnpm infra:up        # Postgres + Mailpit (docker-compose.dev.yml), then migrations
+pnpm setup:env       # writes apps/api/.env and apps/web/.env.local (secrets generated once, then kept)
+pnpm db:seed         # exercise bank
+pnpm samples:seed    # dev users; passwords: pnpm local:credentials
+pnpm dev             # web http://localhost:3000, api http://localhost:3001
 ```
 
-Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` → `apps/web/.env.local` as needed.
+- **Email:** every local email (verification, reset, account deletion) lands in Mailpit at http://localhost:8025.
+- **Ports:** set `POSTGRES_PORT`, `MAILPIT_SMTP_PORT`, `MAILPIT_UI_PORT` before `pnpm setup:env` and `pnpm infra:up`; they are saved in `apps/api/.env`.
+- **Stop / wipe:** `pnpm infra:down` / `pnpm infra:reset`.
 
----
+### Social sign-in (GitHub / Google) locally
+
+There is no mock provider: register real development apps.
+
+1. GitHub: _Settings → Developer settings → OAuth Apps → New_. Homepage `http://localhost:3000`, callback `http://localhost:3001/api/auth/callback/github`.
+2. Google: _Google Cloud console → APIs & Services → Credentials → OAuth client ID (Web)_. Authorized redirect URI `http://localhost:3001/api/auth/callback/google`.
+3. Put the ids and secrets in `apps/api/.env` (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), then re-run `pnpm setup:env`: it keeps them and turns the matching buttons on in the web app.
+
+### Email in production
+
+Set `RESEND_API_KEY` (HTTPS API, works on hosts that block outbound SMTP such as Railway) or `SMTP_URL`, plus `MAIL_FROM` with a verified sender domain. The API refuses to start in production without one of them.
 
 ## Package scripts
 

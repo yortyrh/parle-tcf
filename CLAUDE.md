@@ -49,8 +49,9 @@ When a new generator or script is added, add it to this table.
 
 ## Commands
 
-- Setup: `pnpm install`, `docker compose up -d postgres mailpit`, copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` → `apps/web/.env.local`, then `pnpm db:migrate && pnpm db:seed`.
-- `pnpm dev`: web :3000 + api :3001. Mailpit UI: http://localhost:8025.
+- Setup (Docker or Podman): `pnpm install && pnpm infra:up && pnpm setup:env && pnpm db:seed && pnpm samples:seed`. `infra:up` starts Postgres + Mailpit (`docker-compose.dev.yml`) and migrates; `setup:env` writes `apps/api/.env` and `apps/web/.env.local` (keeps secrets, OAuth credentials, port overrides). `pnpm infra:down` / `infra:reset` stop or wipe it.
+- Dev login: `developer@parle-tcf.local`, password from `pnpm local:credentials`.
+- `pnpm dev`: web :3000 + api :3001. Mailpit UI: http://localhost:8025 (all local emails land there).
 - `pnpm verify`: full pipeline (node version, format:check, lint, typecheck, tests, script tests, build). `pnpm push` runs it.
 - Single test: `pnpm --filter @parle-tcf/<api|web|db|shared> exec vitest run <path>`.
 
@@ -58,6 +59,9 @@ When a new generator or script is added, add it to this table.
 
 - **Session flow:** browser → `POST /exam/session/create` → API decrypts the user's own provider key (AES-256-GCM, `src/crypto`), checks usage limits, loads the task YAML (`apps/api/config/agents/tache*.yml`) and exercise (Postgres), mints the provider secret, creates an attempt. The browser runs the session; the tools `finSession`/`recommencerTest` run client-side. A separate corrector evaluates the saved transcript.
 - **Config:** `apps/api/config/` (YAML agents, `service.yml`, `français/rubrique-v1.md` = corrector prompt). `src/paths.ts` resolves it from the monorepo root too (Docker). Details: `EXERCISES.md`, `apps/api/config/SERVICE_CONFIG.md`.
+- **Auth:** Better Auth in the API with the `bearer()` plugin. The web app is on another site, so it never relies on cookies: the token from `set-auth-token` is kept in localStorage (`apps/web/lib/session-token.ts`) and sent as `Authorization: Bearer`; `SessionAuthGuard` accepts bearer only. Email links (verify, reset, account deletion) open web pages that call the API. GitHub/Google: `GET /auth/oauth/:provider` → provider → `/auth/oauth/complete` (one-time code in `verification`) → web `/connexion/retour` → `POST /auth/oauth/exchange`. Local OAuth needs real dev apps (see README).
+- **Email:** templates in `packages/email-templates` (React Email, preview with `pnpm --filter @parle-tcf/email-templates preview`); `MailService.send(template, to, props)`. Transport: `RESEND_API_KEY` > `SMTP_URL` > log (refused in production).
+- **Migrations at deploy:** Railway pre-deploy runs `node packages/db/dist/migrate.js`; `docker-compose.yml` has a one-shot `migrate` service.
 - **Web bundle boundary:** `apps/web/lib/web-bundle-security.test.ts` fails if web code imports server-only modules or secrets.
 - **Deploy:** Railway, two services (`apps/{api,web}/railway.json`, monorepo root). `NEXT_PUBLIC_EXAM_API_URL` is inlined at web build time; set the API's `CORS_ORIGINS` to the web URL. Order: API → web → CORS.
 - **Decisions:** `docs/adr/`. Product requirements: `PRD · yorty-tcf preparación a la expresión oral del TCF.md`.
