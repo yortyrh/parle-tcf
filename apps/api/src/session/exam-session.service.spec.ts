@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contentHash, eq, examAttempts, exercises } from '@parle-tcf/db';
 import { type TestDb, createTestDb } from '@parle-tcf/db/testing';
 import { AttemptsService } from '../attempts/attempts.service.js';
@@ -13,7 +13,7 @@ import {
   testCipher,
 } from '../test-helpers.js';
 import { UsageService } from '../usage/usage.service.js';
-import { ExamSessionService } from './exam-session.service.js';
+import { DEFAULT_GEMINI_LIVE_MODEL, ExamSessionService } from './exam-session.service.js';
 
 const KEY = 'sk-test-cccccccccccccccccccccccccccc9999';
 
@@ -27,6 +27,19 @@ const FIXTURE_EXERCISES = [
   // The fixed tâche 1 row, which the migrations provide and truncateAll() removes.
   { id: 't1-entretien', task: 1, prompt: T1_PROMPT },
 ];
+
+/** Real agent YAMLs, a custom service.yml `llm`, and no info markdown. */
+class StubConfig extends ExamConfigService {
+  constructor(private readonly llm: { model: string; voice: string }) {
+    super();
+  }
+  override loadServiceConfig() {
+    return { llm: this.llm };
+  }
+  override loadInfoMarkdown(): string | undefined {
+    return undefined;
+  }
+}
 
 describe('ExamSessionService', () => {
   let testDb: TestDb;
@@ -243,6 +256,274 @@ describe('ExamSessionService', () => {
       expect(t1.exerciseData).not.toHaveProperty(key);
     }
   });
+  describe('model and voice resolution', () => {
+    beforeEach(() => {
+      vi.stubEnv('OPENAI_REALTIME_MODEL', undefined);
+      vi.stubEnv('GEMINI_LIVE_MODEL', undefined);
+    });
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    const withServiceModel = (model: string) =>
+      new ExamSessionService(
+        new ExerciseService(testDb.db),
+        new StubConfig({ model, voice: 'alloy' }),
+        settings,
+        attempts,
+        new UsageService(testDb.db),
+        registryOf(voice)
+      );
+
+    it('defaults OpenAI to gpt-realtime-mini and the service voice', async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await service.createSession(userId, { taskType: 'tache2', mode: 'practice' });
+      expect(out.agentConfig.model).toBe('gpt-realtime-mini');
+      expect(out.agentConfig.voice).toBe('alloy');
+      expect(voice.mintCalls[0]?.params).toEqual({ model: 'gpt-realtime-mini', voice: 'alloy' });
+      expect((await attempts.get(userId, out.attemptId)).model).toBe('gpt-realtime-mini');
+    });
+
+    it('takes the OpenAI default from OPENAI_REALTIME_MODEL', async () => {
+      vi.stubEnv('OPENAI_REALTIME_MODEL', 'gpt-realtime-env');
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await service.createSession(userId, { taskType: 'tache2', mode: 'practice' });
+      expect(out.agentConfig.model).toBe('gpt-realtime-env');
+    });
+
+    it("prefers the user's realtime model over every default", async () => {
+      vi.stubEnv('OPENAI_REALTIME_MODEL', 'gpt-realtime-env');
+      await settings.upsert(userId, { apiKey: KEY, realtimeModel: 'gpt-realtime' });
+      const out = await withServiceModel('gpt-realtime-service').createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(out.agentConfig.model).toBe('gpt-realtime');
+      expect(voice.mintCalls[0]?.params.model).toBe('gpt-realtime');
+    });
+
+    it('uses a concrete service.yml model before the env default', async () => {
+      vi.stubEnv('OPENAI_REALTIME_MODEL', 'gpt-realtime-env');
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await withServiceModel('gpt-realtime-service').createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(out.agentConfig.model).toBe('gpt-realtime-service');
+    });
+
+    it('treats an empty service.yml model like "realtime"', async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await withServiceModel('').createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(out.agentConfig.model).toBe('gpt-realtime-mini');
+    });
+
+    it('takes the Gemini default from GEMINI_LIVE_MODEL, then the built-in one', async () => {
+      const gemini = fakeVoiceProvider('gemini');
+      const geminiService = new ExamSessionService(
+        new ExerciseService(testDb.db),
+        new StubConfig({ model: 'gpt-realtime-service', voice: 'alloy' }),
+        settings,
+        attempts,
+        new UsageService(testDb.db),
+        registryOf(voice, gemini)
+      );
+      await settings.upsert(userId, { provider: 'gemini', apiKey: 'AIzaSyTestKey0123456789' });
+
+      const builtIn = await geminiService.createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(builtIn.agentConfig.model).toBe(DEFAULT_GEMINI_LIVE_MODEL);
+
+      vi.stubEnv('GEMINI_LIVE_MODEL', 'gemini-env-model');
+      const fromEnv = await geminiService.createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(fromEnv.agentConfig.model).toBe('gemini-env-model');
+    });
+
+    it("keeps the user's own voice for Gemini", async () => {
+      const gemini = fakeVoiceProvider('gemini');
+      const geminiService = new ExamSessionService(
+        new ExerciseService(testDb.db),
+        new ExamConfigService(),
+        settings,
+        attempts,
+        new UsageService(testDb.db),
+        registryOf(voice, gemini)
+      );
+      await settings.upsert(userId, {
+        provider: 'gemini',
+        apiKey: 'AIzaSyTestKey0123456789',
+        voice: 'Kore',
+      });
+      const out = await geminiService.createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(out.agentConfig.voice).toBe('Kore');
+      expect(gemini.mintCalls[0]?.params.voice).toBe('Kore');
+    });
+  });
+
+  describe('exercise data and instructions', () => {
+    const agent = (task: 'tache1' | 'tache2' | 'tache3') =>
+      new ExamConfigService().loadAgentConfig(task);
+    const base = (task: 'tache1' | 'tache2' | 'tache3') =>
+      `${agent(task).baseInstructions}\n\n${agent(task).instructions}`;
+
+    it('builds tâche 2 from the chosen subject', async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await service.createSession(userId, {
+        taskType: 'tache2',
+        exerciseId: 'x-t2-1',
+        mode: 'practice',
+      });
+      expect(out.exerciseData).toEqual({
+        title: 'Tâche 2 - Exercice en interaction',
+        description: 'Jeu de rôle un',
+        content: 'Jeu de rôle un',
+        exerciseId: 'x-t2-1',
+        taskType: 'tache2',
+      });
+      expect(out.agentConfig).toEqual({
+        instructions: `${base('tache2')}\n\nEXERCICE À UTILISER:\nJeu de rôle un`,
+        greeting: agent('tache2').greeting,
+        voice: 'alloy',
+        model: 'gpt-realtime-mini',
+        allowInterruptions: agent('tache2').settings.allowInterruptions,
+      });
+      expect(out.provider).toBe('openai');
+      expect(out.attemptId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(out.sessionId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(out.sessionId).not.toBe(out.attemptId);
+    });
+
+    it('builds tâche 3 from the chosen subject', async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await service.createSession(userId, {
+        taskType: 'tache3',
+        exerciseId: 'x-t3-1',
+        mode: 'practice',
+      });
+      expect(out.exerciseData).toEqual({
+        title: "Tâche 3 - Expression d'un point de vue",
+        description: 'Sujet de débat',
+        content: 'Sujet de débat',
+        exerciseId: 'x-t3-1',
+        taskType: 'tache3',
+      });
+      expect(out.agentConfig.instructions).toBe(
+        `${base('tache3')}\n\nEXERCICE À UTILISER:\nSujet de débat`
+      );
+      expect(out.agentConfig.greeting).toBe(agent('tache3').greeting);
+    });
+
+    it('builds tâche 1 with the reference question bank', async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      const bank = new ExamConfigService().loadInfoMarkdown('questions-tache1-entretien.md');
+      expect(bank).toBeTruthy();
+      const out = await service.createSession(userId, { taskType: 'tache1', mode: 'practice' });
+      expect(out.exerciseData).toEqual({
+        title: 'Tâche 1 - Entretien dirigé',
+        description:
+          'Présentation de soi, puis un entretien dirigé, exercice de conversation sur des sujets quotidiens',
+        content: '',
+        taskType: 'tache1',
+      });
+      expect(out.agentConfig.instructions).toBe(
+        `${base('tache1')}\n\nBANQUE DE QUESTIONS DE RÉFÉRENCE (à puiser, à varier, à ne JAMAIS lire ni énumérer au candidat):\n${bank}`
+      );
+      expect(out.agentConfig.instructions).not.toContain(T1_PROMPT);
+    });
+
+    it('leaves tâche 1 instructions bare when the question bank is missing', async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      const noBank = new ExamSessionService(
+        new ExerciseService(testDb.db),
+        new StubConfig({ model: 'realtime', voice: 'alloy' }),
+        settings,
+        attempts,
+        new UsageService(testDb.db),
+        registryOf(voice)
+      );
+      const out = await noBank.createSession(userId, { taskType: 'tache1', mode: 'practice' });
+      expect(out.agentConfig.instructions).toBe(base('tache1'));
+    });
+
+    it.each([
+      [
+        'tache2',
+        'Tâche 2 - Exercice en interaction',
+        'Jeu de rôle — obtenir des informations sur une situation quotidienne',
+      ],
+      [
+        'tache3',
+        "Tâche 3 - Expression d'un point de vue",
+        "Présentation d'un sujet, souvent lié à la vie quotidienne ou des débats de société",
+      ],
+    ] as const)(
+      'falls back to a generic %s when the bank has no subject',
+      async (taskType, title, description) => {
+        await testDb.db.delete(exercises);
+        await settings.upsert(userId, { apiKey: KEY });
+        const out = await service.createSession(userId, { taskType, mode: 'practice' });
+        expect(out.exerciseData).toEqual({
+          title,
+          description,
+          content: '',
+          exerciseId: undefined,
+          taskType,
+        });
+        expect(out.agentConfig.instructions).toBe(base(taskType));
+        expect(out.orderedExerciseIds).toEqual([]);
+        expect((await attempts.get(userId, out.attemptId)).exerciseId).toBeNull();
+      }
+    );
+
+    it('serves tâche 1 without its fixed row', async () => {
+      await testDb.db.delete(exercises);
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await service.createSession(userId, { taskType: 'tache1', mode: 'practice' });
+      expect(out.exerciseData.exerciseId).toBeUndefined();
+      expect((await attempts.get(userId, out.attemptId)).exerciseId).toBeNull();
+    });
+
+    it('says which exercise was not found', async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      await expect(
+        service.createSession(userId, { taskType: 'tache2', exerciseId: 'nope', mode: 'practice' })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND', message: 'Exercice introuvable.' });
+    });
+
+    it('chains a full run through the given runId', async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      const first = await service.createSession(userId, { taskType: 'tache1', mode: 'full' });
+      expect(first.runId).toEqual(expect.any(String));
+      const second = await service.createSession(userId, {
+        taskType: 'tache2',
+        mode: 'full',
+        runId: first.runId ?? undefined,
+      });
+      expect(second.runId).toBe(first.runId);
+      expect((await attempts.get(userId, second.attemptId)).runId).toBe(first.runId);
+    });
+  });
+
+  it('rethrows non-provider mint failures unchanged', async () => {
+    await settings.upsert(userId, { apiKey: KEY });
+    const boom = new Error('socket hang up');
+    voice.mintError = boom;
+    await expect(
+      service.createSession(userId, { taskType: 'tache2', mode: 'practice' })
+    ).rejects.toBe(boom);
+  });
+
   describe('refreshToken', () => {
     const rowOf = async (id: string) => {
       const [row] = await testDb.db.select().from(examAttempts).where(eq(examAttempts.id, id));
@@ -329,7 +610,10 @@ describe('ExamSessionService', () => {
 
         await expect(
           service.refreshToken(userId, { attemptId: out.attemptId })
-        ).rejects.toMatchObject({ code: 'CONFLICT' });
+        ).rejects.toMatchObject({
+          code: 'CONFLICT',
+          message: 'Cette tentative est déjà terminée.',
+        });
         expect(voice.mintCalls).toHaveLength(1);
       }
     );
@@ -356,6 +640,7 @@ describe('ExamSessionService', () => {
 
       await expect(both.refreshToken(userId, { attemptId: out.attemptId })).rejects.toMatchObject({
         code: 'CONFLICT',
+        message: 'Le fournisseur a changé depuis le début de la tâche. Relancez la tâche.',
       });
       expect(voice.mintCalls).toHaveLength(1);
       expect(gemini.mintCalls).toHaveLength(0);

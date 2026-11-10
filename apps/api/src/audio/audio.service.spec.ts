@@ -255,4 +255,59 @@ describe('AudioService', () => {
     expect((await svc.downloadUrl(alice, attemptId)).url).toBeNull();
     expect((await svc.status(alice)).consent).toBe(false);
   });
+
+  it('reports storage as available when configured', async () => {
+    const svc = new AudioService(testDb.db, fakeStorage().storage);
+    expect(await svc.status(alice)).toEqual({ available: true, consent: false });
+    expect(await svc.setConsent(alice, true)).toEqual({ available: true, consent: true });
+  });
+
+  it('explains every refusal in French', async () => {
+    const none = new AudioService(testDb.db, null);
+    await expect(none.uploadUrl(alice, input())).rejects.toMatchObject({
+      message: "L'enregistrement audio n'est pas disponible sur ce serveur.",
+    });
+
+    const { storage, objects } = fakeStorage();
+    const svc = new AudioService(testDb.db, storage);
+    await expect(svc.uploadUrl(bob, input())).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Tentative introuvable.',
+    });
+    await expect(svc.uploadUrl(alice, input())).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+      message: "Consentement à l'enregistrement audio requis.",
+    });
+    await svc.setConsent(alice, true);
+    await expect(svc.confirmUpload(alice, attemptId)).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Enregistrement introuvable.',
+    });
+    objects.set(aliceKey(), AUDIO_MAX_BYTES + 1);
+    await expect(svc.confirmUpload(alice, attemptId)).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Enregistrement trop volumineux.',
+    });
+  });
+
+  it('deletes nothing for an attempt without a recording', async () => {
+    const { storage, calls } = fakeStorage();
+    const svc = new AudioService(testDb.db, storage);
+    await svc.deleteForAttempt(alice, attemptId);
+    expect(calls.deleted).toEqual([]);
+  });
+
+  it('skips storage cleanup when recording is not configured', async () => {
+    const svc = new AudioService(testDb.db, null);
+    await expect(svc.deleteForAttempt(bob, attemptId)).resolves.toBeUndefined();
+    await testDb.db
+      .update(examAttempts)
+      .set({ audioKey: aliceKey() })
+      .where(eq(examAttempts.id, attemptId));
+    await expect(svc.setConsent(alice, false)).resolves.toEqual({
+      available: false,
+      consent: false,
+    });
+    expect(await storedKey()).toBeNull();
+  });
 });

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { eq, evaluations, examAttempts, examRuns } from '@parle-tcf/db';
+import { contentHash, eq, evaluations, examAttempts, examRuns, exercises } from '@parle-tcf/db';
 import { type TestDb, createTestDb } from '@parle-tcf/db/testing';
 import { AttemptsService, STALE_ATTEMPT_MS } from './attempts.service.js';
 
@@ -537,6 +537,146 @@ describe('AttemptsService', () => {
     await service.delete(alice, attempt.id);
     await expect(service.get(alice, attempt.id)).rejects.toMatchObject({
       code: 'NOT_FOUND',
+    });
+  });
+
+  it('pages with a default of 20 and honours the offset', async () => {
+    for (let i = 0; i < 21; i++) {
+      const a = await createFor(alice);
+      await patch(a.id, { startedAt: at(i * 1000), task: i === 0 ? 1 : 2 });
+    }
+    const page = await service.list(alice, {});
+    expect(page.total).toBe(21);
+    expect(page.items).toHaveLength(20);
+    const last = await service.list(alice, { limit: 5, offset: 20 });
+    expect(last.items.map((a) => a.task)).toEqual([1]);
+  });
+
+  it('says the attempt was not found in French', async () => {
+    await expect(service.get(alice, '00000000-0000-4000-8000-000000000000')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Tentative introuvable.',
+    });
+  });
+
+  it('never attaches a practice attempt to a run', async () => {
+    const [run] = await testDb.db
+      .insert(examRuns)
+      .values({ userId: alice, mode: 'full' })
+      .returning();
+    const attempt = await service.create({
+      userId: alice,
+      mode: 'practice',
+      runId: run.id,
+      ...base,
+    });
+    expect(attempt.runId).toBeNull();
+  });
+
+  it('refuses to restart the clock of a finished attempt', async () => {
+    const attempt = await startedAtT0(alice);
+    await service.complete(alice, { attemptId: attempt.id, lines: [] }, at(60_000));
+    await expect(service.touchStart(alice, attempt.id)).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Cette tentative est déjà terminée.',
+    });
+  });
+
+  describe('get', () => {
+    it('describes an attempt in progress with null totals', async () => {
+      const attempt = await startedAtT0(alice);
+      const detail = await service.get(alice, attempt.id);
+      expect(detail).toMatchObject({
+        finishedAt: null,
+        durationS: null,
+        estimatedCostUsd: null,
+        realtimeMinutes: null,
+        globalLevel: null,
+        exercisePrompt: null,
+        evaluation: null,
+        transcript: [],
+      });
+    });
+
+    it('describes a completed, evaluated attempt with its subject', async () => {
+      await testDb.db.insert(exercises).values({
+        id: 'x-detail',
+        task: 2,
+        prompt: 'Vous cherchez un appartement.',
+        contentHash: contentHash('Vous cherchez un appartement.'),
+        isImageBased: false,
+      });
+      const attempt = await service.create({
+        userId: alice,
+        mode: 'practice',
+        runId: null,
+        exerciseId: 'x-detail',
+        task: 2,
+        model: 'gpt-realtime-mini',
+      });
+      await patch(attempt.id, { startedAt: T0, lastActivityAt: T0 });
+      await service.complete(
+        alice,
+        {
+          attemptId: attempt.id,
+          lines: [],
+          usage: { inputTokens: 1_000_000, outputTokens: 500_000 },
+        },
+        at(90_000)
+      );
+      const criteria = Object.fromEntries(
+        ['adequation', 'coherence', 'vocabulaire', 'grammaire', 'aisance'].map((c) => [
+          c,
+          { level: 'B2', comment: 'Bien.' },
+        ])
+      );
+      await testDb.db.insert(evaluations).values({
+        attemptId: attempt.id,
+        globalLevel: 'B2',
+        levels: criteria,
+        comments: { summary: 'Très bien.' },
+        correctorModel: 'gpt-4o-mini',
+        rubricVersion: 'v1',
+      });
+
+      const detail = await service.get(alice, attempt.id);
+      expect(detail).toMatchObject({
+        finishedAt: at(90_000).toISOString(),
+        durationS: 90,
+        realtimeMinutes: 1.5,
+        estimatedCostUsd: 20,
+        globalLevel: 'B2',
+        exercisePrompt: 'Vous cherchez un appartement.',
+        evaluation: {
+          globalLevel: 'B2',
+          criteria,
+          summary: 'Très bien.',
+          correctorModel: 'gpt-4o-mini',
+          rubricVersion: 'v1',
+        },
+      });
+      const row = await rowOf(attempt.id);
+      expect(row.inputTokens).toBe(1_000_000);
+      expect(row.outputTokens).toBe(500_000);
+    });
+
+    it('reports an empty summary when the evaluation has no comments', async () => {
+      const attempt = await createFor(alice);
+      await service.complete(alice, { attemptId: attempt.id, lines: [] });
+      await testDb.db.insert(evaluations).values({
+        attemptId: attempt.id,
+        globalLevel: 'A2',
+        levels: {},
+        comments: null,
+        correctorModel: 'gpt-4o-mini',
+        rubricVersion: 'v1',
+      });
+      const detail = await service.get(alice, attempt.id);
+      expect(detail.evaluation?.summary).toBe('');
+      expect(detail.globalLevel).toBe('A2');
+      const row = await rowOf(attempt.id);
+      expect(row.inputTokens).toBeNull();
+      expect(row.outputTokens).toBeNull();
     });
   });
 });

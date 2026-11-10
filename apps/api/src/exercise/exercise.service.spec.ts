@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   contentHash,
+  eq,
   exerciseAliases,
   exerciseOccurrences,
   exerciseSessions,
@@ -178,6 +179,45 @@ describe('ExerciseService', () => {
       });
     });
 
+    describe('source and image links', () => {
+      it('exposes url and imageUrl only when set', async () => {
+        await insertExercises([
+          { id: 'plain', task: 3, prompt: 'Un sujet sans lien.' },
+          { id: 'linked', task: 3, prompt: 'Un sujet avec lien.' },
+        ]);
+        await testDb.db
+          .update(exercises)
+          .set({ sourceUrl: 'https://source.test/s1' })
+          .where(eq(exercises.id, 'linked'));
+        expect(await service.getExerciseById('linked')).toMatchObject({
+          url: 'https://source.test/s1',
+        });
+        const plain = await service.getExerciseById('plain');
+        expect(plain).not.toHaveProperty('url');
+        expect(plain).not.toHaveProperty('imageUrl');
+      });
+    });
+
+    describe('getRandomTcfExercise', () => {
+      it("picks a subject of the task's bank", async () => {
+        await insertExercises([
+          { id: 't2', task: 2, prompt: 'Jeu de rôle.' },
+          { id: 't3', task: 3, prompt: 'Débat.' },
+        ]);
+        expect(await service.getRandomTcfExercise('tache2')).toEqual({
+          id: 't2',
+          task: 2,
+          content: 'Jeu de rôle.',
+          isImageBased: false,
+        });
+        expect((await service.getRandomTcfExercise('tache3'))?.id).toBe('t3');
+      });
+
+      it('returns null on an empty bank', async () => {
+        expect(await service.getRandomTcfExercise('tache2')).toBeNull();
+      });
+    });
+
     describe('resolveExerciseForTask', () => {
       it('accepts an alias of an exercise of the requested task', async () => {
         await insertExercises([{ id: 'canon', task: 2, prompt: 'Je suis votre voisin.' }]);
@@ -185,6 +225,22 @@ describe('ExerciseService', () => {
         const row = await service.resolveExerciseForTask('tache2', 'old-id');
         expect(row?.id).toBe('canon');
         expect((await service.resolveExerciseForTask('tache3', 'old-id')) ?? null).toBeNull();
+      });
+
+      it('always serves the fixed interview row for tâche 1', async () => {
+        await insertExercises([
+          { id: 't1-entretien', task: 1, prompt: 'Entretien dirigé.' },
+          { id: 't1-other', task: 1, prompt: 'Autre entretien.' },
+        ]);
+        expect((await service.resolveExerciseForTask('tache1', 't1-other'))?.id).toBe(
+          't1-entretien'
+        );
+        expect((await service.resolveExerciseForTask('tache1'))?.id).toBe('t1-entretien');
+      });
+
+      it('draws a random subject of the task when no id is given', async () => {
+        await insertExercises([{ id: 'only-t2', task: 2, prompt: 'Seul sujet.' }]);
+        expect((await service.resolveExerciseForTask('tache2'))?.id).toBe('only-t2');
       });
     });
 
@@ -355,6 +411,21 @@ describe('ExerciseService', () => {
         const out = await service.listExercises({ task: 2, search });
         expect(out.items.map((i) => i.id)).toEqual(ids);
         expect(out.total).toBe(ids.length);
+      });
+
+      it('matches % and _ literally in a search', async () => {
+        await insertExercises([
+          { id: 'pct', task: 2, prompt: 'Une remise de 100% ce soir.' },
+          { id: 'pct-like', task: 2, prompt: 'Une remise de 1000 euros.' },
+          { id: 'und', task: 2, prompt: 'Le code a_b est valide.' },
+          { id: 'und-like', task: 2, prompt: 'Le code axb est valide.' },
+        ]);
+        expect(
+          (await service.listExercises({ task: 2, search: '100%' })).items.map((i) => i.id)
+        ).toEqual(['pct']);
+        expect(
+          (await service.listExercises({ task: 2, search: 'a_b' })).items.map((i) => i.id)
+        ).toEqual(['und']);
       });
 
       it('ignores a blank search', async () => {

@@ -132,6 +132,23 @@ describe('session token storage', () => {
     });
   });
 
+  describe('when reading window.localStorage itself throws (blocked site data)', () => {
+    beforeEach(() => {
+      vi.stubGlobal('window', {
+        get localStorage(): Storage {
+          throw new Error('SecurityError: access denied');
+        },
+      });
+    });
+
+    it('behaves as if there were no storage', () => {
+      expect(getSessionToken()).toBeNull();
+      expect(authHeaders()).toEqual({});
+      expect(() => saveSessionToken('tok')).not.toThrow();
+      expect(() => clearSessionToken()).not.toThrow();
+    });
+  });
+
   describe('on the server', () => {
     it('reads null when window and localStorage are undefined', () => {
       vi.stubGlobal('window', undefined);

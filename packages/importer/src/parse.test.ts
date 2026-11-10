@@ -203,6 +203,22 @@ describe('parseMonthPage', () => {
     });
   });
 
+  it('keeps other spans, and spans without a style, in the scenario', () => {
+    const html = `<h2>Tâche 2</h2>
+      <p><strong>Je suis <span style="color: red">votre voisin</span> et <span>votre ami</span>. <span style="color:#00ccff">Vous me posez des questions.</span></strong></p>`;
+    const [s] = parseMonthPage(html);
+    expect(s.instruction).toBe('Vous me posez des questions.');
+    expect(s.scenario).toBe('Je suis votre voisin et votre ami.');
+  });
+
+  it("ignores a 'Partie N' that is neither a heading nor bold", () => {
+    const html = `<h2>Tâche 2</h2>
+      <p>Partie 4</p>
+      <div>Partie 6</div>
+      ${strong(S.a)}`;
+    expect(parseMonthPage(html).map((x) => [x.part, x.position])).toEqual([[1, 1]]);
+  });
+
   it('finds instruction spans nested deeper in the subject', () => {
     const html = `<h2>Tâche 2</h2>
       <p><strong>Je suis votre banquier. <em><span style="color: #00ccff;">Vous voulez ouvrir un compte.</span></em></strong></p>`;
@@ -267,6 +283,14 @@ describe('discoverMonthPages', () => {
       { year: 2024, month: 12, url: monthPageUrl(2024, 12) },
       { year: 2024, month: 8, url: monthPageUrl(2024, 8) },
     ]);
+  });
+
+  it('skips links whose href is not a valid URL', () => {
+    expect(
+      discoverMonthPages(
+        '<a href="http://[nope">x</a><a href="https://reussir-tcfcanada.com/mars-2025-expression-orale/">m</a>'
+      )
+    ).toEqual([{ year: 2025, month: 3, url: monthPageUrl(2025, 3) }]);
   });
 
   it('uses the unaccented https URL without www', () => {

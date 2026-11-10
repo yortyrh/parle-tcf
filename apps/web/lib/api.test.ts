@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ROUTES } from '@parle-tcf/shared';
-import { ApiError, api, getApiBase } from './api';
 import { SESSION_TOKEN_KEY } from './session-token';
+
+// Re-imported fresh before each test rather than at the top, so the
+// module-level `api` table is built while a Stryker (static) mutant is active.
+type ApiModule = typeof import('./api');
+let ApiError: ApiModule['ApiError'];
+let api: ApiModule['api'];
+let getApiBase: ApiModule['getApiBase'];
 
 const ATTEMPT_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -28,7 +34,9 @@ function fakeStorage(entries: Record<string, string> = {}): Storage {
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
-beforeEach(() => {
+beforeEach(async () => {
+  vi.resetModules();
+  ({ ApiError, api, getApiBase } = await import('./api'));
   fetchMock = vi.fn();
   vi.stubGlobal('fetch', fetchMock);
   vi.stubEnv('NEXT_PUBLIC_EXAM_API_URL', 'https://api.example.test');

@@ -4,6 +4,7 @@ import {
   count,
   eq,
   exerciseOccurrences,
+  exerciseSessions,
   exercises,
   importRuns,
   monthPageUrl,
@@ -506,5 +507,62 @@ describe('runImport', () => {
     const rows = await testDb.db.select().from(importRuns);
     expect(rows).toHaveLength(2);
     expect(new Set(rows.map((r) => r.id))).toEqual(new Set([first.id, second.id]));
+  });
+
+  it('succeeds with nothing to do when no month is requested', async () => {
+    const h = harness({});
+    const result = await runImport({
+      db: testDb.db,
+      fetchImpl: h.fetchImpl,
+      months: [],
+      trigger: 'cli',
+      now,
+      sleep: h.sleep,
+    });
+    expect(h.events).toEqual([]);
+    expect(result).toMatchObject({ status: 'success', sessionsScanned: 0, errors: [] });
+    expect((await runRows())[0]?.status).toBe('success');
+  });
+
+  it('records the imported session with its year, month, page URL and fetch time', async () => {
+    const h = harness({ [DEC]: { status: 200, body: page([X]) } });
+    await runImport({
+      db: testDb.db,
+      fetchImpl: h.fetchImpl,
+      months: [{ year: 2025, month: 12 }],
+      trigger: 'cli',
+      now,
+      sleep: h.sleep,
+    });
+    const sessions = await testDb.db.select().from(exerciseSessions);
+    expect(sessions).toEqual([
+      expect.objectContaining({ year: 2025, month: 12, sourceUrl: DEC, fetchedAt: FIXED }),
+    ]);
+  });
+
+  it('describes blocked and missing pages in its error messages', async () => {
+    const missing = harness({ [DEC]: { status: 404 } });
+    const notFound = await runImport({
+      db: testDb.db,
+      fetchImpl: missing.fetchImpl,
+      months: [{ year: 2025, month: 12 }],
+      trigger: 'cli',
+      now,
+      sleep: missing.sleep,
+    });
+    expect(notFound.errors).toEqual([{ url: DEC, message: 'page not found (HTTP 404)' }]);
+
+    const wall = harness({ [DEC]: { status: 403 } });
+    const blocked = await runImport({
+      db: testDb.db,
+      fetchImpl: wall.fetchImpl,
+      months: [{ year: 2025, month: 12 }],
+      trigger: 'cli',
+      now,
+      sleep: wall.sleep,
+    });
+    expect(blocked.errors).toEqual([
+      { url: DEC, message: 'blocked by the site (HTTP 403); not retried' },
+    ]);
   });
 });

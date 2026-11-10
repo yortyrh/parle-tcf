@@ -12,4 +12,15 @@ describe('upsertProviderSettingsInputSchema', () => {
     expect(schema.safeParse({ apiKey: gemini }).success).toBe(false); // defaults to openai
     expect(schema.safeParse({ provider: 'gemini' }).success).toBe(true); // keep stored key
   });
+
+  it.each([
+    ['openai', 'AIza' + 'b'.repeat(30), 'Une clé OpenAI commence par « sk- »'],
+    ['gemini', 'sk-' + 'a'.repeat(30), 'Une clé Gemini commence par « AIza »'],
+  ] as const)('explains a wrong %s key prefix on the apiKey field', (provider, apiKey, message) => {
+    const res = schema.safeParse({ provider, apiKey });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues).toEqual([
+      expect.objectContaining({ code: 'custom', path: ['apiKey'], message }),
+    ]);
+  });
 });

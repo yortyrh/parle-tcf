@@ -1,5 +1,6 @@
+import type { MockLanguageModelV4 } from 'ai/test';
 import { describe, expect, it } from 'vitest';
-import { CRITERIA, evaluationOutputSchema } from '@parle-tcf/shared';
+import { CRITERIA, type EvaluationOutput, evaluationOutputSchema } from '@parle-tcf/shared';
 import { buildPrompt, runEvaluation } from './evaluation.service.js';
 import { fakeEvaluation, fakeModelFactory } from './fake-language-model.js';
 
@@ -60,5 +61,63 @@ describe('fakeModelFactory', () => {
       'Aucune ligne de candidat ici.'
     );
     expect(result.output.utterances).toEqual([]);
+  });
+
+  describe('doGenerate', () => {
+    type Prompt = Parameters<MockLanguageModelV4['doGenerate']>[0]['prompt'];
+    const generate = async (prompt: unknown) => {
+      // The fake factory always builds a MockLanguageModelV4.
+      const model = fakeModelFactory('openai', 'sk-test', 'gpt-4o-mini') as MockLanguageModelV4;
+      const res = await model.doGenerate({ prompt: prompt as Prompt });
+      const first = res.content[0];
+      const out = first?.type === 'text' ? (JSON.parse(first.text) as EvaluationOutput) : null;
+      return { res, out };
+    };
+
+    it('answers a stop with fixed usage and no warnings', async () => {
+      const { res } = await generate([]);
+      expect(res.finishReason).toEqual({ unified: 'stop', raw: 'stop' });
+      expect(res.warnings).toEqual([]);
+      expect(res.usage).toEqual({
+        inputTokens: { total: 100, noCache: 100, cacheRead: 0, cacheWrite: 0 },
+        outputTokens: { total: 50, text: 50, reasoning: 0 },
+      });
+    });
+
+    it('treats a missing prompt as empty', async () => {
+      const { out } = await generate(undefined);
+      expect(out?.utterances).toEqual([]);
+    });
+
+    it('reads each user text part on its own line', async () => {
+      const { out } = await generate([
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: '[1] CANDIDAT : un' },
+            { type: 'text', text: '[2] CANDIDAT : deux' },
+          ],
+        },
+      ]);
+      expect(out?.utterances).toEqual([
+        { seq: 1, corrected: 'un', errors: [] },
+        { seq: 2, corrected: 'deux', errors: [] },
+      ]);
+    });
+
+    it('ignores non-user messages and non-text parts', async () => {
+      const { out } = await generate([
+        { role: 'system', content: '[1] CANDIDAT : système' },
+        { role: 'assistant', content: [{ type: 'text', text: '[2] CANDIDAT : assistant' }] },
+        {
+          role: 'user',
+          content: [
+            { type: 'reasoning', text: '[3] CANDIDAT : raisonnement' },
+            { type: 'text', text: '[4] CANDIDAT : retenu' },
+          ],
+        },
+      ]);
+      expect(out?.utterances).toEqual([{ seq: 4, corrected: 'retenu', errors: [] }]);
+    });
   });
 });

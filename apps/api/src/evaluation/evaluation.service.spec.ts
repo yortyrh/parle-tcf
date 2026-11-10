@@ -1,11 +1,23 @@
 import { MockLanguageModelV4 } from 'ai/test';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { eq, examAttempts, examRuns } from '@parle-tcf/db';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Logger } from '@nestjs/common';
+import { contentHash, eq, examAttempts, examRuns, exercises, transcripts } from '@parle-tcf/db';
 import { type TestDb, createTestDb } from '@parle-tcf/db/testing';
+import { estimateCost } from '@parle-tcf/shared';
 import { AttemptsService } from '../attempts/attempts.service.js';
 import { ProviderSettingsService } from '../settings/provider-settings.service.js';
 import { fakeVoiceProvider, registryOf, testCipher } from '../test-helpers.js';
-import { EvaluationService, STALE_RUNNING_MS, locateErrors } from './evaluation.service.js';
+import {
+  DEFAULT_GEMINI_TEXT_MODEL,
+  DEFAULT_TEXT_MODEL,
+  EvaluationService,
+  type LanguageModelFactory,
+  STALE_RUNNING_MS,
+  buildPrompt,
+  locateErrors,
+  providerModelFactory,
+  runEvaluation,
+} from './evaluation.service.js';
 
 const KEY = 'sk-test-0123456789abcdef';
 
@@ -38,16 +50,24 @@ const goodOutput = {
   ],
 };
 
-function result(text: string) {
+function result(text: string, tokens = { input: 100, output: 50 }) {
   return {
     content: [{ type: 'text' as const, text }],
     finishReason: { unified: 'stop' as const, raw: 'stop' },
     usage: {
-      inputTokens: { total: 100, noCache: 100, cacheRead: 0, cacheWrite: 0 },
-      outputTokens: { total: 50, text: 50, reasoning: 0 },
+      inputTokens: { total: tokens.input, noCache: tokens.input, cacheRead: 0, cacheWrite: 0 },
+      outputTokens: { total: tokens.output, text: tokens.output, reasoning: 0 },
     },
     warnings: [],
   };
+}
+
+/** The user prompt the model received on its `index`-th call. */
+function userPromptOf(model: MockLanguageModelV4, index = 0): string {
+  const call = model.doGenerateCalls[index];
+  const user = call?.prompt.find((m) => m.role === 'user');
+  if (!user || typeof user.content === 'string') return '';
+  return user.content.map((p) => (p.type === 'text' ? p.text : '')).join('');
 }
 
 describe('locateErrors', () => {
@@ -58,6 +78,109 @@ describe('locateErrors', () => {
     ]);
     expect(out).toEqual([{ start: 3, end: 17, type: 'grammaire', explanation: 'x' }]);
   });
+
+  it('keeps an excerpt found at the very start of the text', () => {
+    expect(
+      locateErrors('Je suis allé', [{ excerpt: 'Je suis', type: 'grammaire', explanation: 'x' }])
+    ).toEqual([{ start: 0, end: 7, type: 'grammaire', explanation: 'x' }]);
+  });
+});
+
+describe('buildPrompt', () => {
+  const lines = [
+    { seq: 0, speaker: 'examiner', text: 'Bonjour' },
+    { seq: 1, speaker: 'candidate', text: 'Salut' },
+  ];
+
+  it('lays out the task, the subject, the labelled transcript and the instruction', () => {
+    expect(buildPrompt(2, 'Organiser une fête', lines)).toBe(
+      [
+        'Tâche 2 du TCF.',
+        'Consigne / sujet :\nOrganiser une fête',
+        "Transcription (issue d'une reconnaissance vocale) :\n[0] EXAMINATEUR : Bonjour\n[1] CANDIDAT : Salut",
+        'Évalue le candidat selon la rubrique.',
+      ].join('\n\n')
+    );
+  });
+
+  it('leaves the subject block out when there is none', () => {
+    expect(buildPrompt(1, null, lines)).toBe(
+      [
+        'Tâche 1 du TCF.',
+        "Transcription (issue d'une reconnaissance vocale) :\n[0] EXAMINATEUR : Bonjour\n[1] CANDIDAT : Salut",
+        'Évalue le candidat selon la rubrique.',
+      ].join('\n\n')
+    );
+  });
+});
+
+describe('runEvaluation', () => {
+  it('rethrows the last error after three failed tries', async () => {
+    let n = 0;
+    const model = new MockLanguageModelV4({
+      doGenerate: () => {
+        n += 1;
+        return Promise.reject(new Error(`échec ${n}`));
+      },
+    });
+    await expect(runEvaluation(model, 'p')).rejects.toThrow('échec 3');
+    expect(model.doGenerateCalls).toHaveLength(3);
+  });
+
+  it('wraps a non-Error failure in a generic error', async () => {
+    const model = new MockLanguageModelV4({
+      // A provider SDK may reject with a non-Error value.
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      doGenerate: () => Promise.reject('boom'),
+    });
+    await expect(runEvaluation(model, 'p')).rejects.toThrow('Evaluation failed');
+  });
+
+  it('returns the parsed output with its token usage', async () => {
+    const model = new MockLanguageModelV4({
+      doGenerate: result(JSON.stringify(goodOutput), { input: 7, output: 3 }),
+    });
+    const res = await runEvaluation(model, 'le prompt');
+    expect(res).toEqual({ output: goodOutput, inputTokens: 7, outputTokens: 3 });
+    expect(userPromptOf(model)).toBe('le prompt');
+  });
+});
+
+describe('providerModelFactory', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    ['openai', 'gpt-4o-mini', 'openai.responses', 'authorization', 'Bearer sk-user-key'],
+    ['gemini', 'gemini-2.5-flash', 'google.generative-ai', 'x-goog-api-key', 'sk-user-key'],
+  ] as const)(
+    'builds a %s model that calls the provider with the user key',
+    async (provider, modelId, providerName, header, value) => {
+      vi.stubEnv('OPENAI_API_KEY', undefined);
+      vi.stubEnv('GOOGLE_GENERATIVE_AI_API_KEY', undefined);
+      const seen: Record<string, string>[] = [];
+      vi.stubGlobal('fetch', (_url: string, init: { headers: Record<string, string> }) => {
+        seen.push(init.headers);
+        return Promise.resolve(
+          new Response('{"error":{"message":"stop"}}', {
+            status: 400,
+            headers: { 'content-type': 'application/json' },
+          })
+        );
+      });
+      const model = providerModelFactory(provider, 'sk-user-key', modelId);
+      if (typeof model === 'string') throw new Error('expected a model object');
+      expect(model.provider).toBe(providerName);
+      expect(model.modelId).toBe(modelId);
+      await Promise.resolve(
+        model.doGenerate({ prompt: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }] })
+      ).catch(() => undefined);
+      expect(seen).toHaveLength(1);
+      expect(seen[0]?.[header]).toBe(value);
+    }
+  );
 });
 
 describe('EvaluationService', () => {
@@ -201,6 +324,174 @@ describe('EvaluationService', () => {
     return row;
   };
 
+  describe('corrector input', () => {
+    const recordingFactory = (model: MockLanguageModelV4) => {
+      const calls: Parameters<LanguageModelFactory>[] = [];
+      const factory: LanguageModelFactory = (...args) => {
+        calls.push(args);
+        return model;
+      };
+      return { calls, factory };
+    };
+
+    it('uses the default OpenAI text model with the user key', async () => {
+      const { calls, factory } = recordingFactory(goodModel());
+      await new EvaluationService(testDb.db, settings, factory).evaluate(userId, attemptId);
+      expect(calls).toEqual([['openai', KEY, DEFAULT_TEXT_MODEL]]);
+      expect((await attempts.get(userId, attemptId)).evaluation?.correctorModel).toBe(
+        DEFAULT_TEXT_MODEL
+      );
+    });
+
+    it('uses the default Gemini text model for a Gemini user', async () => {
+      const geminiSettings = new ProviderSettingsService(
+        testDb.db,
+        testCipher(),
+        registryOf(fakeVoiceProvider(), fakeVoiceProvider('gemini'))
+      );
+      await geminiSettings.upsert(userId, {
+        provider: 'gemini',
+        apiKey: 'AIzaSyTestKey0123456789',
+      });
+      const { calls, factory } = recordingFactory(goodModel());
+      await new EvaluationService(testDb.db, geminiSettings, factory).evaluate(userId, attemptId);
+      expect(calls).toEqual([['gemini', 'AIzaSyTestKey0123456789', DEFAULT_GEMINI_TEXT_MODEL]]);
+    });
+
+    it("prefers the user's own text model", async () => {
+      await settings.upsert(userId, { textModel: 'gpt-4.1' });
+      const { calls, factory } = recordingFactory(goodModel());
+      await new EvaluationService(testDb.db, settings, factory).evaluate(userId, attemptId);
+      expect(calls[0]?.[2]).toBe('gpt-4.1');
+    });
+
+    it("sends the subject of the attempt's exercise", async () => {
+      await testDb.db.insert(exercises).values({
+        id: 'x-eval',
+        task: 2,
+        prompt: 'Vous organisez une fête.',
+        contentHash: contentHash('Vous organisez une fête.'),
+        isImageBased: false,
+      });
+      await setRow(attemptId, { exerciseId: 'x-eval' });
+      const model = goodModel();
+      await serviceWith(model).evaluate(userId, attemptId);
+      expect(userPromptOf(model)).toBe(
+        buildPrompt(2, 'Vous organisez une fête.', [
+          { seq: 0, speaker: 'examiner', text: 'Bonjour' },
+          { seq: 1, speaker: 'candidate', text: 'Je suis allé à le marché.' },
+        ])
+      );
+    });
+
+    it('sends no subject when the attempt has no exercise', async () => {
+      const model = goodModel();
+      await serviceWith(model).evaluate(userId, attemptId);
+      expect(userPromptOf(model)).not.toContain('Consigne');
+      expect(userPromptOf(model)).toContain('Tâche 2 du TCF.');
+    });
+
+    it('fails without calling the model when the candidate never spoke', async () => {
+      const a = await attempts.create({
+        userId,
+        mode: 'practice',
+        runId: null,
+        exerciseId: null,
+        task: 3,
+        model: 'gpt-realtime-mini',
+      });
+      await attempts.complete(userId, {
+        attemptId: a.id,
+        lines: [{ seq: 0, speaker: 'examiner', text: 'Bonjour, présentez-vous.' }],
+      });
+      const model = goodModel();
+      await serviceWith(model).evaluate(userId, a.id);
+      expect(model.doGenerateCalls).toHaveLength(0);
+      expect((await rowOf(a.id)).evaluationStatus).toBe('failed');
+    });
+  });
+
+  describe('saving', () => {
+    it("never writes a correction on the examiner's lines", async () => {
+      const withExaminer = {
+        ...goodOutput,
+        utterances: [...goodOutput.utterances, { seq: 0, corrected: 'Bonsoir', errors: [] }],
+      };
+      await serviceWith(
+        new MockLanguageModelV4({ doGenerate: result(JSON.stringify(withExaminer)) })
+      ).evaluate(userId, attemptId);
+      const lines = await testDb.db
+        .select()
+        .from(transcripts)
+        .where(eq(transcripts.attemptId, attemptId))
+        .orderBy(transcripts.seq);
+      expect(lines[0]?.correctedText).toBeNull();
+      expect(lines[1]?.correctedText).toBe('Je suis allé au marché.');
+    });
+
+    it('adds the corrector cost to the realtime cost', async () => {
+      const before = Number((await rowOf(attemptId)).estimatedCostUsd);
+      const tokens = { input: 2_000_000, output: 1_000_000 };
+      await serviceWith(
+        new MockLanguageModelV4({ doGenerate: result(JSON.stringify(goodOutput), tokens) })
+      ).evaluate(userId, attemptId);
+      const added = estimateCost(DEFAULT_TEXT_MODEL, tokens.input, tokens.output) ?? 0;
+      expect(added).toBeGreaterThan(0.5);
+      expect(Number((await rowOf(attemptId)).estimatedCostUsd)).toBeCloseTo(before + added, 4);
+    });
+
+    it('adds nothing for a model without a known price', async () => {
+      await settings.upsert(userId, { textModel: 'modele-inconnu' });
+      const before = Number((await rowOf(attemptId)).estimatedCostUsd);
+      await serviceWith(goodModel()).evaluate(userId, attemptId);
+      const row = await rowOf(attemptId);
+      expect(row.evaluationStatus).toBe('done');
+      expect(Number(row.estimatedCostUsd)).toBeCloseTo(before, 4);
+    });
+
+    it('leaves the run level unset until all three tasks are graded', async () => {
+      const [run] = await testDb.db.insert(examRuns).values({ userId, mode: 'full' }).returning();
+      const svc = serviceWith(goodModel());
+      for (const task of [1, 2]) {
+        const a = await attempts.create({
+          userId,
+          mode: 'full',
+          runId: run.id,
+          exerciseId: null,
+          task,
+          model: 'gpt-realtime-mini',
+        });
+        await attempts.complete(userId, {
+          attemptId: a.id,
+          lines: [{ seq: 0, speaker: 'candidate', text: 'Bonjour madame.' }],
+        });
+        await svc.evaluate(userId, a.id);
+      }
+      const [row] = await testDb.db.select().from(examRuns).where(eq(examRuns.id, run.id));
+      expect(row?.globalLevel).toBeNull();
+      expect(row?.finishedAt).toBeNull();
+    });
+  });
+
+  describe('start', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('logs a crash of the evaluation instead of throwing', async () => {
+      const error = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const svc = serviceWith(goodModel());
+      vi.spyOn(svc, 'evaluate').mockRejectedValue(new Error('db down'));
+      expect(() => svc.start(userId, attemptId)).not.toThrow();
+      await vi.waitFor(() => {
+        expect(error).toHaveBeenCalledTimes(1);
+      });
+      expect(error.mock.calls[0]?.[0]).toBe(
+        `Evaluation crashed for attempt ${attemptId}: Error: db down`
+      );
+    });
+  });
+
   describe('atomic claim', () => {
     it('evaluates only once when two evaluations race', async () => {
       const model = goodModel();
@@ -331,6 +622,19 @@ describe('EvaluationService', () => {
       await setRow(a.id, { evaluationStatus: 'failed' });
       expect(await serviceWith(goodModel()).requeue(userId, a.id)).toBe('not_found');
       expect((await rowOf(a.id)).evaluationStatus).toBe('failed');
+    });
+
+    it('reports not_found for an unfinished attempt marked running', async () => {
+      const a = await attempts.create({
+        userId,
+        mode: 'practice',
+        runId: null,
+        exerciseId: null,
+        task: 2,
+        model: 'gpt-realtime-mini',
+      });
+      await setRow(a.id, { evaluationStatus: 'running' });
+      expect(await serviceWith(goodModel()).requeue(userId, a.id)).toBe('not_found');
     });
 
     it("reports not_found for another user's running evaluation", async () => {

@@ -91,3 +91,56 @@ describe('transcriptLinesFromHistory mapping', () => {
     ).toEqual([]);
   });
 });
+
+describe('transcriptLinesFromHistory content rules', () => {
+  const message = (role: string, content: unknown[], itemId = role) =>
+    ({ type: 'message', itemId, role, status: 'completed', content }) as unknown as RealtimeItem;
+
+  it('reads only input parts for the user, each by its own field', () => {
+    const lines = transcriptLinesFromHistory([
+      message('user', [
+        { type: 'output_text', text: 'sortie' },
+        { type: 'output_audio', transcript: 'sortie audio' },
+        { type: 'input_text', text: 'texte', transcript: 'pas ici' },
+        { type: 'input_audio', transcript: 'audio', text: 'pas ici non plus' },
+      ]),
+    ]);
+    expect(lines.map((l) => l.text)).toEqual(['texte audio']);
+  });
+
+  it('reads only output parts for the assistant, each by its own field', () => {
+    const lines = transcriptLinesFromHistory([
+      message('assistant', [
+        { type: 'input_text', text: 'entrée' },
+        { type: 'input_audio', transcript: 'entrée audio' },
+        { type: 'output_text', text: 'texte', transcript: 'pas ici' },
+        { type: 'output_audio', transcript: 'audio', text: 'pas ici non plus' },
+      ]),
+    ]);
+    expect(lines.map((l) => l.text)).toEqual(['texte audio']);
+  });
+
+  it('trims the joined text and drops whitespace-only messages', () => {
+    const lines = transcriptLinesFromHistory([
+      message('user', [{ type: 'input_text', text: '  Bonjour  ' }], 'u1'),
+      message('assistant', [{ type: 'output_audio', transcript: ' Salut ' }], 'a1'),
+      message('user', [{ type: 'input_text', text: '   ' }], 'u2'),
+      message('assistant', [{ type: 'output_text', text: ' \n ' }], 'a2'),
+    ]);
+    expect(lines).toEqual([
+      { id: 'u1', text: 'Bonjour', isLocal: true, timestamp: 0 },
+      { id: 'a1', text: 'Salut', isLocal: false, timestamp: 1 },
+    ]);
+  });
+
+  it('never shows a system message, whatever its parts', () => {
+    expect(
+      transcriptLinesFromHistory([
+        message('system', [
+          { type: 'output_text', text: 'Consignes' },
+          { type: 'output_audio', transcript: 'Consignes audio' },
+        ]),
+      ])
+    ).toEqual([]);
+  });
+});
