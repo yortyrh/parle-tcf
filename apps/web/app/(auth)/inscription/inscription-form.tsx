@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AuthShell, FieldLabel, FormError } from '@/components/app/auth-shell';
+import { OAuthButtons } from '@/components/app/oauth-buttons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
@@ -55,6 +56,7 @@ export function InscriptionForm() {
         </>
       }
     >
+      <OAuthButtons next="/parametres?bienvenue=1" />
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <div>
           <FieldLabel htmlFor="name">Prénom</FieldLabel>

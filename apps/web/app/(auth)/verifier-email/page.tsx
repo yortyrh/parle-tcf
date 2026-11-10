@@ -1,14 +1,16 @@
 import Link from 'next/link';
 import { AuthShell } from '@/components/app/auth-shell';
+import { VerifyToken } from './verify-token';
 
 export const metadata = { title: 'Vérifiez votre e-mail · parle-tcf' };
 
 export default async function VerifierEmailPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ email?: string; token?: string }>;
 }) {
-  const { email } = await searchParams;
+  const { email, token } = await searchParams;
+  if (token) return <VerifyToken token={token} />;
   return (
     <AuthShell
       title="Vérifiez votre boîte de réception"

@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { DevMailpitBanner } from '@/components/app/dev-mailpit-banner';
 
 interface AuthShellProps {
   title: string;
@@ -20,6 +21,7 @@ export function AuthShell({ title, description, children, footer }: AuthShellPro
         {description && (
           <p className="text-muted-foreground mb-5 text-center text-sm">{description}</p>
         )}
+        <DevMailpitBanner />
         {children}
         {footer && <div className="text-muted-foreground mt-5 text-center text-sm">{footer}</div>}
         <p className="text-muted-foreground mt-4 text-center text-xs">

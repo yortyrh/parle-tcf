@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { authClient } from '@/lib/auth-client';
+import { clearSessionToken } from '@/lib/session-token';
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
@@ -117,22 +118,24 @@ export function ParametresView() {
   }
 
   async function onSignOut() {
-    await authClient.signOut();
+    await authClient.signOut().catch(() => null);
+    clearSessionToken();
     router.replace('/connexion');
     router.refresh();
   }
 
+  // Deletion is always confirmed by email (works for GitHub/Google accounts without a password).
   async function onDeleteAccount() {
-    const password = window.prompt(
-      'Supprimer définitivement votre compte, vos clés et tout votre historique ?\nSaisissez votre mot de passe pour confirmer :'
+    await run(
+      async () => {
+        const { error } = await authClient.deleteUser({});
+        if (error) throw new Error("Impossible d'envoyer l'e-mail de confirmation. Réessayez.");
+      },
+      () => ({
+        kind: 'ok',
+        text: 'Un e-mail de confirmation vous a été envoyé : ouvrez le lien pour supprimer définitivement votre compte.',
+      })
     );
-    if (!password) return;
-    await run(async () => {
-      const { error } = await authClient.deleteUser({ password });
-      if (error) throw new Error('Mot de passe incorrect.');
-      router.replace('/connexion');
-      router.refresh();
-    });
   }
 
   if (loadError) {

@@ -15,6 +15,7 @@ import {
   type UpsertProviderSettingsInput,
   type Usage,
 } from '@parle-tcf/shared';
+import { authHeaders } from '@/lib/session-token';
 
 /** Base URL of the NestJS API (also hosts Better Auth under /api/auth). */
 export function getApiBase(): string {
@@ -38,14 +39,14 @@ interface CallOptions {
   keepalive?: boolean;
 }
 
-/** POST a JSON procedure with the Better Auth session cookie. */
+/** POST a JSON procedure with the bearer session token. */
 async function call<TOut>(route: string, input: unknown, options: CallOptions = {}): Promise<TOut> {
   let res: Response;
   try {
     res = await fetch(`${getApiBase()}${route}`, {
       method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(input ?? {}),
       keepalive: options.keepalive,
     });

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthShell, FieldLabel, FormError } from '@/components/app/auth-shell';
+import { OAuthButtons } from '@/components/app/oauth-buttons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
@@ -13,7 +14,11 @@ export function ConnexionForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeRedirectPath(params.get('next'));
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    params.get('erreur') === 'oauth'
+      ? 'La connexion avec ce fournisseur a échoué. Réessayez.'
+      : null
+  );
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -51,6 +56,7 @@ export function ConnexionForm() {
         </>
       }
     >
+      <OAuthButtons next={next} />
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <div>
           <FieldLabel htmlFor="email">Adresse e-mail</FieldLabel>

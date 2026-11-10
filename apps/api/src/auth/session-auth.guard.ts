@@ -5,7 +5,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
-import { fromNodeHeaders } from "better-auth/node";
 import type { Request } from "express";
 import { type Auth, BETTER_AUTH } from "./better-auth.js";
 
@@ -17,15 +16,23 @@ export interface AuthUser {
 
 export type AuthenticatedRequest = Request & { user?: AuthUser };
 
-/** Validates the Better Auth session cookie and exposes `request.user`. */
+/**
+ * Validates `Authorization: Bearer <session token>` (Better Auth `bearer()` plugin)
+ * and exposes `request.user`. Cookies are ignored on purpose: the web app lives on
+ * another site and authenticates with bearer tokens only, which also rules out CSRF.
+ */
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
   constructor(@Inject(BETTER_AUTH) private readonly auth: Auth) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const authorization = request.headers.authorization ?? "";
+    if (!/^bearer\s+\S+/i.test(authorization)) {
+      throw new UnauthorizedException("Authentification requise");
+    }
     const result = await this.auth.api
-      .getSession({ headers: fromNodeHeaders(request.headers) })
+      .getSession({ headers: new Headers({ authorization }) })
       .catch(() => null);
 
     if (!result?.user) {

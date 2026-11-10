@@ -5,6 +5,8 @@ import { DATABASE } from "../database/database.tokens.js";
 import { MailService } from "../mail/mail.service.js";
 import { BETTER_AUTH, createAuth } from "./better-auth.js";
 import { SessionAuthGuard } from "./session-auth.guard.js";
+import { OAuthHandoffService } from "./oauth-handoff.service.js";
+import { OAuthController } from "./oauth.controller.js";
 
 const betterAuthProvider: Provider = {
   provide: BETTER_AUTH,
@@ -16,7 +18,8 @@ const betterAuthProvider: Provider = {
 /** Global so `@UseGuards(SessionAuthGuard)` resolves in every feature module. */
 @Global()
 @Module({
-  providers: [betterAuthProvider, SessionAuthGuard],
+  providers: [betterAuthProvider, SessionAuthGuard, OAuthHandoffService],
   exports: [BETTER_AUTH, SessionAuthGuard],
+  controllers: [OAuthController],
 })
 export class AuthModule {}
