@@ -6,12 +6,12 @@ Monorepo (Turborepo + pnpm) for practising the **speaking test (expression orale
 
 ## Project layout
 
-| Package | Role |
-| --- | --- |
-| **`apps/web`** | Next.js 15 — candidate UI, auth, Realtime session, results, history and progression. |
-| **`apps/api`** | NestJS — Better Auth, encrypted per-user API keys, `client_secrets`, attempts, CEFR evaluation, usage limits (oRPC contract). |
-| **`packages/db`** | Drizzle schema, migrations and exercise seed (PostgreSQL). |
-| **`packages/shared`** | Task types and Zod schemas for the session contract — `tsc` build → `dist/`. |
+| Package               | Role                                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`apps/web`**        | Next.js 15 — candidate UI, auth, Realtime session, results, history and progression.                                          |
+| **`apps/api`**        | NestJS — Better Auth, encrypted per-user API keys, `client_secrets`, attempts, CEFR evaluation, usage limits (oRPC contract). |
+| **`packages/db`**     | Drizzle schema, migrations and exercise seed (PostgreSQL).                                                                    |
+| **`packages/shared`** | Task types and Zod schemas for the session contract — `tsc` build → `dist/`.                                                  |
 
 ## Quick start (Docker Compose)
 
@@ -46,10 +46,10 @@ Use **two** Railway services from the **same** Git repo: **API** (NestJS) and **
 
 For each service, set Railway **Root Directory** to empty (monorepo root), then point to the config below:
 
-| Service | Role | Config file |
-| --- | --- | --- |
+| Service | Role                                           | Config file             |
+| ------- | ---------------------------------------------- | ----------------------- |
 | **API** | `client_secrets`, auth, PostgreSQL, YAML, CORS | `apps/api/railway.json` |
-| **Web** | UI, microphone, client-side Realtime session | `apps/web/railway.json` |
+| **Web** | UI, microphone, client-side Realtime session   | `apps/web/railway.json` |
 
 ### Recommended order
 
@@ -62,18 +62,22 @@ For each service, set Railway **Root Directory** to empty (monorepo root), then 
 
 **API service** (`apps/api/.env.example`)
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | Yes | Calls to `POST /v1/realtime/client_secrets` |
-| `OPENAI_REALTIME_MODEL` | No | Realtime model when `service.yml` sets `llm.model: realtime` (default `gpt-realtime-mini`) |
-| `CORS_ORIGINS` | Strongly recommended in prod | Front-end origins, e.g. `https://your-web.up.railway.app` |
-| `PORT` | No | Railway often injects `PORT`; default 3001 locally |
+| Variable                                             | Required                     | Description                                                                                |
+| ---------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                                       | Yes                          | PostgreSQL connection string                                                               |
+| `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` / `WEB_URL` | Yes                          | Auth secret (32+ chars), public API URL, public web URL                                    |
+| `ENCRYPTION_KEYS` / `ENCRYPTION_KEY_CURRENT`         | Yes                          | Master keys for users' provider API keys (`v1:<base64 32 bytes>`)                          |
+| `SMTP_URL` / `MAIL_FROM`                             | Yes in prod                  | Verification and reset emails                                                              |
+| `GITHUB_*` / `GOOGLE_*`                              | No                           | OAuth providers (`<id>`/`<secret>`)                                                        |
+| `OPENAI_REALTIME_MODEL`                              | No                           | Realtime model when `service.yml` sets `llm.model: realtime` (default `gpt-realtime-mini`) |
+| `CORS_ORIGINS`                                       | Strongly recommended in prod | Front-end origins, e.g. `https://your-web.up.railway.app`                                  |
+| `PORT`                                               | No                           | Railway often injects `PORT`; default 3001 locally                                         |
 
 **Web service** — build-time variables
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `NEXT_PUBLIC_EXAM_API_URL` | Yes | **Public HTTPS** API URL as seen by the **browser** |
+| Variable                   | Required | Description                                         |
+| -------------------------- | -------- | --------------------------------------------------- |
+| `NEXT_PUBLIC_EXAM_API_URL` | Yes      | **Public HTTPS** API URL as seen by the **browser** |
 
 ---
 
@@ -81,12 +85,15 @@ For each service, set Railway **Root Directory** to empty (monorepo root), then 
 
 Requires Node 24 (`.nvmrc`) and pnpm 10. From the repo root after `pnpm install`:
 
-| Command | Role |
-| --- | --- |
-| `pnpm dev` | Runs web + api via Turborepo. |
-| `pnpm build` | Monorepo build (`@parle-tcf/shared` first, then the apps). |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Quality checks in every package. |
-| `pnpm format` / `pnpm format:check` | Prettier. |
+| Command                                                 | Role                                                                                |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm dev`                                              | Runs web + api via Turborepo.                                                       |
+| `pnpm build`                                            | Monorepo build (`@parle-tcf/shared` first, then the apps).                          |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test`            | Quality checks in every package.                                                    |
+| `pnpm format` / `pnpm format:check`                     | Prettier.                                                                           |
+| `pnpm verify`                                           | Full pipeline (format, lint, typecheck, tests, build).                              |
+| `pnpm push`                                             | Runs `verify`, then `git push` (plain `git push` is rejected by the pre-push hook). |
+| `pnpm db:migrate` / `pnpm db:seed` / `pnpm db:generate` | Apply migrations, seed exercises, generate a migration.                             |
 
 Typical two terminals:
 
@@ -103,27 +110,27 @@ Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` →
 
 ### API — `@parle-tcf/api` (`apps/api`)
 
-| Script | Description |
-| --- | --- |
-| `dev` / `build` / `start` | NestJS |
-| `db:seed` (`@parle-tcf/db`) | TCF CSV → PostgreSQL `exercises` table |
-| `evals` | Corrector evals against `evals/dataset` (needs `OPENAI_API_KEY_EVALS`) |
-| `rotate-keys` | Re-encrypt stored API keys with the current master key |
-| `lint`, `typecheck`, `format`, `test` | Quality |
+| Script                                | Description                                                            |
+| ------------------------------------- | ---------------------------------------------------------------------- |
+| `dev` / `build` / `start`             | NestJS                                                                 |
+| `db:seed` (`@parle-tcf/db`)           | TCF CSV → PostgreSQL `exercises` table (root: `pnpm db:seed`)          |
+| `evals`                               | Corrector evals against `evals/dataset` (needs `OPENAI_API_KEY_EVALS`) |
+| `rotate-keys`                         | Re-encrypt stored API keys with the current master key                 |
+| `lint`, `typecheck`, `format`, `test` | Quality                                                                |
 
 ### Web — `@parle-tcf/web` (`apps/web`)
 
-| Script | Description |
-| --- | --- |
-| `dev`, `build`, `start` | Next.js |
-| `lint`, `typecheck`, `format`, `test` | Quality |
+| Script                                | Description |
+| ------------------------------------- | ----------- |
+| `dev`, `build`, `start`               | Next.js     |
+| `lint`, `typecheck`, `format`, `test` | Quality     |
 
 ### Shared — `@parle-tcf/shared` (`packages/shared`)
 
-| Script | Description |
-| --- | --- |
-| `build` | `tsc` → `dist/` |
-| `lint`, `typecheck`, `format`, `test` | Quality |
+| Script                                | Description     |
+| ------------------------------------- | --------------- |
+| `build`                               | `tsc` → `dist/` |
+| `lint`, `typecheck`, `format`, `test` | Quality         |
 
 ---
 
@@ -137,7 +144,7 @@ See [`docs/adr`](./docs/adr).
 
 ## Documentation
 
-- Architecture: [AGENTS.md](./AGENTS.md)
+- Architecture and contributor rules: [CLAUDE.md](./CLAUDE.md)
 - Exercises & YAML: [EXERCISES.md](./EXERCISES.md)
 - Docker: [DOCKER.md](./DOCKER.md)
 - CI: [`.github/README.md`](./.github/README.md)

@@ -5,7 +5,7 @@ Types and Zod schemas shared between the **NestJS API** and the **Next.js web** 
 ## Documentation
 
 - [README.md](../../README.md) — local setup and deployment.
-- [AGENTS.md](../../AGENTS.md) — architecture and developer notes.
+- [CLAUDE.md](../../CLAUDE.md) — architecture and developer notes.
 - [EXERCISES.md](../../EXERCISES.md) — exercises and YAML configuration.
 
 ## Contents

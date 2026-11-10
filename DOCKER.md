@@ -5,7 +5,7 @@ Docker Compose for local development and Railway for production.
 ## Prerequisites
 
 - Docker 20.10+, Docker Compose v2+
-- **OpenAI** API key (`OPENAI_API_KEY`)
+- No server-side provider key: each user enters their own OpenAI or Gemini key in the app (stored encrypted)
 
 ## Local — Docker Compose
 
@@ -13,7 +13,7 @@ Docker Compose for local development and Railway for production.
 
 ```bash
 cp .env.example .env
-# Set OPENAI_API_KEY
+# Set BETTER_AUTH_SECRET and ENCRYPTION_KEYS (see comments in .env.example)
 ```
 
 ### 2. Start
@@ -29,13 +29,13 @@ docker-compose up -d --build
 
 ### 3. Logs & lifecycle
 
-| Task | Command |
-| --- | --- |
-| Follow logs | `docker-compose logs -f` |
-| API logs only | `docker-compose logs -f api` |
-| Stop | `docker-compose stop` |
-| Remove containers | `docker-compose down` |
-| Rebuild | `docker-compose up -d --build` |
+| Task              | Command                        |
+| ----------------- | ------------------------------ |
+| Follow logs       | `docker-compose logs -f`       |
+| API logs only     | `docker-compose logs -f api`   |
+| Stop              | `docker-compose stop`          |
+| Remove containers | `docker-compose down`          |
+| Rebuild           | `docker-compose up -d --build` |
 
 ---
 
@@ -43,10 +43,10 @@ docker-compose up -d --build
 
 **Two services** from the repo root (**empty root directory**). There is no separate **agent** service: the Realtime agent runs in the **browser**; the **API** holds secrets and data.
 
-| Service | `railway.json` | Image |
-| --- | --- | --- |
+| Service | `railway.json`          | Image                              |
+| ------- | ----------------------- | ---------------------------------- |
 | **API** | `apps/api/railway.json` | Nest + PostgreSQL (`DATABASE_URL`) |
-| **Web** | `apps/web/railway.json` | Next.js standalone |
+| **Web** | `apps/web/railway.json` | Next.js standalone                 |
 
 ### Typical sequence
 
@@ -58,7 +58,7 @@ docker-compose up -d --build
 
 **API**
 
-- `OPENAI_API_KEY` — required
+- `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `WEB_URL`, `ENCRYPTION_KEYS`, `SMTP_URL` — required (see `apps/api/.env.example`)
 - `CORS_ORIGINS` — allowed browser origins (e.g. `https://your-web.up.railway.app`)
 - `PORT` — optional (Railway often provides `PORT`)
 
@@ -73,4 +73,4 @@ docker-compose up -d --build
 - `apps/api/Dockerfile` — `turbo prune @parle-tcf/api`, Nest build, `CMD node apps/api/dist/main.js`
 - `apps/web/Dockerfile` — `turbo prune @parle-tcf/web`, Next standalone build, `ARG NEXT_PUBLIC_EXAM_API_URL`
 
-Functional overview: [AGENTS.md](./AGENTS.md).
+Functional overview: [CLAUDE.md](./CLAUDE.md).

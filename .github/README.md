@@ -6,7 +6,7 @@ GitHub Actions workflows live here (no duplicate workflows under `apps/*/.github
 
 ### [`workflows/ci.yml`](./workflows/ci.yml) — **CI**
 
-**Triggers**: `push` and `pull_request` on branch `main`.
+**Triggers**: manual only (`workflow_dispatch`) for now. Locally, `pnpm verify` runs the same checks and `pnpm push` enforces it.
 
 **Jobs**:
 
@@ -21,8 +21,9 @@ GitHub Actions workflows live here (no duplicate workflows under `apps/*/.github
 
 ## Summary
 
-| File | When it runs | Purpose |
-| --- | --- | --- |
-| `ci.yml` | Push / PR on `main` | Quality + build + tests |
+| File        | When it runs | Purpose                 |
+| ----------- | ------------ | ----------------------- |
+| `ci.yml`    | Manual       | Quality + build + tests |
+| `evals.yml` | Manual       | Corrector evals         |
 
-Hosting (**API** + **Web** on Railway): [README.md](../README.md), [AGENTS.md](../AGENTS.md), [DOCKER.md](../DOCKER.md).
+Hosting (**API** + **Web** on Railway): [README.md](../README.md), [CLAUDE.md](../CLAUDE.md), [DOCKER.md](../DOCKER.md).
