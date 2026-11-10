@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { parseExerciseCsv, seedExercises } from "@parle-tcf/db";
+import { contentHash, exercises } from "@parle-tcf/db";
 import { createTestDb, type TestDb } from "@parle-tcf/db/testing";
 import { AttemptsService } from "../attempts/attempts.service.js";
 import { ExamConfigService } from "../config/exam-config.service.js";
@@ -17,11 +17,16 @@ import { ExamSessionService } from "./exam-session.service.js";
 
 const KEY = "sk-test-cccccccccccccccccccccccccccc9999";
 
-const CSV = `id,taskType,content,url,imageUrl,imagePath,isImageBased
-x-t2-1,Tâche 2,Jeu de rôle un,,,,FALSE
-x-t2-2,Tâche 2,Jeu de rôle deux,,,,FALSE
-x-t3-1,Tâche 3,Sujet de débat,,,,FALSE
-`;
+const T1_PROMPT =
+  "Entretien dirigé : présentation de soi, puis questions sur des sujets quotidiens.";
+
+const FIXTURE_EXERCISES = [
+  { id: "x-t2-1", task: 2, prompt: "Jeu de rôle un" },
+  { id: "x-t2-2", task: 2, prompt: "Jeu de rôle deux" },
+  { id: "x-t3-1", task: 3, prompt: "Sujet de débat" },
+  // The fixed tâche 1 row, which the migrations provide and truncateAll() removes.
+  { id: "t1-entretien", task: 1, prompt: T1_PROMPT },
+];
 
 describe("ExamSessionService", () => {
   let testDb: TestDb;
@@ -37,7 +42,13 @@ describe("ExamSessionService", () => {
   afterAll(() => testDb.close());
   beforeEach(async () => {
     await testDb.truncateAll();
-    await seedExercises(testDb.db, parseExerciseCsv(CSV));
+    await testDb.db.insert(exercises).values(
+      FIXTURE_EXERCISES.map((e) => ({
+        ...e,
+        contentHash: contentHash(e.prompt),
+        isImageBased: false,
+      })),
+    );
     voice = fakeVoiceProvider();
     settings = new ProviderSettingsService(
       testDb.db,
@@ -174,5 +185,71 @@ describe("ExamSessionService", () => {
       service.createSession(userId, { taskType: "tache3", mode: "practice" }),
     ).rejects.toMatchObject({ code: "PROVIDER_KEY_REJECTED", status: 422 });
     expect((await attempts.list(userId, {})).total).toBe(0);
+  });
+  it("adds image, scenario and instruction to the exercise data only when set", async () => {
+    await settings.upsert(userId, { apiKey: KEY });
+    await testDb.db.insert(exercises).values([
+      {
+        id: "x-t2-rich",
+        task: 2,
+        prompt: "Je suis guide. Vous me demandez le programme.",
+        contentHash: contentHash(
+          "Je suis guide. Vous me demandez le programme.",
+        ),
+        scenario: "Je suis guide.",
+        instruction: "Vous me demandez le programme.",
+        isImageBased: false,
+      },
+      {
+        id: "x-t3-img",
+        task: 3,
+        prompt: "Décrivez cette image.",
+        contentHash: contentHash("Décrivez cette image."),
+        imageUrl: "https://img.test/a.png",
+        isImageBased: true,
+      },
+    ]);
+
+    const rich = await service.createSession(userId, {
+      taskType: "tache2",
+      exerciseId: "x-t2-rich",
+      mode: "practice",
+    });
+    expect(rich.exerciseData).toMatchObject({
+      exerciseId: "x-t2-rich",
+      content: "Je suis guide. Vous me demandez le programme.",
+      scenario: "Je suis guide.",
+      instruction: "Vous me demandez le programme.",
+    });
+    expect(rich.exerciseData).not.toHaveProperty("imageUrl");
+
+    const img = await service.createSession(userId, {
+      taskType: "tache3",
+      exerciseId: "x-t3-img",
+      mode: "practice",
+    });
+    expect(img.exerciseData).toMatchObject({
+      exerciseId: "x-t3-img",
+      imageUrl: "https://img.test/a.png",
+    });
+    expect(img.exerciseData).not.toHaveProperty("scenario");
+    expect(img.exerciseData).not.toHaveProperty("instruction");
+
+    const plain = await service.createSession(userId, {
+      taskType: "tache2",
+      exerciseId: "x-t2-2",
+      mode: "practice",
+    });
+    for (const key of ["imageUrl", "scenario", "instruction"]) {
+      expect(plain.exerciseData).not.toHaveProperty(key);
+    }
+
+    const t1 = await service.createSession(userId, {
+      taskType: "tache1",
+      mode: "practice",
+    });
+    for (const key of ["imageUrl", "scenario", "instruction"]) {
+      expect(t1.exerciseData).not.toHaveProperty(key);
+    }
   });
 });
