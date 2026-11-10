@@ -23,12 +23,21 @@
     "scaffold:web-page": "node scripts/scaffold.mjs web-page",
     "scaffold:package": "node scripts/scaffold.mjs package",
     "scaffold:smoke": "node scripts/scaffold.mjs smoke",
-    "db:generate:custom": "pnpm --filter @parle-tcf/db exec drizzle-kit generate --custom --name"
+    "db:generate:custom": "pnpm --filter @parle-tcf/db exec drizzle-kit generate --custom --name",
+    "infra:up": "bash scripts/compose.sh up -d --wait && pnpm --filter @parle-tcf/db build && node scripts/infra-init.mjs",
+    "infra:down": "bash scripts/compose.sh down",
+    "infra:reset": "bash scripts/compose.sh down --volumes",
+    "infra:logs": "bash scripts/compose.sh logs -f",
+    "setup:env": "node scripts/setup-local-env.mjs",
+    "samples:seed": "pnpm --filter @parle-tcf/db build && node scripts/seed-dev-users.mjs",
+    "local:credentials": "node scripts/show-local-credentials.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
+    "@parle-tcf/db": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "better-auth": "^1.7.18",
     "lefthook": "^2.2.2",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.6.14",
