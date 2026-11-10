@@ -19,6 +19,9 @@ import {
   usageSchema,
   testProviderSettingsOutputSchema,
   upsertProviderSettingsInputSchema,
+  listExercisesInputSchema,
+  listExercisesOutputSchema,
+  listExerciseSessionsOutputSchema,
 } from "@parle-tcf/shared";
 import { z } from "zod";
 
@@ -77,6 +80,13 @@ export const audioDownloadUrlProcedure = post(API_ROUTES.audioDownloadUrl)
   .input(attemptIdInputSchema)
   .output(audioDownloadOutputSchema);
 
+export const exercisesListProcedure = post(API_ROUTES.exercisesList)
+  .input(listExercisesInputSchema)
+  .output(listExercisesOutputSchema);
+export const exercisesSessionsProcedure = post(API_ROUTES.exercisesSessions)
+  .input(z.object({}).optional())
+  .output(listExerciseSessionsOutputSchema);
+
 export const examContract = populateContractRouterPaths({
   exam: { session: { create: createExamSessionProcedure } },
   settings: {
@@ -99,5 +109,9 @@ export const examContract = populateContractRouterPaths({
     setConsent: audioSetConsentProcedure,
     uploadUrl: audioUploadUrlProcedure,
     downloadUrl: audioDownloadUrlProcedure,
+  },
+  exercises: {
+    list: exercisesListProcedure,
+    sessions: exercisesSessionsProcedure,
   },
 });

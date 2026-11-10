@@ -73,6 +73,7 @@ export class ExamSessionService {
         content: tcf?.content ?? "",
         exerciseId: tcf?.id,
         taskType,
+        ...subjectExtras(tcf),
       };
     }
     if (taskType === "tache3") {
@@ -84,6 +85,7 @@ export class ExamSessionService {
         content: tcf?.content ?? "",
         exerciseId: tcf?.id,
         taskType,
+        ...subjectExtras(tcf),
       };
     }
     return {
@@ -204,4 +206,18 @@ export class ExamSessionService {
       },
     };
   }
+}
+
+/** Optional subject details sent to the client only when present. */
+function subjectExtras(
+  tcf: TcfExerciseRow | null,
+): Pick<
+  CreateExamSessionOutput["exerciseData"],
+  "imageUrl" | "scenario" | "instruction"
+> {
+  return {
+    ...(tcf?.imageUrl ? { imageUrl: tcf.imageUrl } : {}),
+    ...(tcf?.scenario ? { scenario: tcf.scenario } : {}),
+    ...(tcf?.instruction ? { instruction: tcf.instruction } : {}),
+  };
 }

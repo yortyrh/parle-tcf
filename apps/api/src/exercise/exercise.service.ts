@@ -1,5 +1,17 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { eq, exercises, sql, type Database } from "@parle-tcf/db";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  exerciseAliases,
+  exerciseOccurrences,
+  exercises,
+  exerciseSessions,
+  sql,
+  type Database,
+  type SQL,
+} from "@parle-tcf/db";
 import type { TaskType } from "@parle-tcf/shared";
 import { DATABASE } from "../database/database.tokens.js";
 
@@ -10,7 +22,53 @@ export interface TcfExerciseRow {
   url?: string;
   imageUrl?: string;
   isImageBased: boolean;
+  /** Tâche 2 subjects from imported pages: the situation and the candidate's instruction. */
+  scenario?: string;
+  instruction?: string;
 }
+
+export interface ExerciseSessionSummary {
+  id: number;
+  year: number;
+  month: number;
+  tache2: number;
+  tache3: number;
+}
+
+export interface ExerciseListItem {
+  id: string;
+  task: number;
+  prompt: string;
+  firstSeenOn: string | null;
+  lastSeenOn: string | null;
+  timesPublished: number;
+  isImageBased: boolean;
+}
+
+export interface ListExercisesInput {
+  task: 2 | 3;
+  sessionId?: number;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+const ACCENTED = "àâäáãåçéèêëíìîïñóòôöõúùûüýÿœæ";
+const PLAIN = "aaaaaaceeeeiiiinooooouuuuyyoa";
+
+/** Lowercase, accent-free SQL form of a text expression (no unaccent extension needed). */
+const folded = (expr: SQL) =>
+  sql`translate(lower(${expr}), ${ACCENTED}, ${PLAIN})`;
+
+const foldText = (s: string) =>
+  s
+    .toLowerCase()
+    .split("")
+    .map((c) => {
+      const i = ACCENTED.indexOf(c);
+      return i === -1 ? c : PLAIN[i];
+    })
+    .join("");
 
 /** Id of the fixed row standing for the Tâche 1 interview (see the seed). */
 export const TACHE1_EXERCISE_ID = "t1-entretien";
@@ -40,6 +98,8 @@ export class ExerciseService {
     };
     if (row.sourceUrl) exercise.url = row.sourceUrl;
     if (row.imageUrl) exercise.imageUrl = row.imageUrl;
+    if (row.scenario) exercise.scenario = row.scenario;
+    if (row.instruction) exercise.instruction = row.instruction;
     return exercise;
   }
 
@@ -53,7 +113,9 @@ export class ExerciseService {
       .orderBy(sql`random()`)
       .limit(1);
     if (!row) {
-      this.logger.warn(`No exercises found for ${taskType}; run pnpm db:seed`);
+      this.logger.warn(
+        `No exercises found for ${taskType}; run pnpm db:migrate`,
+      );
       return null;
     }
     return this.toRow(row);
@@ -70,13 +132,95 @@ export class ExerciseService {
     return rows.map((r) => r.id);
   }
 
+  /** Also resolves ids merged into another exercise (`exercise_aliases`). */
   async getExerciseById(id: string): Promise<TcfExerciseRow | null> {
     const [row] = await this.db
       .select()
       .from(exercises)
       .where(eq(exercises.id, id))
       .limit(1);
-    return row ? this.toRow(row) : null;
+    if (row) return this.toRow(row);
+    const [alias] = await this.db
+      .select({ exercise: exercises })
+      .from(exerciseAliases)
+      .innerJoin(exercises, eq(exercises.id, exerciseAliases.exerciseId))
+      .where(eq(exerciseAliases.aliasId, id))
+      .limit(1);
+    return alias ? this.toRow(alias.exercise) : null;
+  }
+
+  /** Months with published subjects, newest first, with distinct subjects per task. */
+  async listSessions(): Promise<ExerciseSessionSummary[]> {
+    const distinctFor = (task: number) =>
+      sql<number>`count(distinct ${exerciseOccurrences.exerciseId}) filter (where ${exerciseOccurrences.task} = ${task})`.mapWith(
+        Number,
+      );
+    return this.db
+      .select({
+        id: exerciseSessions.id,
+        year: exerciseSessions.year,
+        month: exerciseSessions.month,
+        tache2: distinctFor(2),
+        tache3: distinctFor(3),
+      })
+      .from(exerciseSessions)
+      .innerJoin(
+        exerciseOccurrences,
+        eq(exerciseOccurrences.sessionId, exerciseSessions.id),
+      )
+      .groupBy(exerciseSessions.id)
+      .orderBy(desc(exerciseSessions.year), desc(exerciseSessions.month));
+  }
+
+  /** Topic browser: a task's subjects, optionally of one month and/or matching a search. */
+  async listExercises({
+    task,
+    sessionId,
+    search,
+    limit = 20,
+    offset = 0,
+  }: ListExercisesInput): Promise<{
+    items: ExerciseListItem[];
+    total: number;
+  }> {
+    const conditions: SQL[] = [eq(exercises.task, task)];
+    if (sessionId !== undefined) {
+      conditions.push(
+        sql`exists (select 1 from ${exerciseOccurrences} where ${exerciseOccurrences.exerciseId} = ${exercises.id} and ${exerciseOccurrences.sessionId} = ${sessionId})`,
+      );
+    }
+    const term = search?.trim();
+    if (term) {
+      const pattern = `%${foldText(term).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      conditions.push(sql`${folded(sql`${exercises.prompt}`)} like ${pattern}`);
+    }
+    const where = and(...conditions);
+    const pageSize = Math.min(100, Math.max(1, Math.trunc(limit)));
+    const skip = Math.max(0, Math.trunc(offset));
+
+    const timesPublished =
+      sql<number>`(select count(*) from ${exerciseOccurrences} where ${exerciseOccurrences.exerciseId} = ${exercises.id})`.mapWith(
+        Number,
+      );
+    const [items, [{ total }]] = await Promise.all([
+      this.db
+        .select({
+          id: exercises.id,
+          task: exercises.task,
+          prompt: exercises.prompt,
+          firstSeenOn: exercises.firstSeenOn,
+          lastSeenOn: exercises.lastSeenOn,
+          timesPublished,
+          isImageBased: exercises.isImageBased,
+        })
+        .from(exercises)
+        .where(where)
+        .orderBy(sql`${exercises.lastSeenOn} desc nulls last`, exercises.id)
+        .limit(pageSize)
+        .offset(skip),
+      this.db.select({ total: count() }).from(exercises).where(where),
+    ]);
+    return { items, total };
   }
 
   /**

@@ -19,6 +19,11 @@ export const exerciseDataPayloadSchema = z.object({
   content: z.string().optional(),
   exerciseId: z.string().optional(),
   taskType: z.string().optional(),
+  /** Picture the subject relies on (some older Tâche 2 subjects). */
+  imageUrl: z.string().url().optional(),
+  /** Tâche 2: the role-play situation and the candidate's instruction, when known. */
+  scenario: z.string().optional(),
+  instruction: z.string().optional(),
 });
 
 export const agentConfigForClientSchema = z.object({

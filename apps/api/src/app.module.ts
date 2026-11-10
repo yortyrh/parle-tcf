@@ -28,6 +28,7 @@ import { ExamController } from "./session/exam.controller.js";
 import { ExamSessionService } from "./session/exam-session.service.js";
 import { ProviderSettingsService } from "./settings/provider-settings.service.js";
 import { SettingsController } from "./settings/settings.controller.js";
+import { ExerciseController } from "./exercise/exercise.controller.js";
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { SettingsController } from "./settings/settings.controller.js";
     SettingsController,
     AttemptsController,
     AudioController,
+    ExerciseController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
