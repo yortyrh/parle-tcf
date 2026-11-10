@@ -28,9 +28,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint \"src/**/*.ts\"",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
+    "lint": "eslint .",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate && prettier --write --log-level warn migrations",
     "db:migrate": "node --env-file-if-exists=../../apps/api/.env dist/migrate.js"
@@ -41,14 +39,11 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.14",
-    "@eslint/js": "^9.21.0",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.15.0",
     "drizzle-kit": "^0.31.5",
-    "eslint": "^9.21.0",
     "prettier": "^3.4.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.25.0",
     "vitest": "^3.2.4"
   },
   "peerDependencies": {

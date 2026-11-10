@@ -5,6 +5,8 @@
   "tabWidth": 2,
   "printWidth": 100,
   "importOrder": [
+    "^reflect-metadata$",
+    "^node:",
     "^react",
     "^next",
     "^next/(.*)$",
@@ -15,5 +17,6 @@
   ],
   "importOrderSeparation": false,
   "importOrderSortSpecifiers": true,
-  "plugins": ["@trivago/prettier-plugin-sort-imports", "prettier-plugin-tailwindcss"]
+  "plugins": ["@trivago/prettier-plugin-sort-imports", "prettier-plugin-tailwindcss"],
+  "importOrderParserPlugins": ["typescript", "jsx", "decorators-legacy"]
 }

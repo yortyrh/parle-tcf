@@ -8,10 +8,8 @@
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
-    "lint": "eslint \"{src,evals,scripts}/**/*.ts\"",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "vitest run",
     "rotate-keys": "tsx scripts/rotate-keys.ts",
     "evals": "tsx evals/run.ts"
@@ -51,18 +49,15 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.16",
-    "@eslint/js": "^9.21.0",
     "@nestjs/cli": "^11.0.14",
     "@nestjs/schematics": "^11.0.10",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^7.0.12",
     "dotenv": "^16.4.7",
-    "eslint": "^9.21.0",
     "prettier": "^3.4.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.25.0",
     "vitest": "^3.2.4"
   }
 }

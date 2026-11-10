@@ -4,6 +4,22 @@ pnpm-lock.yaml
 **/.next
 **/coverage
 **/.turbo
-reports/
-.stryker-tmp/
-packages/db/migrations/meta/
+**/reports/
+**/.stryker-tmp/
+**/playwright-report/
+**/test-results/
+# Generated or applied: never reformat.
+packages/db/migrations/
+# Exam content (prompts, rubric, agent YAML): byte-for-byte as reviewed.
+apps/api/config/
+apps/api/evals/dataset/
+# Prose and assets that are not ours to reflow.
+**/CHANGELOG.md
+PRD*.md
+.samples/
+patches/
+apps/web/public/
+apps/web/fonts/
+.idea/
+.cursor/
+*.pem

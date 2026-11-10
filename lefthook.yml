@@ -2,8 +2,14 @@
 pre-commit:
   piped: true
   commands:
+    eslint:
+      priority: 1
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx}'
+      run: pnpm exec eslint --fix --no-warn-ignored {staged_files}
+      stage_fixed: true
     prettier:
-      glob: "*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,md,yml,yaml,css}"
+      priority: 2
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,md,yml,yaml,css}'
       run: pnpm exec prettier --write --ignore-unknown {staged_files}
       stage_fixed: true
 
@@ -20,4 +26,4 @@ pre-push:
       # record (milliseconds), so a plain `git push` of an unverified commit is rejected.
       # {all_files} opts out of lefthook's "no matching push files" skip.
       use_stdin: true
-      run: ": {all_files}; node scripts/check-push-stamp.mjs"
+      run: ': {all_files}; node scripts/check-push-stamp.mjs'
