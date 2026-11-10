@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
 import { ORPCModule } from "@orpc/nest";
 import { AppController } from "./app.controller.js";
@@ -33,6 +35,8 @@ import { SettingsController } from "./settings/settings.controller.js";
       loggerParams({ NODE_ENV: process.env.NODE_ENV ?? "development" }),
     ),
     ORPCModule.forRoot({}),
+    // Per-IP limit on every Nest route (Better Auth applies its own limits under /api/auth).
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     DatabaseModule,
     CryptoModule,
     MailModule,
@@ -47,6 +51,7 @@ import { SettingsController } from "./settings/settings.controller.js";
     AudioController,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     ExamConfigService,
     ExerciseService,
     ExamSessionService,

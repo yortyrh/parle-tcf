@@ -6,6 +6,7 @@ import { Logger } from "nestjs-pino";
 import { NestFactory } from "@nestjs/core";
 import { toNodeHandler } from "better-auth/node";
 import dotenv from "dotenv";
+import helmet from "helmet";
 
 const _dir = dirname(fileURLToPath(import.meta.url));
 const localEnv = resolve(_dir, "..", ".env");
@@ -22,8 +23,14 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
+  // JSON API only: helmet's defaults (no sniffing, no framing, strict CSP) are safe here.
+  app.use(helmet());
 
-  app.enableCors({ origin: parseCorsOrigins(env), credentials: true });
+  app.enableCors({
+    origin: parseCorsOrigins(env),
+    credentials: true,
+    exposedHeaders: ["set-auth-token"],
+  });
 
   // Better Auth parses its own body, so it is mounted before Nest's parsers.
   app
