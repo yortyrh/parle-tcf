@@ -1,11 +1,23 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
 import { createTestDb, type TestDb } from "@parle-tcf/db/testing";
 import { examAttempts, examRuns, eq } from "@parle-tcf/db";
 import { AttemptsService } from "../attempts/attempts.service.js";
 import { ProviderSettingsService } from "../settings/provider-settings.service.js";
 import { fakeVoiceProvider, registryOf, testCipher } from "../test-helpers.js";
-import { EvaluationService, locateErrors } from "./evaluation.service.js";
+import {
+  EvaluationService,
+  locateErrors,
+  STALE_RUNNING_MS,
+} from "./evaluation.service.js";
 
 const KEY = "sk-test-0123456789abcdef";
 
@@ -93,7 +105,6 @@ describe("EvaluationService", () => {
     attemptId = a.id;
     await attempts.complete(userId, {
       attemptId,
-      durationS: 120,
       lines: [
         { seq: 0, speaker: "examiner", text: "Bonjour" },
         { seq: 1, speaker: "candidate", text: "Je suis allé à le marché." },
@@ -151,7 +162,12 @@ describe("EvaluationService", () => {
     });
     await serviceWith(model).evaluate(other, attemptId);
     expect(model.doGenerateCalls).toHaveLength(0);
-    expect(await serviceWith(model).requeue(other, attemptId)).toBe(false);
+    expect(await serviceWith(model).requeue(other, attemptId)).toBe(
+      "not_found",
+    );
+    expect((await attempts.get(userId, attemptId)).evaluationStatus).toBe(
+      "pending",
+    );
   });
 
   it("marks stale running evaluations as failed", async () => {
@@ -189,7 +205,6 @@ describe("EvaluationService", () => {
       });
       await attempts.complete(userId, {
         attemptId: a.id,
-        durationS: 60,
         lines: [{ seq: 0, speaker: "candidate", text: "Bonjour madame." }],
       });
       await svc.evaluate(userId, a.id);
@@ -199,5 +214,258 @@ describe("EvaluationService", () => {
       .from(examRuns)
       .where(eq(examRuns.id, run!.id));
     expect(row?.globalLevel).toBe("B1");
+  });
+  const goodModel = () =>
+    new MockLanguageModelV4({
+      doGenerate: result(JSON.stringify(goodOutput)),
+    });
+
+  const setRow = (
+    id: string,
+    values: Partial<typeof examAttempts.$inferInsert>,
+  ) =>
+    testDb.db.update(examAttempts).set(values).where(eq(examAttempts.id, id));
+
+  const rowOf = async (id: string) => {
+    const [row] = await testDb.db
+      .select()
+      .from(examAttempts)
+      .where(eq(examAttempts.id, id));
+    return row!;
+  };
+
+  describe("atomic claim", () => {
+    it("evaluates only once when two evaluations race", async () => {
+      const model = goodModel();
+      const svc = serviceWith(model);
+      await Promise.all([
+        svc.evaluate(userId, attemptId),
+        svc.evaluate(userId, attemptId),
+      ]);
+      expect(model.doGenerateCalls).toHaveLength(1);
+      expect((await rowOf(attemptId)).evaluationStatus).toBe("done");
+    });
+
+    it("does not evaluate again once done", async () => {
+      const model = goodModel();
+      const svc = serviceWith(model);
+      await svc.evaluate(userId, attemptId);
+      await svc.evaluate(userId, attemptId);
+      expect(model.doGenerateCalls).toHaveLength(1);
+      expect((await rowOf(attemptId)).evaluationStatus).toBe("done");
+    });
+
+    it.each(["running", "failed", "done"] as const)(
+      "leaves an attempt whose evaluation is %s alone",
+      async (status) => {
+        const startedAt = new Date(Date.now() - 60_000);
+        await setRow(attemptId, {
+          evaluationStatus: status,
+          evaluationStartedAt: startedAt,
+        });
+        const model = goodModel();
+        await serviceWith(model).evaluate(userId, attemptId);
+        expect(model.doGenerateCalls).toHaveLength(0);
+        const row = await rowOf(attemptId);
+        expect(row.evaluationStatus).toBe(status);
+        expect(row.evaluationStartedAt?.getTime()).toBe(startedAt.getTime());
+      },
+    );
+
+    it("does not claim an attempt that is not completed", async () => {
+      const a = await attempts.create({
+        userId,
+        mode: "practice",
+        runId: null,
+        exerciseId: null,
+        task: 2,
+        model: "gpt-realtime-mini",
+      });
+      const model = goodModel();
+      await serviceWith(model).evaluate(userId, a.id);
+      expect(model.doGenerateCalls).toHaveLength(0);
+      const row = await rowOf(a.id);
+      expect(row.evaluationStatus).toBe("pending");
+      expect(row.evaluationStartedAt).toBeNull();
+    });
+
+    it("does not claim someone else's attempt", async () => {
+      const other = await testDb.createUser("intruder@test.local");
+      await serviceWith(goodModel()).evaluate(other, attemptId);
+      const row = await rowOf(attemptId);
+      expect(row.evaluationStatus).toBe("pending");
+      expect(row.evaluationStartedAt).toBeNull();
+    });
+
+    it("marks the attempt running with its start time while the model works", async () => {
+      const seen: { status?: string; startedAt?: number | null } = {};
+      const before = Date.now();
+      const model = new MockLanguageModelV4({
+        doGenerate: async () => {
+          const row = await rowOf(attemptId);
+          seen.status = row.evaluationStatus;
+          seen.startedAt = row.evaluationStartedAt?.getTime() ?? null;
+          return result(JSON.stringify(goodOutput));
+        },
+      });
+      await serviceWith(model).evaluate(userId, attemptId);
+      const after = Date.now();
+
+      expect(seen.status).toBe("running");
+      expect(seen.startedAt).toEqual(expect.any(Number));
+      expect(seen.startedAt!).toBeGreaterThanOrEqual(before - 1000);
+      expect(seen.startedAt!).toBeLessThanOrEqual(after + 1000);
+      expect((await rowOf(attemptId)).evaluationStatus).toBe("done");
+    });
+  });
+
+  describe("requeue", () => {
+    it.each(["failed", "done"] as const)(
+      "queues a %s evaluation and runs it again",
+      async (status) => {
+        await setRow(attemptId, { evaluationStatus: status });
+        const model = goodModel();
+        expect(await serviceWith(model).requeue(userId, attemptId)).toBe(
+          "queued",
+        );
+        await vi.waitFor(async () => {
+          expect((await rowOf(attemptId)).evaluationStatus).toBe("done");
+        });
+        expect(model.doGenerateCalls).toHaveLength(1);
+      },
+    );
+
+    it("reports a running evaluation without touching it", async () => {
+      const startedAt = new Date(Date.now() - 60_000);
+      await setRow(attemptId, {
+        evaluationStatus: "running",
+        evaluationStartedAt: startedAt,
+      });
+      const model = goodModel();
+      expect(await serviceWith(model).requeue(userId, attemptId)).toBe(
+        "running",
+      );
+      // Give a (wrongly) started evaluation the chance to run.
+      await new Promise((r) => setTimeout(r, 50));
+      expect(model.doGenerateCalls).toHaveLength(0);
+      const row = await rowOf(attemptId);
+      expect(row.evaluationStatus).toBe("running");
+      expect(row.evaluationStartedAt?.getTime()).toBe(startedAt.getTime());
+    });
+
+    it("reports not_found for an unknown attempt", async () => {
+      expect(
+        await serviceWith(goodModel()).requeue(
+          userId,
+          "00000000-0000-4000-8000-000000000000",
+        ),
+      ).toBe("not_found");
+    });
+
+    it("reports not_found for an attempt that is not completed", async () => {
+      const a = await attempts.create({
+        userId,
+        mode: "practice",
+        runId: null,
+        exerciseId: null,
+        task: 2,
+        model: "gpt-realtime-mini",
+      });
+      await setRow(a.id, { evaluationStatus: "failed" });
+      expect(await serviceWith(goodModel()).requeue(userId, a.id)).toBe(
+        "not_found",
+      );
+      expect((await rowOf(a.id)).evaluationStatus).toBe("failed");
+    });
+
+    it("reports not_found for another user's running evaluation", async () => {
+      const other = await testDb.createUser("intruder@test.local");
+      await setRow(attemptId, { evaluationStatus: "running" });
+      expect(await serviceWith(goodModel()).requeue(other, attemptId)).toBe(
+        "not_found",
+      );
+    });
+
+    it("never requeues another user's failed evaluation", async () => {
+      const other = await testDb.createUser("intruder@test.local");
+      await setRow(attemptId, { evaluationStatus: "failed" });
+      expect(await serviceWith(goodModel()).requeue(other, attemptId)).toBe(
+        "not_found",
+      );
+      expect((await rowOf(attemptId)).evaluationStatus).toBe("failed");
+    });
+  });
+
+  describe("failStale", () => {
+    const now = new Date("2026-03-10T12:00:00.000Z");
+    const ago = (ms: number) => new Date(now.getTime() - ms);
+
+    it("fails a running evaluation that started before the window", async () => {
+      await setRow(attemptId, {
+        evaluationStatus: "running",
+        evaluationStartedAt: ago(STALE_RUNNING_MS + 1),
+        finishedAt: ago(STALE_RUNNING_MS + 1),
+      });
+      await serviceWith(goodModel()).failStale(now);
+      expect((await rowOf(attemptId)).evaluationStatus).toBe("failed");
+    });
+
+    it("keeps a running evaluation exactly at the edge of the window", async () => {
+      await setRow(attemptId, {
+        evaluationStatus: "running",
+        evaluationStartedAt: ago(STALE_RUNNING_MS),
+        finishedAt: ago(STALE_RUNNING_MS),
+      });
+      await serviceWith(goodModel()).failStale(now);
+      expect((await rowOf(attemptId)).evaluationStatus).toBe("running");
+    });
+
+    it("keeps a recently requeued evaluation of an old attempt running", async () => {
+      await setRow(attemptId, {
+        evaluationStatus: "running",
+        evaluationStartedAt: ago(60_000),
+        finishedAt: ago(30 * 24 * 3600_000),
+      });
+      await serviceWith(goodModel()).failStale(now);
+      expect((await rowOf(attemptId)).evaluationStatus).toBe("running");
+    });
+
+    it("falls back to finishedAt when the start time is unknown", async () => {
+      const recent = await attempts.create({
+        userId,
+        mode: "practice",
+        runId: null,
+        exerciseId: null,
+        task: 3,
+        model: "gpt-realtime-mini",
+      });
+      await setRow(attemptId, {
+        evaluationStatus: "running",
+        evaluationStartedAt: null,
+        finishedAt: ago(STALE_RUNNING_MS + 60_000),
+      });
+      await setRow(recent.id, {
+        status: "completed",
+        evaluationStatus: "running",
+        evaluationStartedAt: null,
+        finishedAt: ago(60_000),
+      });
+      await serviceWith(goodModel()).failStale(now);
+      expect((await rowOf(attemptId)).evaluationStatus).toBe("failed");
+      expect((await rowOf(recent.id)).evaluationStatus).toBe("running");
+    });
+
+    it.each(["pending", "done"] as const)(
+      "never touches a %s evaluation",
+      async (status) => {
+        await setRow(attemptId, {
+          evaluationStatus: status,
+          evaluationStartedAt: ago(24 * 3600_000),
+          finishedAt: ago(24 * 3600_000),
+        });
+        await serviceWith(goodModel()).failStale(now);
+        expect((await rowOf(attemptId)).evaluationStatus).toBe(status);
+      },
+    );
   });
 });

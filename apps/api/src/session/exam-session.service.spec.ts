@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { contentHash, exercises } from "@parle-tcf/db";
+import { contentHash, eq, examAttempts, exercises } from "@parle-tcf/db";
 import { createTestDb, type TestDb } from "@parle-tcf/db/testing";
 import { AttemptsService } from "../attempts/attempts.service.js";
 import { ExamConfigService } from "../config/exam-config.service.js";
@@ -108,11 +108,12 @@ describe("ExamSessionService", () => {
       taskType: "tache2",
       mode: "practice",
     });
-    await attempts.complete(userId, {
-      attemptId: first.attemptId,
-      lines: [],
-      durationS: 61 * 60,
-    });
+    await attempts.complete(userId, { attemptId: first.attemptId, lines: [] });
+    // The server computes the duration; store a full hour of usage directly.
+    await testDb.db
+      .update(examAttempts)
+      .set({ realtimeMinutes: "61.00" })
+      .where(eq(examAttempts.id, first.attemptId));
     await expect(
       service.createSession(userId, { taskType: "tache2", mode: "practice" }),
     ).rejects.toMatchObject({ code: "LIMIT_REACHED", status: 429 });
@@ -251,5 +252,210 @@ describe("ExamSessionService", () => {
     for (const key of ["imageUrl", "scenario", "instruction"]) {
       expect(t1.exerciseData).not.toHaveProperty(key);
     }
+  });
+  describe("refreshToken", () => {
+    const rowOf = async (id: string) => {
+      const [row] = await testDb.db
+        .select()
+        .from(examAttempts)
+        .where(eq(examAttempts.id, id));
+      return row!;
+    };
+    const hourAgo = () => new Date(Date.now() - 3600_000);
+
+    /** A live session of `userId` whose clock was set an hour back. */
+    const liveSession = async () => {
+      await settings.upsert(userId, { apiKey: KEY, voice: "marin" });
+      const out = await service.createSession(userId, {
+        taskType: "tache2",
+        mode: "practice",
+      });
+      await testDb.db
+        .update(examAttempts)
+        .set({ startedAt: hourAgo(), lastActivityAt: hourAgo() })
+        .where(eq(examAttempts.id, out.attemptId));
+      return out;
+    };
+
+    it("mints a new secret for the attempt's model and restarts its clock", async () => {
+      const out = await liveSession();
+      const before = Date.now();
+
+      expect(
+        await service.refreshToken(userId, { attemptId: out.attemptId }),
+      ).toEqual({ clientSecret: "ek_test_ephemeral" });
+
+      expect(voice.mintCalls).toHaveLength(2);
+      expect(voice.mintCalls[1]?.apiKey).toBe(KEY);
+      expect(voice.mintCalls[1]?.params).toEqual(voice.mintCalls[0]?.params);
+      expect(voice.mintCalls[1]?.params.model).toBe(out.agentConfig.model);
+      expect(voice.mintCalls[1]?.params.voice).toBe("marin");
+
+      const row = await rowOf(out.attemptId);
+      expect(row.startedAt.getTime()).toBeGreaterThanOrEqual(before - 1000);
+      expect(row.lastActivityAt.getTime()).toBeGreaterThanOrEqual(
+        before - 1000,
+      );
+      expect(row.status).toBe("in_progress");
+    });
+
+    it("uses the model stored on the attempt, not the current settings", async () => {
+      const out = await liveSession();
+      await settings.upsert(userId, {
+        apiKey: KEY,
+        realtimeModel: "gpt-realtime",
+      });
+      await service.refreshToken(userId, { attemptId: out.attemptId });
+      expect(voice.mintCalls[1]?.params.model).toBe(out.agentConfig.model);
+    });
+
+    it("refuses another user's attempt", async () => {
+      const out = await liveSession();
+      const other = await testDb.createUser("other@test.local");
+      await settings.upsert(other, { apiKey: KEY });
+
+      await expect(
+        service.refreshToken(other, { attemptId: out.attemptId }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+      expect(voice.mintCalls).toHaveLength(1);
+      expect((await rowOf(out.attemptId)).startedAt.getTime()).toBeLessThan(
+        Date.now() - 30 * 60_000,
+      );
+    });
+
+    it("refuses an unknown attempt", async () => {
+      await settings.upsert(userId, { apiKey: KEY });
+      await expect(
+        service.refreshToken(userId, {
+          attemptId: "00000000-0000-4000-8000-000000000000",
+        }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+      expect(voice.mintCalls).toHaveLength(0);
+    });
+
+    it.each(["completed", "interrupted"] as const)(
+      "refuses a %s attempt with CONFLICT",
+      async (status) => {
+        const out = await liveSession();
+        await testDb.db
+          .update(examAttempts)
+          .set({ status })
+          .where(eq(examAttempts.id, out.attemptId));
+
+        await expect(
+          service.refreshToken(userId, { attemptId: out.attemptId }),
+        ).rejects.toMatchObject({ code: "CONFLICT" });
+        expect(voice.mintCalls).toHaveLength(1);
+      },
+    );
+
+    it("refuses with CONFLICT when the user switched provider", async () => {
+      const gemini = fakeVoiceProvider("gemini");
+      const both = new ExamSessionService(
+        new ExerciseService(testDb.db),
+        new ExamConfigService(),
+        settings,
+        attempts,
+        new UsageService(testDb.db),
+        registryOf(voice, gemini),
+      );
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await both.createSession(userId, {
+        taskType: "tache2",
+        mode: "practice",
+      });
+      await settings.upsert(userId, {
+        provider: "gemini",
+        apiKey: "AIzaSyTestKey0123456789",
+      });
+
+      await expect(
+        both.refreshToken(userId, { attemptId: out.attemptId }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+      expect(voice.mintCalls).toHaveLength(1);
+      expect(gemini.mintCalls).toHaveLength(0);
+    });
+
+    it("refreshes a Gemini session with the Gemini voice rule", async () => {
+      const gemini = fakeVoiceProvider("gemini");
+      const geminiService = new ExamSessionService(
+        new ExerciseService(testDb.db),
+        new ExamConfigService(),
+        settings,
+        attempts,
+        new UsageService(testDb.db),
+        registryOf(voice, gemini),
+      );
+      await settings.upsert(userId, {
+        provider: "gemini",
+        apiKey: "AIzaSyTestKey0123456789",
+      });
+      const out = await geminiService.createSession(userId, {
+        taskType: "tache2",
+        mode: "practice",
+      });
+
+      await geminiService.refreshToken(userId, { attemptId: out.attemptId });
+      expect(gemini.mintCalls).toHaveLength(2);
+      expect(gemini.mintCalls[1]?.params).toEqual({
+        model: out.agentConfig.model,
+        voice: "Puck",
+      });
+      expect(voice.mintCalls).toHaveLength(0);
+    });
+
+    it("refuses once the daily limit is reached, without touching the attempt", async () => {
+      const out = await liveSession();
+      const used = await attempts.create({
+        userId,
+        mode: "practice",
+        runId: null,
+        exerciseId: null,
+        task: 3,
+        model: "gpt-realtime-mini",
+      });
+      await testDb.db
+        .update(examAttempts)
+        .set({ status: "completed", realtimeMinutes: "61.00" })
+        .where(eq(examAttempts.id, used.id));
+      const startedBefore = (await rowOf(out.attemptId)).startedAt.getTime();
+
+      await expect(
+        service.refreshToken(userId, { attemptId: out.attemptId }),
+      ).rejects.toMatchObject({ code: "LIMIT_REACHED", status: 429 });
+      expect(voice.mintCalls).toHaveLength(1);
+      expect((await rowOf(out.attemptId)).startedAt.getTime()).toBe(
+        startedBefore,
+      );
+    });
+
+    it("maps a rejected key like createSession and keeps the clock", async () => {
+      const out = await liveSession();
+      const startedBefore = (await rowOf(out.attemptId)).startedAt.getTime();
+      voice.mintError = new ProviderError("Clé API refusée par OpenAI", 401);
+
+      await expect(
+        service.refreshToken(userId, { attemptId: out.attemptId }),
+      ).rejects.toMatchObject({ code: "PROVIDER_KEY_REJECTED", status: 422 });
+      expect((await rowOf(out.attemptId)).startedAt.getTime()).toBe(
+        startedBefore,
+      );
+    });
+
+    it("maps other provider failures to BAD_GATEWAY", async () => {
+      const out = await liveSession();
+      voice.mintError = new ProviderError("Service indisponible", 503);
+      await expect(
+        service.refreshToken(userId, { attemptId: out.attemptId }),
+      ).rejects.toMatchObject({ code: "BAD_GATEWAY", status: 502 });
+    });
+
+    it("never returns the upstream key", async () => {
+      const out = await liveSession();
+      const res = await service.refreshToken(userId, {
+        attemptId: out.attemptId,
+      });
+      expect(JSON.stringify(res)).not.toContain(KEY);
+    });
   });
 });
