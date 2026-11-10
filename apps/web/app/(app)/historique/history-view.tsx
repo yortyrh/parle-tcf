@@ -8,6 +8,7 @@ import { PageShell } from '@/components/app/page-shell';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { TASK_LABELS, formatCost, formatDuration } from '@/lib/cefr';
+import { canCompare } from '@/lib/exam-flow';
 
 const PAGE_SIZE = 20;
 
@@ -19,7 +20,8 @@ export function HistoryView() {
   const [mode, setMode] = useState<'full' | 'practice' | undefined>();
   const [usage, setUsage] = useState<Usage | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
+  /** Up to two attempts picked for comparison (kept across pages). */
+  const [selected, setSelected] = useState<AttemptSummary[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -42,13 +44,20 @@ export function HistoryView() {
   async function remove(id: string) {
     if (!window.confirm('Supprimer définitivement cette tentative ?')) return;
     await api.deleteAttempt(id);
-    setSelected((s) => s.filter((x) => x !== id));
+    setSelected((s) => s.filter((x) => x.id !== id));
     await load();
   }
 
-  function toggle(id: string) {
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id].slice(-2)));
+  function toggle(attempt: AttemptSummary) {
+    setSelected((s) =>
+      s.some((x) => x.id === attempt.id)
+        ? s.filter((x) => x.id !== attempt.id)
+        : [...s, attempt].slice(-2)
+    );
   }
+
+  const [first, second] = selected;
+  const comparable = first && second ? canCompare(first, second) : false;
 
   return (
     <PageShell title="Historique">
@@ -91,10 +100,15 @@ export function HistoryView() {
             <option value="full">Examen</option>
           </select>
         </label>
-        {selected.length === 2 && (
+        {first && second && comparable && (
           <Button asChild size="sm" variant="primary">
-            <Link href={`/comparer?a=${selected[0]}&b=${selected[1]}`}>Comparer la sélection</Link>
+            <Link href={`/comparer?a=${first.id}&b=${second.id}`}>Comparer la sélection</Link>
           </Button>
+        )}
+        {first && second && !comparable && (
+          <p className="text-muted-foreground text-sm" role="status">
+            Seules deux tentatives du même sujet peuvent être comparées.
+          </p>
         )}
       </div>
 
@@ -147,8 +161,8 @@ export function HistoryView() {
                     <input
                       type="checkbox"
                       aria-label="Sélectionner pour comparer"
-                      checked={selected.includes(a.id)}
-                      onChange={() => toggle(a.id)}
+                      checked={selected.some((x) => x.id === a.id)}
+                      onChange={() => toggle(a)}
                     />
                   </td>
                   <td className="p-2">

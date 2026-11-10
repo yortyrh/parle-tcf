@@ -1,21 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import type { AttemptDetail } from '@parle-tcf/shared';
 import { CRITERIA, CRITERION_LABELS } from '@parle-tcf/shared';
 import { LevelBadge } from '@/components/app/level-badge';
 import { PageShell } from '@/components/app/page-shell';
 import { useAttempt } from '@/hooks/useAttempt';
 import { TASK_LABELS } from '@/lib/cefr';
+import { canCompare } from '@/lib/exam-flow';
 
-function Column({ id }: { id: string }) {
-  const { attempt, error } = useAttempt(id);
-  if (error)
-    return (
-      <p role="alert" className="text-destructive">
-        {error}
-      </p>
-    );
-  if (!attempt) return <p role="status">Chargement…</p>;
+function Column({ attempt }: { attempt: AttemptDetail }) {
   return (
     <section
       className="bg-card rounded-lg border p-4"
@@ -43,7 +37,62 @@ function Column({ id }: { id: string }) {
       ) : (
         <p className="text-muted-foreground text-sm">Pas d’évaluation disponible.</p>
       )}
+      <h3 className="mt-4 mb-2 text-sm font-semibold">Transcription</h3>
+      {attempt.transcript.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Aucune transcription.</p>
+      ) : (
+        <ol className="space-y-2 text-sm">
+          {attempt.transcript.map((line) => (
+            <li key={line.seq}>
+              <span className="text-muted-foreground text-xs font-semibold uppercase">
+                {line.speaker === 'candidate' ? 'Vous' : 'Examinateur'}
+              </span>
+              <p>{line.text}</p>
+              {line.correctedText && line.correctedText !== line.text && (
+                <p className="text-xs text-emerald-700">→ {line.correctedText}</p>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
+  );
+}
+
+function Comparison({ a, b }: { a: string; b: string }) {
+  const left = useAttempt(a);
+  const right = useAttempt(b);
+  const error = left.error ?? right.error;
+  if (error)
+    return (
+      <p role="alert" className="text-destructive">
+        {error}
+      </p>
+    );
+  if (!left.attempt || !right.attempt) return <p role="status">Chargement…</p>;
+  if (!canCompare(left.attempt, right.attempt)) {
+    return (
+      <p role="alert" className="text-muted-foreground">
+        Ces tentatives portent sur des sujets différents : seules deux tentatives du même sujet
+        peuvent être comparées.{' '}
+        <Link href="/historique" className="underline">
+          Retour à l’historique
+        </Link>
+      </p>
+    );
+  }
+  return (
+    <>
+      {left.attempt.exercisePrompt && (
+        <p className="text-muted-foreground mb-4 text-sm whitespace-pre-line">
+          {left.attempt.exercisePrompt}
+        </p>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Column attempt={left.attempt} />
+        <Column attempt={right.attempt} />
+      </div>
+    </>
   );
 }
 
@@ -51,13 +100,10 @@ export function CompareView({ a, b }: { a?: string; b?: string }) {
   return (
     <PageShell title="Comparer deux tentatives">
       {a && b ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Column id={a} />
-          <Column id={b} />
-        </div>
+        <Comparison a={a} b={b} />
       ) : (
         <p className="text-muted-foreground">
-          Sélectionnez deux tentatives dans l’
+          Sélectionnez deux tentatives du même sujet dans l’
           <Link href="/historique" className="underline">
             historique
           </Link>

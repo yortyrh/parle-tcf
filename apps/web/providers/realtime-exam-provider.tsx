@@ -23,6 +23,7 @@ import { TASK_DURATIONS, TCF_TASK_TYPES } from '@parle-tcf/shared';
 import { toastAlert } from '@/components/ui/alert-toast';
 import { ApiError, api } from '@/lib/api';
 import { AttemptRecorder } from '@/lib/audio-recorder';
+import { restartOptions } from '@/lib/exam-flow';
 import { GeminiLiveSession } from '@/lib/gemini-live';
 import {
   nextExerciseIdRandom,
@@ -79,15 +80,18 @@ async function uploadRecording(
   try {
     const recording = await pending;
     if (!recording) return;
-    const { url, contentType } = await api.getAudioUploadUrl({
+    const { url, fields, maxBytes } = await api.getAudioUploadUrl({
       attemptId,
       contentType: recording.contentType,
     });
-    await fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType },
-      body: recording.blob,
-    });
+    if (recording.blob.size > maxBytes) return;
+    // Presigned POST: the policy fields first, the file last.
+    const form = new FormData();
+    for (const [name, value] of Object.entries(fields)) form.append(name, value);
+    form.append('file', recording.blob);
+    const res = await fetch(url, { method: 'POST', body: form });
+    if (!res.ok) return;
+    await api.confirmAudioUpload(attemptId);
   } catch {
     // The transcript and evaluation are unaffected.
   }
@@ -126,6 +130,8 @@ export interface RealtimeExamContextValue {
   timeUpAt: number | null;
   /** True once the attempt has been saved as completed (task over). */
   attemptCompleted: boolean;
+  /** The voice connection closed before the task was completed (network, provider). */
+  sessionClosed: boolean;
   /** Called by the countdown at 0: closes the task in exam mode, only warns in practice. */
   onTimeUp: () => void;
   /** Saves the attempt, stops the session and keeps the result screen state. */
@@ -190,6 +196,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const [preparation, setPreparation] = useState<PreparationState | null>(null);
   const [timeUpAt, setTimeUpAt] = useState<number | null>(null);
   const [attemptCompleted, setAttemptCompleted] = useState(false);
+  const [sessionClosed, setSessionClosed] = useState(false);
 
   const sessionRef = useRef<RealtimeSession | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -206,7 +213,9 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const restartExamRef = useRef<() => Promise<void>>(async () => {});
   const attemptIdRef = useRef<string | null>(null);
   const modeRef = useRef<AttemptMode>('practice');
-  const taskStartedAtRef = useRef<number | null>(null);
+  const runIdRef = useRef<string | null>(null);
+  /** Set once the limit warning fired for the running attempt. */
+  const limitReachedRef = useRef(false);
   const attemptDoneRef = useRef(false);
   const usageRef = useRef({ inputTokens: 0, outputTokens: 0 });
   const transcriptsRef = useRef<ExamTranscriptLine[]>([]);
@@ -350,8 +359,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           () => undefined
         );
       }
-      const startedAt = taskStartedAtRef.current ?? Date.now();
-      const durationS = Math.min(3600, Math.max(0, Math.round((Date.now() - startedAt) / 1000)));
       const { inputTokens, outputTokens } = usageRef.current;
       setAttemptCompleted(true);
       // The recording is finalised now (before the mic tracks stop); a page unload
@@ -363,7 +370,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           {
             attemptId: id,
             lines,
-            durationS,
             ...(inputTokens + outputTokens > 0 ? { usage: { inputTokens, outputTokens } } : {}),
           },
           { keepalive: options.keepalive }
@@ -431,11 +437,13 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     attemptIdRef.current = null;
     setAttemptId(null);
     setRunId(null);
+    runIdRef.current = null;
     setTimeUpAt(null);
     setAttemptCompleted(false);
+    setSessionClosed(false);
+    limitReachedRef.current = false;
     transcriptsRef.current = [];
     lastCheckpointKeyRef.current = '';
-    taskStartedAtRef.current = null;
     usageRef.current = { inputTokens: 0, outputTokens: 0 };
   }, [stopUserVad, stopAgentVad, persistAttempt, clearCheckpointTimer]);
 
@@ -468,9 +476,25 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     if (lines.length === 0 || key === lastCheckpointKeyRef.current) return;
     lastCheckpointKeyRef.current = key;
     // Best effort: the final `complete` call carries the full transcript anyway.
-    api.checkpointAttempt({ attemptId: id, lines }, options).catch(() => {
-      lastCheckpointKeyRef.current = '';
-    });
+    api.checkpointAttempt({ attemptId: id, lines }, options).then(
+      ({ limitReached }) => {
+        if (!limitReached || limitReachedRef.current || attemptIdRef.current !== id) return;
+        limitReachedRef.current = true;
+        toastAlert({
+          title: 'Limite d’utilisation atteinte',
+          description: (
+            <p className="w-full text-sm">
+              Votre limite quotidienne ou mensuelle est atteinte : la tâche est enregistrée et la
+              session s’arrête.
+            </p>
+          ),
+        });
+        void finishTaskRef.current();
+      },
+      () => {
+        lastCheckpointKeyRef.current = '';
+      }
+    );
   }, []);
 
   // Debounced autosave while the transcript grows, plus a last save when the tab is hidden/closed.
@@ -523,6 +547,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       setIsConnecting(true);
       attemptDoneRef.current = false;
       setAttemptCompleted(false);
+      setSessionClosed(false);
+      limitReachedRef.current = false;
       usageRef.current = { inputTokens: 0, outputTokens: 0 };
       lastCheckpointKeyRef.current = '';
       transcriptsRef.current = [];
@@ -548,6 +574,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         modeRef.current = options.mode ?? 'practice';
         setAttemptId(data.attemptId);
         setRunId(data.runId);
+        runIdRef.current = data.runId;
         setMode(options.mode ?? 'practice');
         sessionIdRef.current = data.sessionId;
         setSessionId(data.sessionId);
@@ -562,6 +589,13 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         const preparationS = TASK_DURATIONS[taskType as TaskType]?.preparationS ?? 0;
         if (preparationS > 0) {
           await waitForPreparation(preparationS);
+          if (isStale()) return;
+        }
+        // Tokens are short-lived (Gemini: the session must open within minutes):
+        // after a preparation time, mint a fresh one right before connecting.
+        let clientSecret = data.clientSecret;
+        if (preparationS > 0) {
+          ({ clientSecret } = await api.refreshSessionToken(data.attemptId));
           if (isStale()) return;
         }
 
@@ -604,7 +638,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           startUserVad(geminiStream);
 
           const live = new GeminiLiveSession({
-            token: data.clientSecret,
+            token: clientSecret,
             model: data.agentConfig.model,
             voice: data.agentConfig.voice,
             instructions,
@@ -619,9 +653,9 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
               usageRef.current = usage;
             },
             onTool: (name) => {
+              // onFinSession already schedules finishTask after the farewell.
               if (name === 'finSession') {
                 onFinSession();
-                setTimeout(() => void finishTaskRef.current(), FAREWELL_GRACE_MS);
               } else {
                 void restartExamRef.current();
               }
@@ -639,6 +673,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
               flushTranscripts();
               void persistAttempt();
               setIsConnected(false);
+              // Lets the UI offer to continue or retry instead of waiting forever.
+              setSessionClosed(true);
             },
           });
           geminiRef.current = live;
@@ -650,7 +686,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           live.sendText(
             "Le candidat est prêt. Commence la session d'examen immédiatement en suivant ta consigne d'accueil et ton rôle d'examinateur."
           );
-          taskStartedAtRef.current = Date.now();
           setTimeUpAt(Date.now() + (TASK_DURATIONS[taskType as TaskType]?.speakingS ?? 0) * 1000);
           setIsConnected(true);
           return;
@@ -797,7 +832,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
         });
 
         await session.connect({
-          apiKey: data.clientSecret,
+          apiKey: clientSecret,
           model: data.agentConfig.model,
         });
 
@@ -816,7 +851,6 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           ],
         });
 
-        taskStartedAtRef.current = Date.now();
         setTimeUpAt(Date.now() + (TASK_DURATIONS[taskType as TaskType]?.speakingS ?? 0) * 1000);
         setIsConnected(true);
       } catch (e) {
@@ -847,12 +881,14 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
     const exerciseId = currentExerciseIdRef.current ?? exerciseData?.exerciseId;
     if (!taskType) return;
 
+    // A full exam stays in its run; capture before end() clears the state.
+    const options = restartOptions(modeRef.current, runIdRef.current);
     resetSessionEnd();
     setRestartSequence((current) => current + 1);
     setIsRestarting(true);
     end();
     try {
-      await connectToExam(taskType, exerciseId, { mode: 'practice' });
+      await connectToExam(taskType, exerciseId, options);
     } finally {
       setIsRestarting(false);
     }
@@ -872,12 +908,13 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
             ? previousExerciseIdSequential(ids, currentId)
             : nextExerciseIdRandom(ids, currentId);
 
+      const options = restartOptions(modeRef.current, runIdRef.current);
       resetSessionEnd();
       setRestartSequence((c) => c + 1);
       setIsRestarting(true);
       end();
       try {
-        await connectToExam(taskType, nextId, { mode: 'practice' });
+        await connectToExam(taskType, nextId, options);
       } finally {
         setIsRestarting(false);
       }
@@ -946,6 +983,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       skipPreparation,
       timeUpAt,
       attemptCompleted,
+      sessionClosed,
       onTimeUp,
       finishTask,
       isConnected,
@@ -980,6 +1018,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
       skipPreparation,
       timeUpAt,
       attemptCompleted,
+      sessionClosed,
       onTimeUp,
       finishTask,
       isConnected,

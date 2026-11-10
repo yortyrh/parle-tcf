@@ -5,15 +5,18 @@ import {
   type AudioUploadInput,
   type AudioUploadOutput,
   type CheckpointAttemptInput,
+  type CheckpointAttemptOutput,
   type CompleteAttemptInput,
   type CreateExamSessionOutput,
   type CreateExamSessionRequest,
+  type ExamRun,
   type ExerciseSession,
   type ListAttemptsInput,
   type ListAttemptsOutput,
   type ListExercisesInput,
   type ListExercisesOutput,
   type ProviderSettings,
+  type RefreshSessionTokenOutput,
   type TestProviderSettingsOutput,
   type UpsertProviderSettingsInput,
   type Usage,
@@ -74,6 +77,9 @@ async function call<TOut>(route: string, input: unknown, options: CallOptions = 
 export const api = {
   createExamSession: (input: CreateExamSessionRequest) =>
     call<CreateExamSessionOutput>(API_ROUTES.sessionCreate, input),
+  /** Fresh client secret right before connecting (after the preparation time). */
+  refreshSessionToken: (attemptId: string) =>
+    call<RefreshSessionTokenOutput>(API_ROUTES.sessionToken, { attemptId }),
 
   getSettings: () => call<ProviderSettings>(API_ROUTES.settingsGet, {}),
   saveSettings: (input: UpsertProviderSettingsInput) =>
@@ -82,7 +88,7 @@ export const api = {
   testSettings: () => call<TestProviderSettingsOutput>(API_ROUTES.settingsTest, {}),
 
   checkpointAttempt: (input: CheckpointAttemptInput, options?: CallOptions) =>
-    call<{ ok: true }>(API_ROUTES.attemptsCheckpoint, input, options),
+    call<CheckpointAttemptOutput>(API_ROUTES.attemptsCheckpoint, input, options),
   completeAttempt: (input: CompleteAttemptInput, options?: CallOptions) =>
     call<{ ok: true }>(API_ROUTES.attemptsComplete, input, options),
   listAttempts: (input: ListAttemptsInput = {}) =>
@@ -90,10 +96,13 @@ export const api = {
   getAttempt: (attemptId: string) => call<AttemptDetail>(API_ROUTES.attemptsGet, { attemptId }),
   reevaluateAttempt: (attemptId: string) =>
     call<{ ok: true }>(API_ROUTES.attemptsReevaluate, { attemptId }),
+  getRun: (runId: string) => call<ExamRun>(API_ROUTES.runsGet, { runId }),
   getAudioStatus: () => call<AudioStatus>(API_ROUTES.audioStatus, {}),
   setAudioConsent: (consent: boolean) => call<AudioStatus>(API_ROUTES.audioSetConsent, { consent }),
   getAudioUploadUrl: (input: AudioUploadInput) =>
     call<AudioUploadOutput>(API_ROUTES.audioUploadUrl, input),
+  confirmAudioUpload: (attemptId: string) =>
+    call<{ ok: true }>(API_ROUTES.audioConfirm, { attemptId }),
   getAudioDownloadUrl: (attemptId: string) =>
     call<{ url: string | null }>(API_ROUTES.audioDownloadUrl, { attemptId }),
   getUsage: () => call<Usage>(API_ROUTES.usageGet, {}),
