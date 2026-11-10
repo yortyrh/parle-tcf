@@ -61,10 +61,10 @@ import type { List${pascal}Input, List${pascal}Output } from "@parle-tcf/shared"
 @Injectable()
 export class ${pascal}Service {
   // TODO: inject DATABASE and filter every query by userId (no RLS: isolation lives in the API).
-  async list(userId: string, input: List${pascal}Input): Promise<List${pascal}Output> {
+  list(userId: string, input: List${pascal}Input): Promise<List${pascal}Output> {
     void userId;
     void input;
-    return { items: [] };
+    return Promise.resolve({ items: [] });
   }
 }
 `;
