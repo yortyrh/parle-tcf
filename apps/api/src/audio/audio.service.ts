@@ -7,7 +7,12 @@ import {
   userPreferences,
   type Database,
 } from "@parle-tcf/db";
-import type { AudioStatus, AudioUploadInput } from "@parle-tcf/shared";
+import {
+  AUDIO_MAX_BYTES,
+  type AudioStatus,
+  type AudioUploadInput,
+  type AudioUploadOutput,
+} from "@parle-tcf/shared";
 import { DATABASE } from "../database/database.tokens.js";
 import {
   AUDIO_STORAGE,
@@ -78,28 +83,63 @@ export class AudioService {
     return row;
   }
 
-  async uploadUrl(userId: string, input: AudioUploadInput) {
-    const storage = this.requireStorage();
-    await this.ownedAttempt(userId, input.attemptId);
+  private async requireConsent(userId: string): Promise<void> {
     if (!(await this.hasConsent(userId))) {
       throw new ORPCError("FORBIDDEN", {
         message: "Consentement à l'enregistrement audio requis.",
       });
     }
+  }
+
+  /**
+   * Presigned POST capped at AUDIO_MAX_BYTES. The attempt only points at the
+   * recording once `confirmUpload` has checked that it really landed.
+   */
+  async uploadUrl(
+    userId: string,
+    input: AudioUploadInput,
+  ): Promise<AudioUploadOutput> {
+    const storage = this.requireStorage();
+    await this.ownedAttempt(userId, input.attemptId);
+    await this.requireConsent(userId);
     const key = attemptKey(userId, input.attemptId);
+    const { url, fields } = await storage.presignUpload(
+      key,
+      input.contentType,
+      AUDIO_MAX_BYTES,
+    );
+    return {
+      url,
+      fields,
+      contentType: input.contentType,
+      maxBytes: AUDIO_MAX_BYTES,
+    };
+  }
+
+  /** Links the uploaded object to the attempt after checking it exists and its size. */
+  async confirmUpload(userId: string, attemptId: string): Promise<void> {
+    const storage = this.requireStorage();
+    await this.ownedAttempt(userId, attemptId);
+    await this.requireConsent(userId);
+    const key = attemptKey(userId, attemptId);
+    const object = await storage.head(key);
+    if (!object) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Enregistrement introuvable.",
+      });
+    }
+    if (object.size > AUDIO_MAX_BYTES) {
+      await storage.delete(key);
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Enregistrement trop volumineux.",
+      });
+    }
     await this.db
       .update(examAttempts)
       .set({ audioKey: key })
       .where(
-        and(
-          eq(examAttempts.id, input.attemptId),
-          eq(examAttempts.userId, userId),
-        ),
+        and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
       );
-    return {
-      url: await storage.presignUpload(key, input.contentType),
-      contentType: input.contentType,
-    };
   }
 
   async downloadUrl(userId: string, attemptId: string) {

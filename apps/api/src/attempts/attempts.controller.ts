@@ -13,6 +13,7 @@ import {
   attemptsGetProcedure,
   attemptsListProcedure,
   attemptsReevaluateProcedure,
+  runsGetProcedure,
   usageGetProcedure,
 } from "../contract/exam.contract.js";
 import { AudioService } from "../audio/audio.service.js";
@@ -35,7 +36,9 @@ export class AttemptsController {
     const userId = currentUserId(req);
     return implement(attemptsCheckpointProcedure).handler(async ({ input }) => {
       await this.attempts.checkpoint(userId, input.attemptId, input.lines);
-      return { ok: true as const };
+      // Long sessions re-check the limits: the client ends the session when reached.
+      const limitReached = await this.usage.isOverLimit(userId);
+      return { ok: true as const, limitReached };
     });
   }
 
@@ -43,8 +46,10 @@ export class AttemptsController {
   complete(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(attemptsCompleteProcedure).handler(async ({ input }) => {
-      await this.attempts.complete(userId, input);
-      this.evaluation.start(userId, input.attemptId);
+      // Only the call that actually completes the attempt starts its evaluation.
+      if (await this.attempts.complete(userId, input)) {
+        this.evaluation.start(userId, input.attemptId);
+      }
       return { ok: true as const };
     });
   }
@@ -79,12 +84,26 @@ export class AttemptsController {
   reevaluate(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(attemptsReevaluateProcedure).handler(async ({ input }) => {
-      const queued = await this.evaluation.requeue(userId, input.attemptId);
-      if (!queued) {
+      const result = await this.evaluation.requeue(userId, input.attemptId);
+      if (result === "running") {
+        throw new ORPCError("CONFLICT", {
+          status: 409,
+          message: "L'évaluation est déjà en cours.",
+        });
+      }
+      if (result === "not_found") {
         throw new ORPCError("NOT_FOUND", { message: "Tentative introuvable." });
       }
       return { ok: true as const };
     });
+  }
+
+  @Implement(runsGetProcedure)
+  runsGet(@Req() req: AuthenticatedRequest) {
+    const userId = currentUserId(req);
+    return implement(runsGetProcedure).handler(({ input }) =>
+      this.attempts.getRun(userId, input.runId),
+    );
   }
 
   @Implement(usageGetProcedure)

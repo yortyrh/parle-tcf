@@ -6,6 +6,7 @@ import {
   SessionAuthGuard,
 } from "../auth/session-auth.guard.js";
 import {
+  audioConfirmProcedure,
   audioDownloadUrlProcedure,
   audioSetConsentProcedure,
   audioStatusProcedure,
@@ -40,6 +41,15 @@ export class AudioController {
     return implement(audioUploadUrlProcedure).handler(({ input }) =>
       this.audio.uploadUrl(userId, input),
     );
+  }
+
+  @Implement(audioConfirmProcedure)
+  confirm(@Req() req: AuthenticatedRequest) {
+    const userId = currentUserId(req);
+    return implement(audioConfirmProcedure).handler(async ({ input }) => {
+      await this.audio.confirmUpload(userId, input.attemptId);
+      return { ok: true as const };
+    });
   }
 
   @Implement(audioDownloadUrlProcedure)

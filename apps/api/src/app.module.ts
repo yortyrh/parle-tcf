@@ -29,6 +29,7 @@ import { ExamSessionService } from "./session/exam-session.service.js";
 import { ProviderSettingsService } from "./settings/provider-settings.service.js";
 import { SettingsController } from "./settings/settings.controller.js";
 import { ExerciseController } from "./exercise/exercise.controller.js";
+import { StaleSweeperService } from "./attempts/stale-sweeper.service.js";
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { ExerciseController } from "./exercise/exercise.controller.js";
         gemini: GeminiLiveProvider,
       ) => new VoiceProviderRegistry([openai, gemini]),
     },
+    StaleSweeperService,
   ],
 })
 export class AppModule {}

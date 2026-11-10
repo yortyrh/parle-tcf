@@ -60,3 +60,21 @@ export type CreateExamSessionOutput = z.infer<
   typeof createExamSessionOutputSchema
 >;
 export type ExerciseData = z.infer<typeof exerciseDataPayloadSchema>;
+
+/**
+ * A fresh client secret for an attempt already created, minted right before the
+ * voice session connects (after the tâche 2 preparation): Gemini tokens only
+ * open a session within a short window.
+ */
+export const refreshSessionTokenInputSchema = z.object({
+  attemptId: z.string().uuid(),
+});
+export const refreshSessionTokenOutputSchema = z.object({
+  clientSecret: z.string().min(1),
+});
+export type RefreshSessionTokenInput = z.infer<
+  typeof refreshSessionTokenInputSchema
+>;
+export type RefreshSessionTokenOutput = z.infer<
+  typeof refreshSessionTokenOutputSchema
+>;

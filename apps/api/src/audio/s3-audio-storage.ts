@@ -2,12 +2,14 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
-  PutObjectCommand,
+  NotFound,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { AudioStorage } from "./audio-storage.js";
+import type { AudioStorage, PresignedUpload } from "./audio-storage.js";
 
 export interface S3Config {
   endpoint?: string;
@@ -35,16 +37,41 @@ export class S3AudioStorage implements AudioStorage {
     });
   }
 
-  presignUpload(key: string, contentType: string): Promise<string> {
-    return getSignedUrl(
-      this.client,
-      new PutObjectCommand({
-        Bucket: this.config.bucket,
-        Key: key,
-        ContentType: contentType,
-      }),
-      { expiresIn: URL_TTL_S },
-    );
+  /** A presigned PUT cannot cap the size; a POST policy can. */
+  async presignUpload(
+    key: string,
+    contentType: string,
+    maxBytes: number,
+  ): Promise<PresignedUpload> {
+    const { url, fields } = await createPresignedPost(this.client, {
+      Bucket: this.config.bucket,
+      Key: key,
+      Conditions: [
+        ["content-length-range", 1, maxBytes],
+        ["eq", "$Content-Type", contentType],
+      ],
+      Fields: { "Content-Type": contentType },
+      Expires: URL_TTL_S,
+    });
+    return { url, fields };
+  }
+
+  async head(key: string): Promise<{ size: number } | null> {
+    try {
+      const out = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.config.bucket, Key: key }),
+      );
+      return { size: out.ContentLength ?? 0 };
+    } catch (error) {
+      if (
+        error instanceof NotFound ||
+        (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+          ?.httpStatusCode === 404
+      ) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   presignDownload(key: string): Promise<string> {

@@ -12,6 +12,7 @@ export * from "./pricing";
 /** HTTP route of every API procedure (all POST + JSON, cookie session). */
 export const API_ROUTES = {
   sessionCreate: "/exam/session/create",
+  sessionToken: "/exam/session/token",
   settingsGet: "/settings/get",
   settingsUpsert: "/settings/upsert",
   settingsDelete: "/settings/delete",
@@ -22,10 +23,12 @@ export const API_ROUTES = {
   attemptsGet: "/attempts/get",
   attemptsDelete: "/attempts/delete",
   attemptsReevaluate: "/attempts/reevaluate",
+  runsGet: "/runs/get",
   usageGet: "/usage/get",
   audioStatus: "/audio/status",
   audioSetConsent: "/audio/consent",
   audioUploadUrl: "/audio/upload-url",
+  audioConfirm: "/audio/confirm",
   audioDownloadUrl: "/audio/download-url",
   exercisesList: "/exercises/list",
   exercisesSessions: "/exercises/sessions",

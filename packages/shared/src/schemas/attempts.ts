@@ -25,14 +25,16 @@ export const checkpointAttemptInputSchema = z.object({
   lines: linesSchema,
 });
 
+export const checkpointAttemptOutputSchema = z.object({
+  ok: z.literal(true),
+  /** The daily or monthly limit is reached: the client ends the session. */
+  limitReached: z.boolean(),
+});
+
+/** The duration is computed by the server from the attempt's timestamps. */
 export const completeAttemptInputSchema = z.object({
   attemptId: z.string().uuid(),
   lines: linesSchema,
-  durationS: z
-    .number()
-    .int()
-    .nonnegative()
-    .max(60 * 60),
   usage: z
     .object({
       inputTokens: z.number().int().nonnegative(),
@@ -93,6 +95,18 @@ export const listAttemptsOutputSchema = z.object({
   total: z.number().int(),
 });
 
+export const getRunInputSchema = z.object({ runId: z.string().uuid() });
+
+/** A full-exam run: its three attempts and, once all are graded, the overall level. */
+export const examRunSchema = z.object({
+  id: z.string().uuid(),
+  mode: attemptModeSchema,
+  startedAt: z.string(),
+  finishedAt: z.string().nullable(),
+  globalLevel: cefrLevelSchema.nullable(),
+  attempts: z.array(attemptSummarySchema),
+});
+
 export const usageSchema = z.object({
   todayMinutes: z.number(),
   dailyMinutesLimit: z.number(),
@@ -107,7 +121,12 @@ export type TranscriptLine = z.infer<typeof transcriptLineSchema>;
 export type CheckpointAttemptInput = z.infer<
   typeof checkpointAttemptInputSchema
 >;
+export type CheckpointAttemptOutput = z.infer<
+  typeof checkpointAttemptOutputSchema
+>;
 export type CompleteAttemptInput = z.infer<typeof completeAttemptInputSchema>;
+export type GetRunInput = z.infer<typeof getRunInputSchema>;
+export type ExamRun = z.infer<typeof examRunSchema>;
 export type AttemptSummary = z.infer<typeof attemptSummarySchema>;
 export type AttemptDetail = z.infer<typeof attemptDetailSchema>;
 export type ListAttemptsInput = z.input<typeof listAttemptsInputSchema>;

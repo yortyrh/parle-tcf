@@ -7,6 +7,12 @@ import {
   audioStatusSchema,
   audioUploadInputSchema,
   audioUploadOutputSchema,
+  audioConfirmInputSchema,
+  checkpointAttemptOutputSchema,
+  examRunSchema,
+  getRunInputSchema,
+  refreshSessionTokenInputSchema,
+  refreshSessionTokenOutputSchema,
   setAudioConsentInputSchema,
   checkpointAttemptInputSchema,
   completeAttemptInputSchema,
@@ -30,6 +36,9 @@ const post = (path: `/${string}`) => oc.route({ method: "POST", path });
 export const createExamSessionProcedure = post(API_ROUTES.sessionCreate)
   .input(createExamSessionInputSchema)
   .output(createExamSessionOutputSchema);
+export const refreshSessionTokenProcedure = post(API_ROUTES.sessionToken)
+  .input(refreshSessionTokenInputSchema)
+  .output(refreshSessionTokenOutputSchema);
 
 export const settingsGetProcedure = post(API_ROUTES.settingsGet)
   .input(z.object({}).optional())
@@ -46,7 +55,7 @@ export const settingsTestProcedure = post(API_ROUTES.settingsTest)
 
 export const attemptsCheckpointProcedure = post(API_ROUTES.attemptsCheckpoint)
   .input(checkpointAttemptInputSchema)
-  .output(okOutputSchema);
+  .output(checkpointAttemptOutputSchema);
 export const attemptsCompleteProcedure = post(API_ROUTES.attemptsComplete)
   .input(completeAttemptInputSchema)
   .output(okOutputSchema);
@@ -63,6 +72,9 @@ export const attemptsDeleteProcedure = post(API_ROUTES.attemptsDelete)
 export const attemptsReevaluateProcedure = post(API_ROUTES.attemptsReevaluate)
   .input(attemptIdInputSchema)
   .output(okOutputSchema);
+export const runsGetProcedure = post(API_ROUTES.runsGet)
+  .input(getRunInputSchema)
+  .output(examRunSchema);
 export const usageGetProcedure = post(API_ROUTES.usageGet)
   .input(z.object({}).optional())
   .output(usageSchema);
@@ -76,6 +88,9 @@ export const audioSetConsentProcedure = post(API_ROUTES.audioSetConsent)
 export const audioUploadUrlProcedure = post(API_ROUTES.audioUploadUrl)
   .input(audioUploadInputSchema)
   .output(audioUploadOutputSchema);
+export const audioConfirmProcedure = post(API_ROUTES.audioConfirm)
+  .input(audioConfirmInputSchema)
+  .output(okOutputSchema);
 export const audioDownloadUrlProcedure = post(API_ROUTES.audioDownloadUrl)
   .input(attemptIdInputSchema)
   .output(audioDownloadOutputSchema);
@@ -88,7 +103,12 @@ export const exercisesSessionsProcedure = post(API_ROUTES.exercisesSessions)
   .output(listExerciseSessionsOutputSchema);
 
 export const examContract = populateContractRouterPaths({
-  exam: { session: { create: createExamSessionProcedure } },
+  exam: {
+    session: {
+      create: createExamSessionProcedure,
+      token: refreshSessionTokenProcedure,
+    },
+  },
   settings: {
     get: settingsGetProcedure,
     upsert: settingsUpsertProcedure,
@@ -103,11 +123,13 @@ export const examContract = populateContractRouterPaths({
     delete: attemptsDeleteProcedure,
     reevaluate: attemptsReevaluateProcedure,
   },
+  runs: { get: runsGetProcedure },
   usage: { get: usageGetProcedure },
   audio: {
     status: audioStatusProcedure,
     setConsent: audioSetConsentProcedure,
     uploadUrl: audioUploadUrlProcedure,
+    confirm: audioConfirmProcedure,
     downloadUrl: audioDownloadUrlProcedure,
   },
   exercises: {

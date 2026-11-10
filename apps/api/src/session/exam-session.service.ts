@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import type {
   CreateExamSessionInput,
   CreateExamSessionOutput,
+  RefreshSessionTokenInput,
+  RefreshSessionTokenOutput,
   TaskType,
 } from "@parle-tcf/shared";
 import { AttemptsService } from "../attempts/attempts.service.js";
@@ -49,6 +51,74 @@ export class ExamSessionService {
     }
     if (serviceModel && serviceModel !== "realtime") return serviceModel;
     return process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-mini";
+  }
+
+  private resolveVoice(
+    provider: { provider: "openai" | "gemini"; voice: string | null },
+    serviceVoice: string,
+  ): string {
+    return (
+      provider.voice ??
+      (provider.provider === "gemini" ? DEFAULT_GEMINI_VOICE : serviceVoice)
+    );
+  }
+
+  /** Mints a client secret; provider failures map to API errors. */
+  private async mint(
+    provider: { provider: "openai" | "gemini"; apiKey: string },
+    model: string,
+    voice: string,
+  ): Promise<string> {
+    try {
+      return await this.voices
+        .get(provider.provider)
+        .mintClientSecret(provider.apiKey, { model, voice });
+    } catch (error) {
+      if (error instanceof ProviderError) {
+        throw new ORPCError(
+          error.status === 401 ? "PROVIDER_KEY_REJECTED" : "BAD_GATEWAY",
+          {
+            status: error.status === 401 ? 422 : 502,
+            message: error.message,
+          },
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * A new client secret for an attempt in progress, asked right before the
+   * voice session connects (after the preparation time): Gemini tokens must
+   * open their session within minutes of being minted. The attempt's clock
+   * starts here.
+   */
+  async refreshToken(
+    userId: string,
+    input: RefreshSessionTokenInput,
+  ): Promise<RefreshSessionTokenOutput> {
+    const attempt = await this.attempts.findOwned(userId, input.attemptId);
+    if (attempt.status !== "in_progress") {
+      throw new ORPCError("CONFLICT", {
+        message: "Cette tentative est déjà terminée.",
+      });
+    }
+    await this.usage.assertWithinLimits(userId);
+    const provider = await this.settings.getConfigForUser(userId);
+    if (provider.provider !== attempt.provider) {
+      throw new ORPCError("CONFLICT", {
+        message:
+          "Le fournisseur a changé depuis le début de la tâche. Relancez la tâche.",
+      });
+    }
+    const serviceYaml = this.examConfig.loadServiceConfig();
+    const clientSecret = await this.mint(
+      provider,
+      attempt.model,
+      this.resolveVoice(provider, serviceYaml.llm.voice),
+    );
+    await this.attempts.touchStart(userId, input.attemptId);
+    return { clientSecret };
   }
 
   private buildExerciseData(
@@ -150,34 +220,14 @@ export class ExamSessionService {
       contentForInstructions,
     );
 
-    const voice =
-      provider.voice ??
-      (provider.provider === "gemini"
-        ? DEFAULT_GEMINI_VOICE
-        : serviceYaml.llm.voice);
+    const voice = this.resolveVoice(provider, serviceYaml.llm.voice);
     const model = this.resolveRealtimeModel(
       provider.provider,
       provider.realtimeModel,
       serviceYaml.llm.model,
     );
 
-    let clientSecret: string;
-    try {
-      clientSecret = await this.voices
-        .get(provider.provider)
-        .mintClientSecret(provider.apiKey, { model, voice });
-    } catch (error) {
-      if (error instanceof ProviderError) {
-        throw new ORPCError(
-          error.status === 401 ? "PROVIDER_KEY_REJECTED" : "BAD_GATEWAY",
-          {
-            status: error.status === 401 ? 422 : 502,
-            message: error.message,
-          },
-        );
-      }
-      throw error;
-    }
+    const clientSecret = await this.mint(provider, model, voice);
 
     const attempt = await this.attempts.create({
       userId,

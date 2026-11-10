@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ORPCError } from "@orpc/server";
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -9,6 +10,7 @@ import {
   evaluations,
   examRuns,
   exercises,
+  lt,
   sql,
   transcripts,
   type Database,
@@ -22,6 +24,7 @@ import type {
   AttemptMode,
   AttemptSummary,
   CompleteAttemptInput,
+  ExamRun,
   ListAttemptsInput,
   ListAttemptsOutput,
   TranscriptLine,
@@ -29,6 +32,16 @@ import type {
 import { DATABASE } from "../database/database.tokens.js";
 
 type AttemptRow = typeof examAttempts.$inferSelect;
+
+/** An in-progress attempt with no sign of life for this long is interrupted. */
+export const STALE_ATTEMPT_MS = 15 * 60_000;
+const MAX_DURATION_S = 60 * 60;
+
+/** Seconds between two instants, clamped to [0, MAX_DURATION_S]. */
+function elapsedSeconds(from: Date, to: Date): number {
+  const s = Math.round((to.getTime() - from.getTime()) / 1000);
+  return Math.min(MAX_DURATION_S, Math.max(0, s));
+}
 
 export interface CreateAttemptParams {
   userId: string;
@@ -74,7 +87,7 @@ export class AttemptsService {
     throw new ORPCError("NOT_FOUND", { message: "Tentative introuvable." });
   }
 
-  private async findOwned(
+  async findOwned(
     userId: string,
     attemptId: string,
     executor: DbExecutor = this.db,
@@ -145,22 +158,70 @@ export class AttemptsService {
       });
   }
 
-  /** Idempotent by `seq`: replays and overlapping batches are harmless. */
+  /**
+   * Idempotent by `seq`: replays and overlapping batches are harmless. Only an
+   * in-progress attempt takes lines (and counts as alive); later ones are ignored.
+   */
   async checkpoint(
     userId: string,
     attemptId: string,
     lines: TranscriptLine[],
+    now = new Date(),
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await this.findOwned(userId, attemptId, tx);
+      const attempt = await this.findOwned(userId, attemptId, tx);
+      if (attempt.status !== "in_progress") return;
       await this.saveLines(tx, attemptId, lines);
+      await tx
+        .update(examAttempts)
+        .set({ lastActivityAt: now })
+        .where(
+          and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
+        );
     });
   }
 
-  async complete(userId: string, input: CompleteAttemptInput): Promise<void> {
-    await this.db.transaction(async (tx) => {
+  /** The voice session really starts now (after any preparation time). */
+  async touchStart(
+    userId: string,
+    attemptId: string,
+    now = new Date(),
+  ): Promise<AttemptRow> {
+    const attempt = await this.findOwned(userId, attemptId);
+    if (attempt.status !== "in_progress") {
+      throw new ORPCError("CONFLICT", {
+        message: "Cette tentative est déjà terminée.",
+      });
+    }
+    const [row] = await this.db
+      .update(examAttempts)
+      .set({ startedAt: now, lastActivityAt: now })
+      .where(
+        and(
+          eq(examAttempts.id, attemptId),
+          eq(examAttempts.userId, userId),
+          eq(examAttempts.status, "in_progress"),
+        ),
+      )
+      .returning();
+    return row ?? this.notFound();
+  }
+
+  /**
+   * Closes the attempt once. Returns true when it moved to `completed` (the
+   * caller then starts the evaluation); a second call changes nothing. The
+   * duration comes from the server clock, never from the client.
+   */
+  async complete(
+    userId: string,
+    input: CompleteAttemptInput,
+    now = new Date(),
+  ): Promise<boolean> {
+    return this.db.transaction(async (tx) => {
       const attempt = await this.findOwned(userId, input.attemptId, tx);
+      if (attempt.status === "completed") return false;
       await this.saveLines(tx, input.attemptId, input.lines);
+      const durationS = elapsedSeconds(attempt.startedAt, now);
       const cost = input.usage
         ? estimateCost(
             attempt.model,
@@ -172,9 +233,10 @@ export class AttemptsService {
         .update(examAttempts)
         .set({
           status: "completed",
-          finishedAt: new Date(),
-          durationS: input.durationS,
-          realtimeMinutes: (input.durationS / 60).toFixed(2),
+          finishedAt: now,
+          lastActivityAt: now,
+          durationS,
+          realtimeMinutes: (durationS / 60).toFixed(2),
           inputTokens: input.usage?.inputTokens ?? null,
           outputTokens: input.usage?.outputTokens ?? null,
           estimatedCostUsd: cost === null ? null : cost.toFixed(4),
@@ -186,7 +248,73 @@ export class AttemptsService {
             eq(examAttempts.userId, userId),
           ),
         );
+      return true;
     });
+  }
+
+  /**
+   * Sessions that vanished (tab closed, crash) stop counting as in progress:
+   * they end at their last sign of life. Returns how many were interrupted.
+   */
+  async interruptStale(now = new Date()): Promise<number> {
+    const cutoff = new Date(now.getTime() - STALE_ATTEMPT_MS);
+    const stale = await this.db
+      .select({
+        id: examAttempts.id,
+        startedAt: examAttempts.startedAt,
+        lastActivityAt: examAttempts.lastActivityAt,
+      })
+      .from(examAttempts)
+      .where(
+        and(
+          eq(examAttempts.status, "in_progress"),
+          lt(examAttempts.lastActivityAt, cutoff),
+        ),
+      );
+    for (const row of stale) {
+      const durationS = elapsedSeconds(row.startedAt, row.lastActivityAt);
+      await this.db
+        .update(examAttempts)
+        .set({
+          status: "interrupted",
+          finishedAt: row.lastActivityAt,
+          durationS,
+          realtimeMinutes: (durationS / 60).toFixed(2),
+        })
+        .where(
+          and(
+            eq(examAttempts.id, row.id),
+            eq(examAttempts.status, "in_progress"),
+          ),
+        );
+    }
+    return stale.length;
+  }
+
+  /** A full-exam run with its attempts; someone else's run is NOT_FOUND. */
+  async getRun(userId: string, runId: string): Promise<ExamRun> {
+    const [run] = await this.db
+      .select()
+      .from(examRuns)
+      .where(and(eq(examRuns.id, runId), eq(examRuns.userId, userId)))
+      .limit(1);
+    if (!run) this.notFound();
+    const rows = await this.db
+      .select({ attempt: examAttempts, level: evaluations.globalLevel })
+      .from(examAttempts)
+      .leftJoin(evaluations, eq(evaluations.attemptId, examAttempts.id))
+      .where(
+        and(eq(examAttempts.runId, runId), eq(examAttempts.userId, userId)),
+      )
+      .orderBy(asc(examAttempts.task), asc(examAttempts.startedAt));
+    return {
+      id: run.id,
+      mode: run.mode,
+      startedAt: run.startedAt.toISOString(),
+      finishedAt: run.finishedAt?.toISOString() ?? null,
+      globalLevel: run.globalLevel as CefrLevel | null,
+      attempts: rows.map((r) => toSummary(r.attempt, r.level)),
+    };
   }
 
   async list(

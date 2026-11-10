@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output, type LanguageModel } from "ai";
@@ -9,7 +9,10 @@ import {
   examAttempts,
   examRuns,
   exercises,
+  isNull,
   lt,
+  ne,
+  or,
   sql,
   transcripts,
   type Database,
@@ -45,7 +48,9 @@ export const providerModelFactory: LanguageModelFactory = (
 export const DEFAULT_TEXT_MODEL = "gpt-4o-mini";
 export const DEFAULT_GEMINI_TEXT_MODEL = "gemini-2.5-flash";
 const MAX_ATTEMPTS = 3; // first try + 2 retries
-const STALE_RUNNING_MS = 5 * 60_000;
+export const STALE_RUNNING_MS = 5 * 60_000;
+
+export type RequeueResult = "queued" | "not_found" | "running";
 
 export interface EvaluationRunResult {
   output: EvaluationOutput;
@@ -100,7 +105,7 @@ export function locateErrors(
 }
 
 @Injectable()
-export class EvaluationService implements OnModuleInit {
+export class EvaluationService {
   private readonly logger = new Logger(EvaluationService.name);
 
   constructor(
@@ -110,19 +115,26 @@ export class EvaluationService implements OnModuleInit {
     private readonly modelFactory: LanguageModelFactory,
   ) {}
 
-  /** Evaluations left "running" by a crashed process must not stay stuck. */
-  async onModuleInit(): Promise<void> {
-    await this.failStale();
-  }
-
-  async failStale(): Promise<void> {
+  /**
+   * Marks `running` evaluations older than STALE_RUNNING_MS as failed (they can
+   * be requeued). Age is counted from when the run started; rows from before
+   * that column existed fall back to the attempt's end.
+   */
+  async failStale(now = new Date()): Promise<void> {
+    const cutoff = new Date(now.getTime() - STALE_RUNNING_MS);
     await this.db
       .update(examAttempts)
       .set({ evaluationStatus: "failed" })
       .where(
         and(
           eq(examAttempts.evaluationStatus, "running"),
-          lt(examAttempts.finishedAt, new Date(Date.now() - STALE_RUNNING_MS)),
+          or(
+            lt(examAttempts.evaluationStartedAt, cutoff),
+            and(
+              isNull(examAttempts.evaluationStartedAt),
+              lt(examAttempts.finishedAt, cutoff),
+            ),
+          ),
         ),
       );
   }
@@ -137,19 +149,20 @@ export class EvaluationService implements OnModuleInit {
   }
 
   async evaluate(userId: string, attemptId: string): Promise<void> {
+    // Atomic claim: only one caller moves a pending evaluation to running.
     const [attempt] = await this.db
-      .select()
-      .from(examAttempts)
-      .where(
-        and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
-      )
-      .limit(1);
-    if (!attempt || attempt.status !== "completed") return;
-
-    await this.db
       .update(examAttempts)
-      .set({ evaluationStatus: "running" })
-      .where(eq(examAttempts.id, attemptId));
+      .set({ evaluationStatus: "running", evaluationStartedAt: new Date() })
+      .where(
+        and(
+          eq(examAttempts.id, attemptId),
+          eq(examAttempts.userId, userId),
+          eq(examAttempts.status, "completed"),
+          eq(examAttempts.evaluationStatus, "pending"),
+        ),
+      )
+      .returning();
+    if (!attempt) return;
 
     try {
       const config = await this.settings.getConfigForUser(userId);
@@ -286,8 +299,8 @@ export class EvaluationService implements OnModuleInit {
       .where(eq(examRuns.id, runId));
   }
 
-  /** Re-queues a failed (or done) evaluation. Returns false if not found. */
-  async requeue(userId: string, attemptId: string): Promise<boolean> {
+  /** Re-queues a failed (or done) evaluation; refuses while one is running. */
+  async requeue(userId: string, attemptId: string): Promise<RequeueResult> {
     const [row] = await this.db
       .update(examAttempts)
       .set({ evaluationStatus: "pending" })
@@ -296,12 +309,28 @@ export class EvaluationService implements OnModuleInit {
           eq(examAttempts.id, attemptId),
           eq(examAttempts.userId, userId),
           eq(examAttempts.status, "completed"),
+          ne(examAttempts.evaluationStatus, "running"),
         ),
       )
       .returning({ id: examAttempts.id });
-    if (!row) return false;
-    this.start(userId, attemptId);
-    return true;
+    if (row) {
+      this.start(userId, attemptId);
+      return "queued";
+    }
+    const [current] = await this.db
+      .select({
+        status: examAttempts.status,
+        evaluationStatus: examAttempts.evaluationStatus,
+      })
+      .from(examAttempts)
+      .where(
+        and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
+      )
+      .limit(1);
+    return current?.status === "completed" &&
+      current.evaluationStatus === "running"
+      ? "running"
+      : "not_found";
   }
 }
 
