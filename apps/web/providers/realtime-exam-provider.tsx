@@ -863,8 +863,9 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           setNeedsProviderKey(true);
         }
         const msg = e instanceof Error ? e.message : String(e);
-        setFatalError(msg);
         end();
+        // After end(): it clears fatalError, and the UI needs the message to leave the connecting screen.
+        setFatalError(msg);
       } finally {
         if (!isStale()) setIsConnecting(false);
       }

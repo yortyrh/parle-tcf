@@ -17,6 +17,7 @@ import { levelPercent } from '@/lib/level-series';
 export function ResultView({ attemptId }: { attemptId: string }) {
   const { attempt, error, refresh } = useAttempt(attemptId);
   const [retrying, setRetrying] = useState(false);
+  const [retryFailed, setRetryFailed] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,9 +29,12 @@ export function ResultView({ attemptId }: { attemptId: string }) {
 
   async function retry() {
     setRetrying(true);
+    setRetryFailed(false);
     try {
       await api.reevaluateAttempt(attemptId);
       await refresh();
+    } catch {
+      setRetryFailed(true);
     } finally {
       setRetrying(false);
     }
@@ -91,6 +95,15 @@ export function ResultView({ attemptId }: { attemptId: string }) {
         >
           <span aria-hidden className="bg-primary size-2 animate-pulse rounded-full" />
           Évaluation en cours… cette page se met à jour automatiquement.
+        </p>
+      )}
+
+      {retryFailed && (
+        <p
+          role="alert"
+          className="border-destructive/30 bg-destructive/5 mb-6 rounded-xl border p-4 text-sm"
+        >
+          La relance de l’évaluation a échoué. Réessayez dans un instant.
         </p>
       )}
 

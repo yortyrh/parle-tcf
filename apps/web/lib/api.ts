@@ -40,6 +40,30 @@ export class ApiError extends Error {
   }
 }
 
+interface ErrorBody {
+  code?: string;
+  message?: string;
+  data?: unknown;
+}
+
+/** oRPC's generic message for a request that fails the shared zod schemas. */
+const VALIDATION_FAILED = 'Input validation failed';
+
+/**
+ * Message to show for an error body: the first schema issue for a validation
+ * error (the shared schemas carry French messages), else the API message.
+ */
+function errorMessage(body: ErrorBody | null): string | undefined {
+  const issues = (body?.data as { issues?: unknown } | undefined)?.issues;
+  if (Array.isArray(issues)) {
+    const first: unknown = issues[0];
+    const message = (first as { message?: unknown } | undefined)?.message;
+    if (typeof message === 'string' && message) return message;
+  }
+  if (body?.message === VALIDATION_FAILED) return 'Requête invalide.';
+  return body?.message;
+}
+
 interface CallOptions {
   /** Keeps the request alive while the page unloads (pagehide). */
   keepalive?: boolean;
@@ -61,14 +85,11 @@ async function call<TOut>(route: string, input: unknown, options: CallOptions = 
   }
 
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as {
-      code?: string;
-      message?: string;
-    } | null;
+    const body = (await res.json().catch(() => null)) as ErrorBody | null;
     throw new ApiError(
       body?.code ?? (res.status === 401 ? 'UNAUTHORIZED' : 'ERROR'),
       res.status,
-      body?.message ?? `Erreur ${res.status}`
+      errorMessage(body) ?? `Erreur ${res.status}`
     );
   }
   return (await res.json()) as TOut;

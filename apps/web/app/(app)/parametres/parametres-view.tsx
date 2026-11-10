@@ -225,6 +225,7 @@ export function ParametresView() {
                   type="password"
                   autoComplete="off"
                   spellCheck={false}
+                  minLength={20}
                   placeholder={provider === 'gemini' ? 'AIza…' : 'sk-…'}
                   required={!settings.configured || provider !== settings.provider}
                 />
