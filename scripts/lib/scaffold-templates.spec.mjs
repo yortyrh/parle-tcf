@@ -162,14 +162,16 @@ describe('apiServiceTemplate', () => {
     expect(source).toMatch(namedImport('Injectable', '@nestjs/common'));
   });
 
-  it('declares the typed async list method', () => {
+  it('declares the typed list method without async (nothing to await yet)', () => {
     expect(source).toMatch(
-      /async list\(\s*userId: string,\s*input: ListExerciseBankInput,?\s*\):\s*Promise<ListExerciseBankOutput>/
+      /(^|[^\w])list\(\s*userId: string,\s*input: ListExerciseBankInput,?\s*\):\s*Promise<ListExerciseBankOutput>/m
     );
+    expect(source).not.toMatch(/\basync\s+list\s*\(/);
   });
 
-  it('returns an empty list of items', () => {
-    expect(source).toMatch(/return \{ items: \[\] \};?/);
+  it('returns an empty list of items as a resolved promise', () => {
+    expect(source).toMatch(/return Promise\.resolve\(\{ items: \[\] \}\);?/);
+    expect(source).not.toMatch(/return \{ items: \[\] \};?/);
   });
 
   it('imports the input and output types from @parle-tcf/shared', () => {
