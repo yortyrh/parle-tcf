@@ -31,7 +31,7 @@ export function TimerDisplay({ remainingSeconds, className, compact }: TimerDisp
     >
       <div className="flex items-center gap-2">
         {!compact && (
-          <span className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase sm:text-xs">
+          <span className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider sm:text-xs">
             Temps restant
           </span>
         )}

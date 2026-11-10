@@ -1,12 +1,12 @@
-import { Global, Module, type Provider } from "@nestjs/common";
-import type { Database } from "@parle-tcf/db";
-import { AudioService } from "../audio/audio.service.js";
-import { DATABASE } from "../database/database.tokens.js";
-import { MailService } from "../mail/mail.service.js";
-import { BETTER_AUTH, createAuth } from "./better-auth.js";
-import { SessionAuthGuard } from "./session-auth.guard.js";
-import { OAuthHandoffService } from "./oauth-handoff.service.js";
-import { OAuthController } from "./oauth.controller.js";
+import { Global, Module, type Provider } from '@nestjs/common';
+import type { Database } from '@parle-tcf/db';
+import { AudioService } from '../audio/audio.service.js';
+import { DATABASE } from '../database/database.tokens.js';
+import { MailService } from '../mail/mail.service.js';
+import { BETTER_AUTH, createAuth } from './better-auth.js';
+import { OAuthHandoffService } from './oauth-handoff.service.js';
+import { OAuthController } from './oauth.controller.js';
+import { SessionAuthGuard } from './session-auth.guard.js';
 
 const betterAuthProvider: Provider = {
   provide: BETTER_AUTH,

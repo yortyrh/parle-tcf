@@ -1,5 +1,5 @@
-import { eq, providerSettings, type Database } from "@parle-tcf/db";
-import type { SecretCipher } from "./secret-cipher.js";
+import { type Database, eq, providerSettings } from '@parle-tcf/db';
+import type { SecretCipher } from './secret-cipher.js';
 
 export interface RotationReport {
   scanned: number;
@@ -12,7 +12,7 @@ export interface RotationReport {
  */
 export async function rotateProviderKeys(
   db: Database,
-  cipher: SecretCipher,
+  cipher: SecretCipher
 ): Promise<RotationReport> {
   const rows = await db.select().from(providerSettings);
   let rotated = 0;

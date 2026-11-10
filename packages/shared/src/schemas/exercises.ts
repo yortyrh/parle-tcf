@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const listExercisesInputSchema = z.object({
   task: z.union([z.literal(2), z.literal(3)]),

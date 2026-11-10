@@ -1,11 +1,8 @@
-import { Controller, UseGuards } from "@nestjs/common";
-import { Implement, implement } from "@orpc/nest";
-import { SessionAuthGuard } from "../auth/session-auth.guard.js";
-import {
-  exercisesListProcedure,
-  exercisesSessionsProcedure,
-} from "../contract/exam.contract.js";
-import { ExerciseService } from "./exercise.service.js";
+import { Controller, UseGuards } from '@nestjs/common';
+import { Implement, implement } from '@orpc/nest';
+import { SessionAuthGuard } from '../auth/session-auth.guard.js';
+import { exercisesListProcedure, exercisesSessionsProcedure } from '../contract/exam.contract.js';
+import { ExerciseService } from './exercise.service.js';
 
 /** Topic browser: months of published subjects and the subjects of a task. */
 @Controller()
@@ -16,7 +13,7 @@ export class ExerciseController {
   @Implement(exercisesListProcedure)
   list() {
     return implement(exercisesListProcedure).handler(({ input }) =>
-      this.exercises.listExercises(input),
+      this.exercises.listExercises(input)
     );
   }
 

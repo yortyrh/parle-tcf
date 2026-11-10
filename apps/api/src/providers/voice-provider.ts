@@ -1,4 +1,4 @@
-export type ProviderId = "openai" | "gemini";
+export type ProviderId = 'openai' | 'gemini';
 
 export interface MintClientSecretParams {
   model: string;
@@ -16,15 +16,12 @@ export interface VerifyKeyResult {
  */
 export interface VoiceProvider {
   readonly id: ProviderId;
-  mintClientSecret(
-    apiKey: string,
-    params: MintClientSecretParams,
-  ): Promise<string>;
+  mintClientSecret(apiKey: string, params: MintClientSecretParams): Promise<string>;
   /** Cheap authenticated call proving the key works. */
   verifyKey(apiKey: string): Promise<VerifyKeyResult>;
 }
 
-export const VOICE_PROVIDERS = Symbol("VOICE_PROVIDERS");
+export const VOICE_PROVIDERS = Symbol('VOICE_PROVIDERS');
 
 /** Looks a backend up by the provider chosen in the user's settings. */
 export class VoiceProviderRegistry {
@@ -41,9 +38,9 @@ export class VoiceProviderRegistry {
 export class ProviderError extends Error {
   constructor(
     message: string,
-    readonly status: number,
+    readonly status: number
   ) {
     super(message);
-    this.name = "ProviderError";
+    this.name = 'ProviderError';
   }
 }

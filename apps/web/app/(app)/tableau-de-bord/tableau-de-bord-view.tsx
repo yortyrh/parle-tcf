@@ -112,7 +112,7 @@ function Dashboard({ data }: { data: DashboardData }) {
         aria-labelledby="next-task"
         className="bg-primary text-primary-foreground shadow-raised relative overflow-hidden rounded-2xl p-6 sm:p-8 lg:col-span-2"
       >
-        <p className="text-xs font-semibold tracking-widest uppercase opacity-80">
+        <p className="text-xs font-semibold uppercase tracking-widest opacity-80">
           Prochaine étape conseillée
         </p>
         <h2 id="next-task" className="font-display text-headline mt-2">
@@ -131,7 +131,7 @@ function Dashboard({ data }: { data: DashboardData }) {
         </Button>
         <span
           aria-hidden
-          className="font-display pointer-events-none absolute -right-4 -bottom-10 text-[10rem] leading-none opacity-10 select-none"
+          className="font-display pointer-events-none absolute -bottom-10 -right-4 select-none text-[10rem] leading-none opacity-10"
         >
           {next.task}
         </span>

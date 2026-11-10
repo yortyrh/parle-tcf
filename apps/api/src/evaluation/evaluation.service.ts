@@ -1,8 +1,10 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createOpenAI } from "@ai-sdk/openai";
-import { generateText, Output, type LanguageModel } from "ai";
+import { type LanguageModel, Output, generateText } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  type Database,
+  type TranscriptError,
   and,
   eq,
   evaluations,
@@ -15,42 +17,36 @@ import {
   or,
   sql,
   transcripts,
-  type Database,
-  type TranscriptError,
-} from "@parle-tcf/db";
+} from '@parle-tcf/db';
 import {
+  type CefrLevel,
+  type EvaluationOutput,
   estimateCost,
   evaluationOutputSchema,
   weightedMedianLevel,
-  type CefrLevel,
-  type EvaluationOutput,
-} from "@parle-tcf/shared";
-import { DATABASE } from "../database/database.tokens.js";
-import { ProviderSettingsService } from "../settings/provider-settings.service.js";
-import { loadRubric, RUBRIC_VERSION } from "./rubric.js";
+} from '@parle-tcf/shared';
+import { DATABASE } from '../database/database.tokens.js';
+import { ProviderSettingsService } from '../settings/provider-settings.service.js';
+import { RUBRIC_VERSION, loadRubric } from './rubric.js';
 
-export const LANGUAGE_MODEL_FACTORY = Symbol("LANGUAGE_MODEL_FACTORY");
+export const LANGUAGE_MODEL_FACTORY = Symbol('LANGUAGE_MODEL_FACTORY');
 export type LanguageModelFactory = (
-  provider: "openai" | "gemini",
+  provider: 'openai' | 'gemini',
   apiKey: string,
-  modelId: string,
+  modelId: string
 ) => LanguageModel;
 
-export const providerModelFactory: LanguageModelFactory = (
-  provider,
-  apiKey,
-  modelId,
-) =>
-  provider === "gemini"
+export const providerModelFactory: LanguageModelFactory = (provider, apiKey, modelId) =>
+  provider === 'gemini'
     ? createGoogleGenerativeAI({ apiKey })(modelId)
     : createOpenAI({ apiKey })(modelId);
 
-export const DEFAULT_TEXT_MODEL = "gpt-4o-mini";
-export const DEFAULT_GEMINI_TEXT_MODEL = "gemini-2.5-flash";
+export const DEFAULT_TEXT_MODEL = 'gpt-4o-mini';
+export const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-2.5-flash';
 const MAX_ATTEMPTS = 3; // first try + 2 retries
 export const STALE_RUNNING_MS = 5 * 60_000;
 
-export type RequeueResult = "queued" | "not_found" | "running";
+export type RequeueResult = 'queued' | 'not_found' | 'running';
 
 export interface EvaluationRunResult {
   output: EvaluationOutput;
@@ -61,7 +57,7 @@ export interface EvaluationRunResult {
 /** Up to 2 retries when the output is missing or does not match the schema. */
 export async function runEvaluation(
   model: LanguageModel,
-  prompt: string,
+  prompt: string
 ): Promise<EvaluationRunResult> {
   let lastError: unknown;
   let inputTokens = 0;
@@ -82,13 +78,13 @@ export async function runEvaluation(
       lastError = error;
     }
   }
-  throw lastError instanceof Error ? lastError : new Error("Evaluation failed");
+  throw lastError instanceof Error ? lastError : new Error('Evaluation failed');
 }
 
 /** Locates each faulty excerpt inside the original text (first match). */
 export function locateErrors(
   text: string,
-  errors: EvaluationOutput["utterances"][number]["errors"],
+  errors: EvaluationOutput['utterances'][number]['errors']
 ): TranscriptError[] {
   const located: TranscriptError[] = [];
   for (const e of errors) {
@@ -112,7 +108,7 @@ export class EvaluationService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly settings: ProviderSettingsService,
     @Inject(LANGUAGE_MODEL_FACTORY)
-    private readonly modelFactory: LanguageModelFactory,
+    private readonly modelFactory: LanguageModelFactory
   ) {}
 
   /**
@@ -124,27 +120,22 @@ export class EvaluationService {
     const cutoff = new Date(now.getTime() - STALE_RUNNING_MS);
     await this.db
       .update(examAttempts)
-      .set({ evaluationStatus: "failed" })
+      .set({ evaluationStatus: 'failed' })
       .where(
         and(
-          eq(examAttempts.evaluationStatus, "running"),
+          eq(examAttempts.evaluationStatus, 'running'),
           or(
             lt(examAttempts.evaluationStartedAt, cutoff),
-            and(
-              isNull(examAttempts.evaluationStartedAt),
-              lt(examAttempts.finishedAt, cutoff),
-            ),
-          ),
-        ),
+            and(isNull(examAttempts.evaluationStartedAt), lt(examAttempts.finishedAt, cutoff))
+          )
+        )
       );
   }
 
   /** Fire-and-forget entry point: never throws, always settles the status. */
   start(userId: string, attemptId: string): void {
     void this.evaluate(userId, attemptId).catch((error: unknown) =>
-      this.logger.error(
-        `Evaluation crashed for attempt ${attemptId}: ${String(error)}`,
-      ),
+      this.logger.error(`Evaluation crashed for attempt ${attemptId}: ${String(error)}`)
     );
   }
 
@@ -152,14 +143,14 @@ export class EvaluationService {
     // Atomic claim: only one caller moves a pending evaluation to running.
     const [attempt] = await this.db
       .update(examAttempts)
-      .set({ evaluationStatus: "running", evaluationStartedAt: new Date() })
+      .set({ evaluationStatus: 'running', evaluationStartedAt: new Date() })
       .where(
         and(
           eq(examAttempts.id, attemptId),
           eq(examAttempts.userId, userId),
-          eq(examAttempts.status, "completed"),
-          eq(examAttempts.evaluationStatus, "pending"),
-        ),
+          eq(examAttempts.status, 'completed'),
+          eq(examAttempts.evaluationStatus, 'pending')
+        )
       )
       .returning();
     if (!attempt) return;
@@ -171,8 +162,8 @@ export class EvaluationService {
         .from(transcripts)
         .where(eq(transcripts.attemptId, attemptId))
         .orderBy(transcripts.seq);
-      const candidate = lines.filter((l) => l.speaker === "candidate");
-      if (candidate.length === 0) throw new Error("No candidate speech.");
+      const candidate = lines.filter((l) => l.speaker === 'candidate');
+      if (candidate.length === 0) throw new Error('No candidate speech.');
 
       const [exercise] = attempt.exerciseId
         ? await this.db
@@ -184,13 +175,11 @@ export class EvaluationService {
 
       const modelId =
         config.textModel ??
-        (config.provider === "gemini"
-          ? DEFAULT_GEMINI_TEXT_MODEL
-          : DEFAULT_TEXT_MODEL);
+        (config.provider === 'gemini' ? DEFAULT_GEMINI_TEXT_MODEL : DEFAULT_TEXT_MODEL);
       const startedAt = Date.now();
       const result = await this.run(
         this.modelFactory(config.provider, config.apiKey, modelId),
-        buildPrompt(attempt.task, exercise?.prompt ?? null, lines),
+        buildPrompt(attempt.task, exercise?.prompt ?? null, lines)
       );
       const latencyMs = Date.now() - startedAt;
 
@@ -204,11 +193,11 @@ export class EvaluationService {
       });
     } catch (error) {
       this.logger.warn(
-        `Evaluation failed for attempt ${attemptId}: ${error instanceof Error ? error.message : "unknown"}`,
+        `Evaluation failed for attempt ${attemptId}: ${error instanceof Error ? error.message : 'unknown'}`
       );
       await this.db
         .update(examAttempts)
-        .set({ evaluationStatus: "failed" })
+        .set({ evaluationStatus: 'failed' })
         .where(eq(examAttempts.id, attemptId));
     }
   }
@@ -246,7 +235,7 @@ export class EvaluationService {
         .onConflictDoUpdate({ target: evaluations.attemptId, set: values });
 
       for (const line of lines) {
-        if (line.speaker !== "candidate") continue;
+        if (line.speaker !== 'candidate') continue;
         const u = byseq.get(line.seq);
         if (!u) continue;
         await tx
@@ -258,12 +247,11 @@ export class EvaluationService {
           .where(eq(transcripts.id, line.id));
       }
 
-      const evalCost =
-        estimateCost(modelId, result.inputTokens, result.outputTokens) ?? 0;
+      const evalCost = estimateCost(modelId, result.inputTokens, result.outputTokens) ?? 0;
       await tx
         .update(examAttempts)
         .set({
-          evaluationStatus: "done",
+          evaluationStatus: 'done',
           // evaluation cost adds to the realtime cost already stored
           estimatedCostUsd: sql`coalesce(${examAttempts.estimatedCostUsd}, 0) + ${evalCost.toFixed(4)}`,
         })
@@ -282,16 +270,11 @@ export class EvaluationService {
       })
       .from(examAttempts)
       .innerJoin(evaluations, eq(evaluations.attemptId, examAttempts.id))
-      .where(
-        and(
-          eq(examAttempts.runId, runId),
-          eq(examAttempts.status, "completed"),
-        ),
-      );
+      .where(and(eq(examAttempts.runId, runId), eq(examAttempts.status, 'completed')));
     const tasks = new Set(rows.map((r) => r.task));
     if (![1, 2, 3].every((t) => tasks.has(t))) return;
     const level = weightedMedianLevel(
-      rows.map((r) => ({ task: r.task, level: r.level as CefrLevel })),
+      rows.map((r) => ({ task: r.task, level: r.level as CefrLevel }))
     );
     await this.db
       .update(examRuns)
@@ -303,19 +286,19 @@ export class EvaluationService {
   async requeue(userId: string, attemptId: string): Promise<RequeueResult> {
     const [row] = await this.db
       .update(examAttempts)
-      .set({ evaluationStatus: "pending" })
+      .set({ evaluationStatus: 'pending' })
       .where(
         and(
           eq(examAttempts.id, attemptId),
           eq(examAttempts.userId, userId),
-          eq(examAttempts.status, "completed"),
-          ne(examAttempts.evaluationStatus, "running"),
-        ),
+          eq(examAttempts.status, 'completed'),
+          ne(examAttempts.evaluationStatus, 'running')
+        )
       )
       .returning({ id: examAttempts.id });
     if (row) {
       this.start(userId, attemptId);
-      return "queued";
+      return 'queued';
     }
     const [current] = await this.db
       .select({
@@ -323,34 +306,28 @@ export class EvaluationService {
         evaluationStatus: examAttempts.evaluationStatus,
       })
       .from(examAttempts)
-      .where(
-        and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
-      )
+      .where(and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)))
       .limit(1);
-    return current?.status === "completed" &&
-      current.evaluationStatus === "running"
-      ? "running"
-      : "not_found";
+    return current?.status === 'completed' && current.evaluationStatus === 'running'
+      ? 'running'
+      : 'not_found';
   }
 }
 
 export function buildPrompt(
   task: number,
   exercisePrompt: string | null,
-  lines: { seq: number; speaker: string; text: string }[],
+  lines: { seq: number; speaker: string; text: string }[]
 ): string {
   const transcript = lines
-    .map(
-      (l) =>
-        `[${l.seq}] ${l.speaker === "candidate" ? "CANDIDAT" : "EXAMINATEUR"} : ${l.text}`,
-    )
-    .join("\n");
+    .map((l) => `[${l.seq}] ${l.speaker === 'candidate' ? 'CANDIDAT' : 'EXAMINATEUR'} : ${l.text}`)
+    .join('\n');
   return [
     `Tâche ${task} du TCF.`,
     exercisePrompt ? `Consigne / sujet :\n${exercisePrompt}` : null,
     `Transcription (issue d'une reconnaissance vocale) :\n${transcript}`,
-    "Évalue le candidat selon la rubrique.",
+    'Évalue le candidat selon la rubrique.',
   ]
     .filter(Boolean)
-    .join("\n\n");
+    .join('\n\n');
 }

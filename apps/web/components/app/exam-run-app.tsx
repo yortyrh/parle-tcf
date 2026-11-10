@@ -126,7 +126,7 @@ function ExamRunController() {
 
   async function runTask(index: number) {
     setStep(index);
-    await exam.start(STEPS[index]!, undefined, { mode: 'full', runId: runIdRef.current });
+    await exam.start(STEPS[index], undefined, { mode: 'full', runId: runIdRef.current });
   }
 
   async function nextTask() {
@@ -260,7 +260,7 @@ function ExamRunController() {
     <div className="relative h-svh">
       <SessionView appConfig={APP_CONFIG_DEFAULTS} selectedTask={task} />
       <div
-        className="bg-card/95 absolute top-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full border px-4 py-1.5 text-xs shadow-md"
+        className="bg-card/95 absolute left-1/2 top-2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full border px-4 py-1.5 text-xs shadow-md"
         aria-live="polite"
       >
         <span className="font-semibold">

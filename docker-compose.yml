@@ -7,13 +7,13 @@ services:
       POSTGRES_PASSWORD: parle
       POSTGRES_DB: parle
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - parle-tcf-pgdata:/var/lib/postgresql/data
     networks:
       - parle-tcf-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U parle -d parle"]
+      test: ['CMD-SHELL', 'pg_isready -U parle -d parle']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -23,13 +23,13 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    command: ["node", "packages/db/dist/migrate.js"]
+    command: ['node', 'packages/db/dist/migrate.js']
     environment:
       - DATABASE_URL=postgresql://parle:parle@postgres:5432/parle
     depends_on:
       postgres:
         condition: service_healthy
-    restart: "no"
+    restart: 'no'
     networks:
       - parle-tcf-network
 
@@ -38,8 +38,8 @@ services:
     image: axllent/mailpit:v1.33.0
     container_name: parle-tcf-mailpit
     ports:
-      - "8025:8025"
-      - "1025:1025"
+      - '8025:8025'
+      - '1025:1025'
     networks:
       - parle-tcf-network
 
@@ -68,7 +68,7 @@ services:
     volumes:
       - ./apps/api/config:/app/apps/api/config:ro
     ports:
-      - "3001:3001"
+      - '3001:3001'
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -78,9 +78,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "fetch('http://localhost:3001/health').then(r => { if (!r.ok) process.exit(1) })",
         ]
       interval: 30s
@@ -100,22 +100,14 @@ services:
     environment:
       - NODE_ENV=production
     ports:
-      - "80:3000"
+      - '80:3000'
     restart: unless-stopped
     networks:
       - parle-tcf-network
     depends_on:
       - api
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:3000/",
-        ]
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/']
       interval: 30s
       timeout: 10s
       retries: 3

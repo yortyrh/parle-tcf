@@ -1,11 +1,9 @@
-import { Controller, Req, UseGuards } from "@nestjs/common";
-import { ORPCError } from "@orpc/server";
-import { Implement, implement } from "@orpc/nest";
-import { currentUserId } from "../auth/current-user.js";
-import {
-  type AuthenticatedRequest,
-  SessionAuthGuard,
-} from "../auth/session-auth.guard.js";
+import { Controller, Req, UseGuards } from '@nestjs/common';
+import { Implement, implement } from '@orpc/nest';
+import { ORPCError } from '@orpc/server';
+import { AudioService } from '../audio/audio.service.js';
+import { currentUserId } from '../auth/current-user.js';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard.js';
 import {
   attemptsCheckpointProcedure,
   attemptsCompleteProcedure,
@@ -15,11 +13,10 @@ import {
   attemptsReevaluateProcedure,
   runsGetProcedure,
   usageGetProcedure,
-} from "../contract/exam.contract.js";
-import { AudioService } from "../audio/audio.service.js";
-import { EvaluationService } from "../evaluation/evaluation.service.js";
-import { UsageService } from "../usage/usage.service.js";
-import { AttemptsService } from "./attempts.service.js";
+} from '../contract/exam.contract.js';
+import { EvaluationService } from '../evaluation/evaluation.service.js';
+import { UsageService } from '../usage/usage.service.js';
+import { AttemptsService } from './attempts.service.js';
 
 @Controller()
 @UseGuards(SessionAuthGuard)
@@ -28,7 +25,7 @@ export class AttemptsController {
     private readonly attempts: AttemptsService,
     private readonly evaluation: EvaluationService,
     private readonly usage: UsageService,
-    private readonly audio: AudioService,
+    private readonly audio: AudioService
   ) {}
 
   @Implement(attemptsCheckpointProcedure)
@@ -58,7 +55,7 @@ export class AttemptsController {
   list(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(attemptsListProcedure).handler(({ input }) =>
-      this.attempts.list(userId, input),
+      this.attempts.list(userId, input)
     );
   }
 
@@ -66,7 +63,7 @@ export class AttemptsController {
   get(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(attemptsGetProcedure).handler(({ input }) =>
-      this.attempts.get(userId, input.attemptId),
+      this.attempts.get(userId, input.attemptId)
     );
   }
 
@@ -85,14 +82,14 @@ export class AttemptsController {
     const userId = currentUserId(req);
     return implement(attemptsReevaluateProcedure).handler(async ({ input }) => {
       const result = await this.evaluation.requeue(userId, input.attemptId);
-      if (result === "running") {
-        throw new ORPCError("CONFLICT", {
+      if (result === 'running') {
+        throw new ORPCError('CONFLICT', {
           status: 409,
           message: "L'évaluation est déjà en cours.",
         });
       }
-      if (result === "not_found") {
-        throw new ORPCError("NOT_FOUND", { message: "Tentative introuvable." });
+      if (result === 'not_found') {
+        throw new ORPCError('NOT_FOUND', { message: 'Tentative introuvable.' });
       }
       return { ok: true as const };
     });
@@ -102,7 +99,7 @@ export class AttemptsController {
   runsGet(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(runsGetProcedure).handler(({ input }) =>
-      this.attempts.getRun(userId, input.runId),
+      this.attempts.getRun(userId, input.runId)
     );
   }
 

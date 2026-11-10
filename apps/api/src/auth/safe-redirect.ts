@@ -1,5 +1,5 @@
 /** Default landing page after sign-in (mirrors apps/web/lib/safe-redirect.ts). */
-export const DEFAULT_REDIRECT = "/tableau-de-bord";
+export const DEFAULT_REDIRECT = '/tableau-de-bord';
 
 /**
  * Accepts only app-relative paths (`/tcf/tache2`), rejecting absolute and
@@ -7,10 +7,10 @@ export const DEFAULT_REDIRECT = "/tableau-de-bord";
  */
 export function safeRedirectPath(value: unknown): string {
   if (
-    typeof value !== "string" ||
-    !value.startsWith("/") ||
-    value.startsWith("//") ||
-    value.includes("\\") ||
+    typeof value !== 'string' ||
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    value.includes('\\') ||
     /[\r\n]/.test(value)
   ) {
     return DEFAULT_REDIRECT;

@@ -12,7 +12,7 @@ describe('transcriptLinesFromHistory', () => {
         content: [{ type: 'output_text' as const, text: '' }],
       },
     ];
-    const lines = transcriptLinesFromHistory(history as never);
+    const lines = transcriptLinesFromHistory(history);
     expect(lines.length).toBe(1);
     expect(lines[0].text).toBe('');
     expect(lines[0].isLocal).toBe(false);
@@ -28,7 +28,7 @@ describe('transcriptLinesFromHistory', () => {
         content: [{ type: 'output_text' as const, text: '' }],
       },
     ];
-    const lines = transcriptLinesFromHistory(history as never);
+    const lines = transcriptLinesFromHistory(history);
     expect(lines.length).toBe(0);
   });
 });

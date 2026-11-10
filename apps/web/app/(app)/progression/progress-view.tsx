@@ -40,7 +40,7 @@ function LevelChart({ points, task }: { points: LevelPoint[]; task: number }) {
         viewBox={`0 0 ${W} ${H}`}
         className="text-foreground w-full overflow-visible"
         role="img"
-        aria-label={`${TASK_LABELS[task]} : ${points.length} évaluation(s), dernier niveau ${points[points.length - 1]!.level}`}
+        aria-label={`${TASK_LABELS[task]} : ${points.length} évaluation(s), dernier niveau ${points[points.length - 1].level}`}
       >
         {CEFR_LEVELS.map((level, i) => (
           <g key={level}>
@@ -82,7 +82,7 @@ function LevelChart({ points, task }: { points: LevelPoint[]; task: number }) {
             fill="currentColor"
             opacity={0.6}
           >
-            {shortDate(points[i]!.date)}
+            {shortDate(points[i].date)}
           </text>
         ))}
         <path
@@ -183,7 +183,7 @@ export function ProgressView() {
       <div className="flex flex-col gap-6">
         {series.map(({ task, points }) => {
           if (points.length === 0) return null;
-          const last = points[points.length - 1]!;
+          const last = points[points.length - 1];
           return (
             <section
               key={task}

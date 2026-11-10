@@ -1,17 +1,14 @@
-import { Controller, Req, UseGuards } from "@nestjs/common";
-import { Implement, implement } from "@orpc/nest";
+import { Controller, Req, UseGuards } from '@nestjs/common';
+import { Implement, implement } from '@orpc/nest';
+import { currentUserId } from '../auth/current-user.js';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard.js';
 import {
   settingsDeleteProcedure,
   settingsGetProcedure,
   settingsTestProcedure,
   settingsUpsertProcedure,
-} from "../contract/exam.contract.js";
-import {
-  type AuthenticatedRequest,
-  SessionAuthGuard,
-} from "../auth/session-auth.guard.js";
-import { currentUserId } from "../auth/current-user.js";
-import { ProviderSettingsService } from "./provider-settings.service.js";
+} from '../contract/exam.contract.js';
+import { ProviderSettingsService } from './provider-settings.service.js';
 
 @Controller()
 @UseGuards(SessionAuthGuard)
@@ -21,16 +18,14 @@ export class SettingsController {
   @Implement(settingsGetProcedure)
   get(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
-    return implement(settingsGetProcedure).handler(() =>
-      this.settings.get(userId),
-    );
+    return implement(settingsGetProcedure).handler(() => this.settings.get(userId));
   }
 
   @Implement(settingsUpsertProcedure)
   upsert(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(settingsUpsertProcedure).handler(({ input }) =>
-      this.settings.upsert(userId, input),
+      this.settings.upsert(userId, input)
     );
   }
 
@@ -46,8 +41,6 @@ export class SettingsController {
   @Implement(settingsTestProcedure)
   test(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
-    return implement(settingsTestProcedure).handler(() =>
-      this.settings.test(userId),
-    );
+    return implement(settingsTestProcedure).handler(() => this.settings.test(userId));
   }
 }

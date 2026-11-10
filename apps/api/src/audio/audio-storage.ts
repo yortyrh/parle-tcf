@@ -1,4 +1,4 @@
-export const AUDIO_STORAGE = Symbol("AUDIO_STORAGE");
+export const AUDIO_STORAGE = Symbol('AUDIO_STORAGE');
 
 /** Object storage for attempt recordings (S3-compatible: R2, MinIO, S3). */
 export interface PresignedUpload {
@@ -9,11 +9,7 @@ export interface PresignedUpload {
 
 export interface AudioStorage {
   /** Presigned POST limited to `maxBytes` and this content type. */
-  presignUpload(
-    key: string,
-    contentType: string,
-    maxBytes: number,
-  ): Promise<PresignedUpload>;
+  presignUpload(key: string, contentType: string, maxBytes: number): Promise<PresignedUpload>;
   /** Size of a stored object, or null when it does not exist. */
   head(key: string): Promise<{ size: number } | null>;
   presignDownload(key: string): Promise<string>;

@@ -25,7 +25,7 @@ export function levelSeries(attempts: SeriesAttempt[], task: number): LevelPoint
 /** Last point against the mean of the `window` points before it. */
 export function levelTrend(points: LevelPoint[], window = 3): 'up' | 'down' | 'flat' | null {
   if (points.length < 2) return null;
-  const last = points[points.length - 1]!;
+  const last = points[points.length - 1];
   const before = points.slice(Math.max(0, points.length - 1 - window), points.length - 1);
   const mean = before.reduce((sum, p) => sum + p.score, 0) / before.length;
   if (last.score > mean) return 'up';

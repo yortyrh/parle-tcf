@@ -35,7 +35,7 @@ import { mergeStreamingAssistantText, pruneStreamBuffer } from '@/lib/transcript
 
 function messageFromSessionError(payload: unknown): string {
   if (payload && typeof payload === 'object' && 'error' in payload) {
-    const inner = (payload as { error: unknown }).error;
+    const inner = payload.error;
     if (inner instanceof Error) return inner.message;
     if (typeof inner === 'string') return inner;
   }
@@ -696,7 +696,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           description:
             "Signale la fin de la session d'examen. À appeler quand l'épreuve est terminée, après avoir dit au revoir.",
           parameters: z.object({}),
-          execute: async () => {
+          execute: () => {
             onFinSession();
             return FIN_SESSION_NEXT;
           },
@@ -707,7 +707,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           description:
             "À appeler lorsque le candidat demande de recommencer le test ou de refaire l'épreuve depuis le début. Réinitialise la conversation et le déroulement comme au premier lancement.",
           parameters: z.object({}),
-          execute: async () => {
+          execute: () => {
             void restartExamRef.current();
             return RECOMMENCER_TEST_NEXT;
           },

@@ -1,18 +1,15 @@
-import { Controller, Req, UseGuards } from "@nestjs/common";
-import { Implement, implement } from "@orpc/nest";
-import { currentUserId } from "../auth/current-user.js";
-import {
-  type AuthenticatedRequest,
-  SessionAuthGuard,
-} from "../auth/session-auth.guard.js";
+import { Controller, Req, UseGuards } from '@nestjs/common';
+import { Implement, implement } from '@orpc/nest';
+import { currentUserId } from '../auth/current-user.js';
+import { type AuthenticatedRequest, SessionAuthGuard } from '../auth/session-auth.guard.js';
 import {
   audioConfirmProcedure,
   audioDownloadUrlProcedure,
   audioSetConsentProcedure,
   audioStatusProcedure,
   audioUploadUrlProcedure,
-} from "../contract/exam.contract.js";
-import { AudioService } from "./audio.service.js";
+} from '../contract/exam.contract.js';
+import { AudioService } from './audio.service.js';
 
 @Controller()
 @UseGuards(SessionAuthGuard)
@@ -22,16 +19,14 @@ export class AudioController {
   @Implement(audioStatusProcedure)
   status(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
-    return implement(audioStatusProcedure).handler(() =>
-      this.audio.status(userId),
-    );
+    return implement(audioStatusProcedure).handler(() => this.audio.status(userId));
   }
 
   @Implement(audioSetConsentProcedure)
   setConsent(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(audioSetConsentProcedure).handler(({ input }) =>
-      this.audio.setConsent(userId, input.consent),
+      this.audio.setConsent(userId, input.consent)
     );
   }
 
@@ -39,7 +34,7 @@ export class AudioController {
   uploadUrl(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(audioUploadUrlProcedure).handler(({ input }) =>
-      this.audio.uploadUrl(userId, input),
+      this.audio.uploadUrl(userId, input)
     );
   }
 
@@ -56,7 +51,7 @@ export class AudioController {
   downloadUrl(@Req() req: AuthenticatedRequest) {
     const userId = currentUserId(req);
     return implement(audioDownloadUrlProcedure).handler(({ input }) =>
-      this.audio.downloadUrl(userId, input.attemptId),
+      this.audio.downloadUrl(userId, input.attemptId)
     );
   }
 }

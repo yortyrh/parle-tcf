@@ -1,25 +1,14 @@
-import { Inject, Injectable, Optional } from "@nestjs/common";
-import { ORPCError } from "@orpc/server";
-import {
-  and,
-  eq,
-  examAttempts,
-  userPreferences,
-  type Database,
-} from "@parle-tcf/db";
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { ORPCError } from '@orpc/server';
+import { type Database, and, eq, examAttempts, userPreferences } from '@parle-tcf/db';
 import {
   AUDIO_MAX_BYTES,
   type AudioStatus,
   type AudioUploadInput,
   type AudioUploadOutput,
-} from "@parle-tcf/shared";
-import { DATABASE } from "../database/database.tokens.js";
-import {
-  AUDIO_STORAGE,
-  attemptKey,
-  userPrefix,
-  type AudioStorage,
-} from "./audio-storage.js";
+} from '@parle-tcf/shared';
+import { DATABASE } from '../database/database.tokens.js';
+import { AUDIO_STORAGE, type AudioStorage, attemptKey, userPrefix } from './audio-storage.js';
 
 @Injectable()
 export class AudioService {
@@ -27,12 +16,12 @@ export class AudioService {
     @Inject(DATABASE) private readonly db: Database,
     @Optional()
     @Inject(AUDIO_STORAGE)
-    private readonly storage: AudioStorage | null = null,
+    private readonly storage: AudioStorage | null = null
   ) {}
 
   private requireStorage(): AudioStorage {
     if (!this.storage) {
-      throw new ORPCError("BAD_REQUEST", {
+      throw new ORPCError('BAD_REQUEST', {
         message: "L'enregistrement audio n'est pas disponible sur ce serveur.",
       });
     }
@@ -73,19 +62,17 @@ export class AudioService {
     const [row] = await this.db
       .select({ id: examAttempts.id, audioKey: examAttempts.audioKey })
       .from(examAttempts)
-      .where(
-        and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
-      )
+      .where(and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)))
       .limit(1);
     if (!row) {
-      throw new ORPCError("NOT_FOUND", { message: "Tentative introuvable." });
+      throw new ORPCError('NOT_FOUND', { message: 'Tentative introuvable.' });
     }
     return row;
   }
 
   private async requireConsent(userId: string): Promise<void> {
     if (!(await this.hasConsent(userId))) {
-      throw new ORPCError("FORBIDDEN", {
+      throw new ORPCError('FORBIDDEN', {
         message: "Consentement à l'enregistrement audio requis.",
       });
     }
@@ -95,19 +82,12 @@ export class AudioService {
    * Presigned POST capped at AUDIO_MAX_BYTES. The attempt only points at the
    * recording once `confirmUpload` has checked that it really landed.
    */
-  async uploadUrl(
-    userId: string,
-    input: AudioUploadInput,
-  ): Promise<AudioUploadOutput> {
+  async uploadUrl(userId: string, input: AudioUploadInput): Promise<AudioUploadOutput> {
     const storage = this.requireStorage();
     await this.ownedAttempt(userId, input.attemptId);
     await this.requireConsent(userId);
     const key = attemptKey(userId, input.attemptId);
-    const { url, fields } = await storage.presignUpload(
-      key,
-      input.contentType,
-      AUDIO_MAX_BYTES,
-    );
+    const { url, fields } = await storage.presignUpload(key, input.contentType, AUDIO_MAX_BYTES);
     return {
       url,
       fields,
@@ -124,22 +104,20 @@ export class AudioService {
     const key = attemptKey(userId, attemptId);
     const object = await storage.head(key);
     if (!object) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Enregistrement introuvable.",
+      throw new ORPCError('BAD_REQUEST', {
+        message: 'Enregistrement introuvable.',
       });
     }
     if (object.size > AUDIO_MAX_BYTES) {
       await storage.delete(key);
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Enregistrement trop volumineux.",
+      throw new ORPCError('BAD_REQUEST', {
+        message: 'Enregistrement trop volumineux.',
       });
     }
     await this.db
       .update(examAttempts)
       .set({ audioKey: key })
-      .where(
-        and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
-      );
+      .where(and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)));
   }
 
   async downloadUrl(userId: string, attemptId: string) {

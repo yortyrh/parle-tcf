@@ -1,15 +1,15 @@
 import {
-  contentHash,
   type Database,
+  contentHash,
   exerciseIdFor,
   exerciseOccurrences,
-  exercises,
   exerciseSessions,
+  exercises,
   sessionDate,
   sourceRef,
   sql,
-} from "@parle-tcf/db";
-import type { ParsedSubject } from "./parse";
+} from '@parle-tcf/db';
+import type { ParsedSubject } from './parse';
 
 export interface SessionInput {
   year: number;
@@ -32,7 +32,7 @@ export async function importSession(
   db: Database,
   { year, month, sourceUrl }: SessionInput,
   subjects: ParsedSubject[],
-  { now = new Date() }: { now?: Date } = {},
+  { now = new Date() }: { now?: Date } = {}
 ): Promise<SessionImportResult> {
   const seenOn = sessionDate(year, month);
   return db.transaction(async (tx) => {

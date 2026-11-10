@@ -1,6 +1,6 @@
-import { Global, Module } from "@nestjs/common";
-import { getEnv } from "../config/env.js";
-import { SecretCipher } from "./secret-cipher.js";
+import { Global, Module } from '@nestjs/common';
+import { getEnv } from '../config/env.js';
+import { SecretCipher } from './secret-cipher.js';
 
 @Global()
 @Module({
@@ -9,10 +9,7 @@ import { SecretCipher } from "./secret-cipher.js";
       provide: SecretCipher,
       useFactory: () => {
         const env = getEnv();
-        return new SecretCipher(
-          env.ENCRYPTION_KEYS,
-          env.ENCRYPTION_KEY_CURRENT,
-        );
+        return new SecretCipher(env.ENCRYPTION_KEYS, env.ENCRYPTION_KEY_CURRENT);
       },
     },
   ],

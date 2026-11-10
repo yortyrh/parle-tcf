@@ -1,15 +1,9 @@
-import {
-  Global,
-  Inject,
-  Logger,
-  Module,
-  type OnApplicationShutdown,
-} from "@nestjs/common";
-import { createDb, type DbHandle } from "@parle-tcf/db";
-import { getEnv } from "../config/env.js";
-import { DATABASE } from "./database.tokens.js";
+import { Global, Inject, Logger, Module, type OnApplicationShutdown } from '@nestjs/common';
+import { type DbHandle, createDb } from '@parle-tcf/db';
+import { getEnv } from '../config/env.js';
+import { DATABASE } from './database.tokens.js';
 
-const DB_HANDLE = Symbol("DB_HANDLE");
+const DB_HANDLE = Symbol('DB_HANDLE');
 
 /**
  * Global Postgres pool (node-postgres + Drizzle). The API is the only process

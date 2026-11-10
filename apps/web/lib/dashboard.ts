@@ -32,15 +32,15 @@ export function recommendNextTask(attempts: DashboardAttempt[]): Recommendation 
 
   // Every task has a completed attempt from here on.
   const oldestFirst = (a: (typeof byTask)[number], b: (typeof byTask)[number]) =>
-    a.latestAt!.localeCompare(b.latestAt!) || a.task - b.task;
+    a.latestAt.localeCompare(b.latestAt) || a.task - b.task;
 
   const graded = byTask.filter((t) => t.score !== null);
   const scores = graded.map((t) => t.score!);
   if (graded.length >= 2 && Math.min(...scores) !== Math.max(...scores)) {
     const lowest = Math.min(...scores);
-    const weakest = graded.filter((t) => t.score === lowest).sort(oldestFirst)[0]!;
+    const weakest = graded.filter((t) => t.score === lowest).sort(oldestFirst)[0];
     return { task: weakest.task, reason: 'lowest-level' };
   }
 
-  return { task: [...byTask].sort(oldestFirst)[0]!.task, reason: 'least-recent' };
+  return { task: [...byTask].sort(oldestFirst)[0].task, reason: 'least-recent' };
 }

@@ -3,38 +3,38 @@
  *
  * Usage: OPENAI_API_KEY_EVALS=sk-... pnpm --filter @parle-tcf/api evals -- --model gpt-4o-mini,gpt-4.1-mini --passes 3
  */
-import { createOpenAI } from "@ai-sdk/openai";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { estimateCost } from "@parle-tcf/shared";
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createOpenAI } from '@ai-sdk/openai';
+import { estimateCost } from '@parle-tcf/shared';
 import {
-  renderResultsTable,
-  summarize,
   type CaseRun,
   type EvalCase,
-} from "../src/evaluation/eval-metrics.js";
-import { buildPrompt, runEvaluation } from "../src/evaluation/evaluation.service.js";
-import { RUBRIC_VERSION } from "../src/evaluation/rubric.js";
+  renderResultsTable,
+  summarize,
+} from '../src/evaluation/eval-metrics.js';
+import { buildPrompt, runEvaluation } from '../src/evaluation/evaluation.service.js';
+import { RUBRIC_VERSION } from '../src/evaluation/rubric.js';
 
 const dir = dirname(fileURLToPath(import.meta.url));
 
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`);
-  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : fallback;
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
 const apiKey = process.env.OPENAI_API_KEY_EVALS;
 if (!apiKey) {
-  console.error("OPENAI_API_KEY_EVALS is required.");
+  console.error('OPENAI_API_KEY_EVALS is required.');
   process.exit(1);
 }
 
-const models = arg("model", "gpt-4o-mini").split(",");
-const passes = Number(arg("passes", "3"));
-const cases: EvalCase[] = readdirSync(join(dir, "dataset"))
-  .filter((f) => f.endsWith(".json"))
-  .flatMap((f) => JSON.parse(readFileSync(join(dir, "dataset", f), "utf8")) as EvalCase[]);
+const models = arg('model', 'gpt-4o-mini').split(',');
+const passes = Number(arg('passes', '3'));
+const cases: EvalCase[] = readdirSync(join(dir, 'dataset'))
+  .filter((f) => f.endsWith('.json'))
+  .flatMap((f) => JSON.parse(readFileSync(join(dir, 'dataset', f), 'utf8')) as EvalCase[]);
 
 const rows = [];
 for (const model of models) {
@@ -58,7 +58,9 @@ for (const model of models) {
       outputTokens,
       latencyMs: (Date.now() - started) / passes,
     });
-    console.log(`${model} ${c.id}: ${outputs.map((o) => o.globalLevel).join(",")} (human ${c.human.globalLevel})`);
+    console.log(
+      `${model} ${c.id}: ${outputs.map((o) => o.globalLevel).join(',')} (human ${c.human.globalLevel})`
+    );
   }
   const summary = summarize(cases, runs);
   rows.push({
@@ -76,5 +78,5 @@ ${renderResultsTable(rows)}
 
 > Les niveaux de référence du jeu de données sont **synthétiques** (rédigés par le mainteneur) : ils mesurent la cohérence du correcteur, pas sa fidélité à un examinateur certifié.
 `;
-writeFileSync(join(dir, "results.md"), md);
+writeFileSync(join(dir, 'results.md'), md);
 console.log(md);

@@ -1,11 +1,7 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const AUDIO_MAX_BYTES = 25 * 1024 * 1024;
-export const AUDIO_MIME_TYPES = [
-  "audio/webm",
-  "audio/mp4",
-  "audio/ogg",
-] as const;
+export const AUDIO_MIME_TYPES = ['audio/webm', 'audio/mp4', 'audio/ogg'] as const;
 
 export const audioStatusSchema = z.object({
   /** The server has object storage configured. */

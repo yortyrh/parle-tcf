@@ -1,15 +1,15 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
 
 onlyBuiltDependencies:
-  - "@nestjs/core"
-  - "@tailwindcss/oxide"
+  - '@nestjs/core'
+  - '@tailwindcss/oxide'
   - esbuild
   - lefthook
   - sharp
   - unrs-resolver
 
 patchedDependencies:
-  "@openai/agents-core@0.8.2": patches/@openai__agents-core@0.8.2.patch
-  "@openai/agents-realtime@0.8.2": patches/@openai__agents-realtime@0.8.2.patch
+  '@openai/agents-core@0.8.2': patches/@openai__agents-core@0.8.2.patch
+  '@openai/agents-realtime@0.8.2': patches/@openai__agents-realtime@0.8.2.patch

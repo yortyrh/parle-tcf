@@ -1,19 +1,19 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  type Database,
+  type SQL,
   and,
   count,
   desc,
   eq,
   exerciseAliases,
   exerciseOccurrences,
-  exercises,
   exerciseSessions,
+  exercises,
   sql,
-  type Database,
-  type SQL,
-} from "@parle-tcf/db";
-import type { TaskType } from "@parle-tcf/shared";
-import { DATABASE } from "../database/database.tokens.js";
+} from '@parle-tcf/db';
+import type { TaskType } from '@parle-tcf/shared';
+import { DATABASE } from '../database/database.tokens.js';
 
 export interface TcfExerciseRow {
   id: string;
@@ -53,25 +53,24 @@ export interface ListExercisesInput {
   offset?: number;
 }
 
-const ACCENTED = "àâäáãåçéèêëíìîïñóòôöõúùûüýÿœæ";
-const PLAIN = "aaaaaaceeeeiiiinooooouuuuyyoa";
+const ACCENTED = 'àâäáãåçéèêëíìîïñóòôöõúùûüýÿœæ';
+const PLAIN = 'aaaaaaceeeeiiiinooooouuuuyyoa';
 
 /** Lowercase, accent-free SQL form of a text expression (no unaccent extension needed). */
-const folded = (expr: SQL) =>
-  sql`translate(lower(${expr}), ${ACCENTED}, ${PLAIN})`;
+const folded = (expr: SQL) => sql`translate(lower(${expr}), ${ACCENTED}, ${PLAIN})`;
 
 const foldText = (s: string) =>
   s
     .toLowerCase()
-    .split("")
+    .split('')
     .map((c) => {
       const i = ACCENTED.indexOf(c);
       return i === -1 ? c : PLAIN[i];
     })
-    .join("");
+    .join('');
 
 /** Id of the fixed row standing for the Tâche 1 interview (see the seed). */
-export const TACHE1_EXERCISE_ID = "t1-entretien";
+export const TACHE1_EXERCISE_ID = 't1-entretien';
 
 const TASK_NUMBER: Record<TaskType, number> = {
   tache1: 1,
@@ -103,9 +102,7 @@ export class ExerciseService {
     return exercise;
   }
 
-  async getRandomTcfExercise(
-    taskType: "tache2" | "tache3",
-  ): Promise<TcfExerciseRow | null> {
+  async getRandomTcfExercise(taskType: 'tache2' | 'tache3'): Promise<TcfExerciseRow | null> {
     const [row] = await this.db
       .select()
       .from(exercises)
@@ -113,9 +110,7 @@ export class ExerciseService {
       .orderBy(sql`random()`)
       .limit(1);
     if (!row) {
-      this.logger.warn(
-        `No exercises found for ${taskType}; run pnpm db:migrate`,
-      );
+      this.logger.warn(`No exercises found for ${taskType}; run pnpm db:migrate`);
       return null;
     }
     return this.toRow(row);
@@ -123,7 +118,7 @@ export class ExerciseService {
 
   /** Ids of a task's bank in a stable order (used by the "next exercise" navigation). */
   async listOrderedExerciseIds(taskType: TaskType): Promise<string[]> {
-    if (taskType === "tache1") return [];
+    if (taskType === 'tache1') return [];
     const rows = await this.db
       .select({ id: exercises.id })
       .from(exercises)
@@ -134,11 +129,7 @@ export class ExerciseService {
 
   /** Also resolves ids merged into another exercise (`exercise_aliases`). */
   async getExerciseById(id: string): Promise<TcfExerciseRow | null> {
-    const [row] = await this.db
-      .select()
-      .from(exercises)
-      .where(eq(exercises.id, id))
-      .limit(1);
+    const [row] = await this.db.select().from(exercises).where(eq(exercises.id, id)).limit(1);
     if (row) return this.toRow(row);
     const [alias] = await this.db
       .select({ exercise: exercises })
@@ -153,7 +144,7 @@ export class ExerciseService {
   async listSessions(): Promise<ExerciseSessionSummary[]> {
     const distinctFor = (task: number) =>
       sql<number>`count(distinct ${exerciseOccurrences.exerciseId}) filter (where ${exerciseOccurrences.task} = ${task})`.mapWith(
-        Number,
+        Number
       );
     return this.db
       .select({
@@ -164,10 +155,7 @@ export class ExerciseService {
         tache3: distinctFor(3),
       })
       .from(exerciseSessions)
-      .innerJoin(
-        exerciseOccurrences,
-        eq(exerciseOccurrences.sessionId, exerciseSessions.id),
-      )
+      .innerJoin(exerciseOccurrences, eq(exerciseOccurrences.sessionId, exerciseSessions.id))
       .groupBy(exerciseSessions.id)
       .orderBy(desc(exerciseSessions.year), desc(exerciseSessions.month));
   }
@@ -186,7 +174,7 @@ export class ExerciseService {
     const conditions: SQL[] = [eq(exercises.task, task)];
     if (sessionId !== undefined) {
       conditions.push(
-        sql`exists (select 1 from ${exerciseOccurrences} where ${exerciseOccurrences.exerciseId} = ${exercises.id} and ${exerciseOccurrences.sessionId} = ${sessionId})`,
+        sql`exists (select 1 from ${exerciseOccurrences} where ${exerciseOccurrences.exerciseId} = ${exercises.id} and ${exerciseOccurrences.sessionId} = ${sessionId})`
       );
     }
     const term = search?.trim();
@@ -200,7 +188,7 @@ export class ExerciseService {
 
     const timesPublished =
       sql<number>`(select count(*) from ${exerciseOccurrences} where ${exerciseOccurrences.exerciseId} = ${exercises.id})`.mapWith(
-        Number,
+        Number
       );
     const [items, [{ total }]] = await Promise.all([
       this.db
@@ -235,10 +223,10 @@ export class ExerciseService {
     if (!session) return { session: null, items: [] };
     const [t2, t3] = await Promise.all(
       ([2, 3] as const).map((task) =>
-        this.listExercises({ task, sessionId: session.id, limit: perTask }),
-      ),
+        this.listExercises({ task, sessionId: session.id, limit: perTask })
+      )
     );
-    return { session, items: [...t2!.items, ...t3!.items] };
+    return { session, items: [...t2.items, ...t3.items] };
   }
 
   /**
@@ -247,9 +235,9 @@ export class ExerciseService {
    */
   async resolveExerciseForTask(
     taskType: TaskType,
-    exerciseId?: string,
+    exerciseId?: string
   ): Promise<TcfExerciseRow | null> {
-    if (taskType === "tache1") {
+    if (taskType === 'tache1') {
       return this.getExerciseById(TACHE1_EXERCISE_ID);
     }
     if (exerciseId) {

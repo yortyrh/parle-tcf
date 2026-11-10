@@ -30,7 +30,7 @@ export const ConsigneTabContent = React.memo(function ConsigneTabContent({
 
       {!showExerciseSkeleton && (
         <div className="border-primary/20 bg-primary/5 flex min-h-[88px] items-center justify-center rounded-xl border px-4 py-3 shadow-sm">
-          <p className="text-primary text-center text-base leading-relaxed font-semibold">
+          <p className="text-primary text-center text-base font-semibold leading-relaxed">
             {announcementText}
           </p>
         </div>

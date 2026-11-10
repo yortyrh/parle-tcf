@@ -1,33 +1,22 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-export const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+export const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 export const cefrLevelSchema = z.enum(CEFR_LEVELS);
 export type CefrLevel = z.infer<typeof cefrLevelSchema>;
 
-export const CRITERIA = [
-  "adequation",
-  "coherence",
-  "vocabulaire",
-  "grammaire",
-  "aisance",
-] as const;
+export const CRITERIA = ['adequation', 'coherence', 'vocabulaire', 'grammaire', 'aisance'] as const;
 export const criterionSchema = z.enum(CRITERIA);
 export type Criterion = z.infer<typeof criterionSchema>;
 
 export const CRITERION_LABELS: Record<Criterion, string> = {
-  adequation: "Adéquation à la tâche",
-  coherence: "Cohérence et cohésion",
-  vocabulaire: "Vocabulaire",
-  grammaire: "Grammaire",
-  aisance: "Aisance et prononciation",
+  adequation: 'Adéquation à la tâche',
+  coherence: 'Cohérence et cohésion',
+  vocabulaire: 'Vocabulaire',
+  grammaire: 'Grammaire',
+  aisance: 'Aisance et prononciation',
 };
 
-export const errorTypeSchema = z.enum([
-  "grammaire",
-  "lexique",
-  "syntaxe",
-  "registre",
-]);
+export const errorTypeSchema = z.enum(['grammaire', 'lexique', 'syntaxe', 'registre']);
 
 const criterionResultSchema = z.object({
   level: cefrLevelSchema,
@@ -55,9 +44,9 @@ export const evaluationOutputSchema = z.object({
           excerpt: z.string().min(1).max(500),
           type: errorTypeSchema,
           explanation: z.string().min(1).max(500),
-        }),
+        })
       ),
-    }),
+    })
   ),
 });
 export type EvaluationOutput = z.infer<typeof evaluationOutputSchema>;
@@ -92,15 +81,13 @@ const LEVEL_SCORE: Record<CefrLevel, number> = {
 };
 export const levelScore = (level: CefrLevel): number => LEVEL_SCORE[level];
 export const scoreToLevel = (score: number): CefrLevel =>
-  CEFR_LEVELS[Math.min(5, Math.max(0, Math.round(score) - 1))]!;
+  CEFR_LEVELS[Math.min(5, Math.max(0, Math.round(score) - 1))];
 
 /** Weight of each task in the overall level of a full exam. */
 const TASK_WEIGHT: Record<number, number> = { 1: 1, 2: 1.5, 3: 2 };
 
 /** Weighted median of the per-task levels (deterministic, no LLM). */
-export function weightedMedianLevel(
-  items: { task: number; level: CefrLevel }[],
-): CefrLevel | null {
+export function weightedMedianLevel(items: { task: number; level: CefrLevel }[]): CefrLevel | null {
   if (items.length === 0) return null;
   const sorted = items
     .map((i) => ({ score: levelScore(i.level), w: TASK_WEIGHT[i.task] ?? 1 }))
@@ -111,5 +98,5 @@ export function weightedMedianLevel(
     acc += item.w;
     if (acc >= total / 2) return scoreToLevel(item.score);
   }
-  return scoreToLevel(sorted[sorted.length - 1]!.score);
+  return scoreToLevel(sorted[sorted.length - 1].score);
 }

@@ -7,6 +7,7 @@ import { AuthShell, FieldLabel, FormError } from '@/components/app/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
+import { formText } from '@/lib/form';
 
 export function ReinitialiserForm() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export function ReinitialiserForm() {
     setPending(true);
     setError(null);
     const { error: authError } = await authClient.resetPassword({
-      newPassword: String(form.get('password')),
+      newPassword: formText(form, 'password'),
       token,
     });
     setPending(false);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from 'next-themes';
-import { Toaster as Sonner, ToasterProps } from 'sonner';
+import { Toaster as Sonner, type ToasterProps } from 'sonner';
 import { WarningIcon } from '@phosphor-icons/react/dist/ssr';
 
 export function Toaster({ ...props }: ToasterProps) {

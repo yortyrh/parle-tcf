@@ -1,12 +1,8 @@
-import { z } from "zod";
-import { attemptModeSchema } from "./exam-session";
-import {
-  cefrLevelSchema,
-  evaluationSchema,
-  transcriptErrorSchema,
-} from "./evaluation";
+import { z } from 'zod';
+import { cefrLevelSchema, evaluationSchema, transcriptErrorSchema } from './evaluation';
+import { attemptModeSchema } from './exam-session';
 
-export const speakerSchema = z.enum(["examiner", "candidate"]);
+export const speakerSchema = z.enum(['examiner', 'candidate']);
 
 export const transcriptLineSchema = z.object({
   seq: z.number().int().nonnegative(),
@@ -43,17 +39,8 @@ export const completeAttemptInputSchema = z.object({
     .optional(),
 });
 
-export const attemptStatusSchema = z.enum([
-  "in_progress",
-  "completed",
-  "interrupted",
-]);
-export const evaluationStatusSchema = z.enum([
-  "pending",
-  "running",
-  "done",
-  "failed",
-]);
+export const attemptStatusSchema = z.enum(['in_progress', 'completed', 'interrupted']);
+export const evaluationStatusSchema = z.enum(['pending', 'running', 'done', 'failed']);
 
 export const attemptSummarySchema = z.object({
   id: z.string().uuid(),
@@ -79,7 +66,7 @@ export const attemptDetailSchema = attemptSummarySchema.extend({
     transcriptLineSchema.extend({
       correctedText: z.string().nullable(),
       errors: z.array(transcriptErrorSchema).nullable(),
-    }),
+    })
   ),
 });
 
@@ -118,12 +105,8 @@ export type Usage = z.infer<typeof usageSchema>;
 export const okOutputSchema = z.object({ ok: z.literal(true) });
 
 export type TranscriptLine = z.infer<typeof transcriptLineSchema>;
-export type CheckpointAttemptInput = z.infer<
-  typeof checkpointAttemptInputSchema
->;
-export type CheckpointAttemptOutput = z.infer<
-  typeof checkpointAttemptOutputSchema
->;
+export type CheckpointAttemptInput = z.infer<typeof checkpointAttemptInputSchema>;
+export type CheckpointAttemptOutput = z.infer<typeof checkpointAttemptOutputSchema>;
 export type CompleteAttemptInput = z.infer<typeof completeAttemptInputSchema>;
 export type GetRunInput = z.infer<typeof getRunInputSchema>;
 export type ExamRun = z.infer<typeof examRunSchema>;

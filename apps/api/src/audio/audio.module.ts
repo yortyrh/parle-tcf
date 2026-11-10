@@ -1,8 +1,8 @@
-import { Global, Module, type Provider } from "@nestjs/common";
-import { getEnv } from "../config/env.js";
-import { AUDIO_STORAGE, type AudioStorage } from "./audio-storage.js";
-import { AudioService } from "./audio.service.js";
-import { S3AudioStorage } from "./s3-audio-storage.js";
+import { Global, Module, type Provider } from '@nestjs/common';
+import { getEnv } from '../config/env.js';
+import { AUDIO_STORAGE, type AudioStorage } from './audio-storage.js';
+import { AudioService } from './audio.service.js';
+import { S3AudioStorage } from './s3-audio-storage.js';
 
 const storageProvider: Provider = {
   provide: AUDIO_STORAGE,

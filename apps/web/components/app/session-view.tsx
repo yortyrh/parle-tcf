@@ -147,7 +147,7 @@ function SpeakingIndicator({
         {evaluatorCaptionVisible ? (
           <span
             className={cn(
-              'text-xs font-bold tracking-wider whitespace-nowrap uppercase select-none',
+              'select-none whitespace-nowrap text-xs font-bold uppercase tracking-wider',
               active ? 'text-primary' : 'text-foreground'
             )}
             aria-hidden
@@ -174,7 +174,7 @@ function SpeakingIndicator({
       {label != null && label !== '' ? (
         <span
           className={cn(
-            'text-[11px] font-medium tracking-wide transition-colors duration-200 select-none',
+            'select-none text-[11px] font-medium tracking-wide transition-colors duration-200',
             active ? (color === 'cyan' ? 'text-primary' : 'text-success') : 'text-muted-foreground'
           )}
         >

@@ -1,20 +1,14 @@
-import { createHash, randomUUID } from "node:crypto";
-import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { PGlite } from "@electric-sql/pglite";
-import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
-import type { Database } from "./client";
-import { MIGRATIONS_FOLDER } from "./migrate";
-import * as schema from "./schema";
+import { createHash, randomUUID } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/pglite';
+import { migrate } from 'drizzle-orm/pglite/migrator';
+import { PGlite } from '@electric-sql/pglite';
+import type { Database } from './client';
+import { MIGRATIONS_FOLDER } from './migrate';
+import * as schema from './schema';
 
 export interface TestDb {
   /** Typed as the production `Database`; PGlite speaks the same Postgres dialect. */
@@ -28,10 +22,10 @@ export interface TestDb {
 
 /** Hash of every migration file: a new or changed migration invalidates the template. */
 function migrationsKey(): string {
-  const hash = createHash("sha256");
+  const hash = createHash('sha256');
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
-      a.name.localeCompare(b.name),
+      a.name.localeCompare(b.name)
     )) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) walk(path);
@@ -39,7 +33,7 @@ function migrationsKey(): string {
     }
   };
   walk(MIGRATIONS_FOLDER);
-  return hash.digest("hex").slice(0, 16);
+  return hash.digest('hex').slice(0, 16);
 }
 
 let templatePromise: Promise<Blob> | null = null;
@@ -57,7 +51,7 @@ function migratedTemplate(): Promise<Blob> {
     await migrate(drizzle(builder, { schema }), {
       migrationsFolder: MIGRATIONS_FOLDER,
     });
-    const dump = await builder.dumpDataDir("none");
+    const dump = await builder.dumpDataDir('none');
     await builder.close();
     const bytes = Buffer.from(await dump.arrayBuffer());
     // Atomic publish: parallel workers may build it at the same time.
@@ -84,7 +78,7 @@ export async function createTestDb(): Promise<TestDb> {
       const id = randomUUID();
       await db.insert(schema.user).values({
         id,
-        name: "Test User",
+        name: 'Test User',
         email: email ?? `${id}@test.local`,
         emailVerified: true,
       });
@@ -92,10 +86,10 @@ export async function createTestDb(): Promise<TestDb> {
     },
     async truncateAll() {
       const { rows } = await client.query<{ tablename: string }>(
-        `select tablename from pg_tables where schemaname = 'public'`,
+        `select tablename from pg_tables where schemaname = 'public'`
       );
       if (rows.length === 0) return;
-      const tables = rows.map((r) => `"public"."${r.tablename}"`).join(", ");
+      const tables = rows.map((r) => `"public"."${r.tablename}"`).join(', ');
       await db.execute(sql.raw(`truncate table ${tables} cascade`));
     },
     close: () => client.close(),

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
 const remarkGfm = import('remark-gfm').then((m) => m.default);
 let _remarkGfm: typeof import('remark-gfm').default | null = null;
-remarkGfm.then((mod) => {
+void remarkGfm.then((mod) => {
   _remarkGfm = mod;
 });
 
@@ -70,7 +70,7 @@ const MessageBubble = React.memo(function MessageBubble({ item }: { item: ExamTr
         <span className="text-muted-foreground text-xs font-semibold">{label}</span>
         <div
           className={cn(
-            'max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug break-words',
+            'max-w-[85%] break-words rounded-2xl px-3 py-2 text-sm leading-snug',
             isLocal
               ? 'bg-primary text-primary-foreground rounded-tr-none'
               : 'bg-muted text-foreground rounded-tl-none'
@@ -128,7 +128,7 @@ export function ConversationTabContent({ lines }: ConversationTabContentProps) {
               key={virtualRow.key}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
-              className="absolute top-0 left-0 w-full px-1 py-2"
+              className="absolute left-0 top-0 w-full px-1 py-2"
               style={{ transform: `translateY(${virtualRow.start}px)` }}
             >
               <MessageBubble item={item} />

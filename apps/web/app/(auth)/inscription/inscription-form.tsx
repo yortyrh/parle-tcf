@@ -8,6 +8,7 @@ import { OAuthButtons } from '@/components/app/oauth-buttons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
+import { formText } from '@/lib/form';
 
 export function InscriptionForm() {
   const router = useRouter();
@@ -17,13 +18,13 @@ export function InscriptionForm() {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const email = String(form.get('email'));
+    const email = formText(form, 'email');
     setPending(true);
     setError(null);
     const { data, error: authError } = await authClient.signUp.email({
-      name: String(form.get('name')),
+      name: formText(form, 'name'),
       email,
-      password: String(form.get('password')),
+      password: formText(form, 'password'),
     });
     setPending(false);
     if (authError) {

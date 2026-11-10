@@ -121,9 +121,10 @@ export function SujetsView() {
             ))}
           </select>
         </label>
-        <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
+        <label htmlFor="sujets-search" className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
           Rechercher
           <Input
+            id="sujets-search"
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

@@ -1,14 +1,14 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-export const taskTypeSchema = z.enum(["tache1", "tache2", "tache3"]);
+export const taskTypeSchema = z.enum(['tache1', 'tache2', 'tache3']);
 
-export const attemptModeSchema = z.enum(["practice", "full"]);
+export const attemptModeSchema = z.enum(['practice', 'full']);
 
 export const createExamSessionInputSchema = z.object({
   taskType: taskTypeSchema,
   exerciseId: z.string().optional(),
   /** `full` chains the three tasks of an exam under one run. */
-  mode: attemptModeSchema.default("practice"),
+  mode: attemptModeSchema.default('practice'),
   /** Existing run to attach to (full mode, tasks 2 and 3). */
   runId: z.string().uuid().optional(),
 });
@@ -36,7 +36,7 @@ export const agentConfigForClientSchema = z.object({
 
 export const createExamSessionOutputSchema = z.object({
   /** Voice backend the browser must connect to. */
-  provider: z.enum(["openai", "gemini"]).default("openai"),
+  provider: z.enum(['openai', 'gemini']).default('openai'),
   clientSecret: z.string(),
   sessionId: z.string(),
   /** Persisted attempt this session records into. */
@@ -50,15 +50,9 @@ export const createExamSessionOutputSchema = z.object({
 
 export type AttemptMode = z.infer<typeof attemptModeSchema>;
 /** Input as sent by clients (defaults not yet applied). */
-export type CreateExamSessionRequest = z.input<
-  typeof createExamSessionInputSchema
->;
-export type CreateExamSessionInput = z.infer<
-  typeof createExamSessionInputSchema
->;
-export type CreateExamSessionOutput = z.infer<
-  typeof createExamSessionOutputSchema
->;
+export type CreateExamSessionRequest = z.input<typeof createExamSessionInputSchema>;
+export type CreateExamSessionInput = z.infer<typeof createExamSessionInputSchema>;
+export type CreateExamSessionOutput = z.infer<typeof createExamSessionOutputSchema>;
 export type ExerciseData = z.infer<typeof exerciseDataPayloadSchema>;
 
 /**
@@ -72,9 +66,5 @@ export const refreshSessionTokenInputSchema = z.object({
 export const refreshSessionTokenOutputSchema = z.object({
   clientSecret: z.string().min(1),
 });
-export type RefreshSessionTokenInput = z.infer<
-  typeof refreshSessionTokenInputSchema
->;
-export type RefreshSessionTokenOutput = z.infer<
-  typeof refreshSessionTokenOutputSchema
->;
+export type RefreshSessionTokenInput = z.infer<typeof refreshSessionTokenInputSchema>;
+export type RefreshSessionTokenOutput = z.infer<typeof refreshSessionTokenOutputSchema>;

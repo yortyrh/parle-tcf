@@ -1,9 +1,9 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { parse } from "yaml";
-import type { TaskType } from "@parle-tcf/shared";
-import { getApiConfigDir } from "../paths.js";
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse } from 'yaml';
+import { Injectable, Logger } from '@nestjs/common';
+import type { TaskType } from '@parle-tcf/shared';
+import { getApiConfigDir } from '../paths.js';
 
 export interface AgentYamlConfig {
   name: string;
@@ -41,8 +41,8 @@ export class ExamConfigService {
   loadAgentConfig(taskType: TaskType): AgentYamlConfig {
     const cached = this.agentCache.get(taskType);
     if (cached) return cached;
-    const configPath = join(this.getConfigDir(), "agents", `${taskType}.yml`);
-    const fileContent = readFileSync(configPath, "utf-8");
+    const configPath = join(this.getConfigDir(), 'agents', `${taskType}.yml`);
+    const fileContent = readFileSync(configPath, 'utf-8');
     const config = parse(fileContent) as AgentYamlConfig;
     this.validateAgent(config, taskType);
     this.agentCache.set(taskType, config);
@@ -52,11 +52,11 @@ export class ExamConfigService {
 
   loadServiceConfig(): ServiceYamlConfig {
     if (this.serviceCache) return this.serviceCache;
-    const configPath = join(this.getConfigDir(), "service.yml");
-    const fileContent = readFileSync(configPath, "utf-8");
+    const configPath = join(this.getConfigDir(), 'service.yml');
+    const fileContent = readFileSync(configPath, 'utf-8');
     const config = parse(fileContent) as ServiceYamlConfig;
     if (!config.llm?.voice || !config.llm?.model) {
-      throw new Error("service.yml: missing llm.voice or llm.model");
+      throw new Error('service.yml: missing llm.voice or llm.model');
     }
     this.serviceCache = config;
     return config;
@@ -70,27 +70,25 @@ export class ExamConfigService {
   loadInfoMarkdown(filename: string): string | undefined {
     const cached = this.markdownCache.get(filename);
     if (cached !== undefined) return cached;
-    const filePath = join(this.getConfigDir(), "info", filename);
+    const filePath = join(this.getConfigDir(), 'info', filename);
     try {
-      const content = readFileSync(filePath, "utf-8");
+      const content = readFileSync(filePath, 'utf-8');
       this.markdownCache.set(filename, content);
       return content;
     } catch (err) {
-      this.logger.warn(
-        `Could not load info markdown '${filename}': ${(err as Error).message}`,
-      );
+      this.logger.warn(`Could not load info markdown '${filename}': ${(err as Error).message}`);
       return undefined;
     }
   }
 
   private validateAgent(config: AgentYamlConfig, taskType: TaskType): void {
     const required = [
-      "name",
-      "description",
-      "settings",
-      "baseInstructions",
-      "instructions",
-      "greeting",
+      'name',
+      'description',
+      'settings',
+      'baseInstructions',
+      'instructions',
+      'greeting',
     ] as const;
     for (const field of required) {
       if (!(field in config)) {

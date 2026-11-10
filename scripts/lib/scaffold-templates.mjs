@@ -74,7 +74,7 @@ export class ${pascal}Service {
 export function webPageTemplate({ pascal, title, fileBase }) {
   return `import { ${pascal}View } from './${fileBase}-view';
 
-export const metadata = { title: '${title.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}' };
+export const metadata = { title: '${title.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' };
 
 export default function ${pascal}Page() {
   return <${pascal}View />;
@@ -84,7 +84,7 @@ export default function ${pascal}Page() {
 
 /** @param {{ pascal: string, title: string }} opts */
 export function webViewTemplate({ pascal, title }) {
-  const attr = title.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  const attr = title.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   return `'use client';
 
 import { PageShell } from '@/components/app/page-shell';
@@ -103,51 +103,51 @@ export function ${pascal}View() {
 export function packageFiles({ kebab }) {
   const pkg = {
     name: `@parle-tcf/${kebab}`,
-    version: "0.0.0",
+    version: '0.0.0',
     private: true,
-    main: "./dist/index.js",
-    types: "./dist/index.d.ts",
-    files: ["dist"],
+    main: './dist/index.js',
+    types: './dist/index.d.ts',
+    files: ['dist'],
     scripts: {
-      build: "tsc -p tsconfig.build.json",
-      typecheck: "tsc --noEmit",
+      build: 'tsc -p tsconfig.build.json',
+      typecheck: 'tsc --noEmit',
       lint: 'eslint "src/**/*.ts"',
       format: 'prettier --write "src/**/*.ts"',
-      "format:check": 'prettier --check "src/**/*.ts"',
-      test: "vitest run --passWithNoTests",
+      'format:check': 'prettier --check "src/**/*.ts"',
+      test: 'vitest run --passWithNoTests',
     },
   };
   const tsconfig = {
     compilerOptions: {
-      target: "ES2022",
-      module: "CommonJS",
-      lib: ["ES2022"],
+      target: 'ES2022',
+      module: 'CommonJS',
+      lib: ['ES2022'],
       declaration: true,
-      outDir: "dist",
-      rootDir: "src",
+      outDir: 'dist',
+      rootDir: 'src',
       strict: true,
       skipLibCheck: true,
       esModuleInterop: true,
       forceConsistentCasingInFileNames: true,
     },
-    include: ["src/**/*.ts"],
+    include: ['src/**/*.ts'],
   };
   const tsconfigBuild = {
-    extends: "./tsconfig.json",
-    exclude: ["src/**/*.spec.ts", "src/**/*.test.ts"],
+    extends: './tsconfig.json',
+    exclude: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
   };
   return {
-    "package.json": `${JSON.stringify(pkg, null, 2)}\n`,
-    "tsconfig.json": `${JSON.stringify(tsconfig, null, 2)}\n`,
-    "tsconfig.build.json": `${JSON.stringify(tsconfigBuild, null, 2)}\n`,
-    "eslint.config.mjs": `import eslint from "@eslint/js";
+    'package.json': `${JSON.stringify(pkg, null, 2)}\n`,
+    'tsconfig.json': `${JSON.stringify(tsconfig, null, 2)}\n`,
+    'tsconfig.build.json': `${JSON.stringify(tsconfigBuild, null, 2)}\n`,
+    'eslint.config.mjs': `import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.recommended, {
   ignores: ["dist/**", "node_modules/**", "coverage/**"],
 });
 `,
-    "vitest.config.ts": `import { defineConfig } from "vitest/config";
+    'vitest.config.ts': `import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
@@ -155,7 +155,7 @@ export default defineConfig({
   },
 });
 `,
-    "src/index.ts": `export const PACKAGE_NAME = "@parle-tcf/${kebab}";
+    'src/index.ts': `export const PACKAGE_NAME = "@parle-tcf/${kebab}";
 `,
   };
 }

@@ -1,11 +1,11 @@
-import { randomBytes } from "node:crypto";
-import { Inject, Injectable, Optional } from "@nestjs/common";
-import { and, type Database, eq, gt, verification } from "@parle-tcf/db";
-import { DATABASE } from "../database/database.tokens.js";
+import { randomBytes } from 'node:crypto';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { type Database, and, eq, gt, verification } from '@parle-tcf/db';
+import { DATABASE } from '../database/database.tokens.js';
 
-const PREFIX = "oauth-handoff:";
+const PREFIX = 'oauth-handoff:';
 const TTL_MS = 2 * 60 * 1000;
-export const HANDOFF_CLOCK = Symbol("HANDOFF_CLOCK");
+export const HANDOFF_CLOCK = Symbol('HANDOFF_CLOCK');
 
 /**
  * One-time codes that hand an OAuth session from the API origin to the web app.
@@ -22,11 +22,11 @@ export class OAuthHandoffService {
     @Inject(DATABASE) private readonly db: Database,
     @Optional()
     @Inject(HANDOFF_CLOCK)
-    private readonly now: () => Date = () => new Date(),
+    private readonly now: () => Date = () => new Date()
   ) {}
 
   async issue(sessionToken: string): Promise<string> {
-    const code = randomBytes(32).toString("base64url");
+    const code = randomBytes(32).toString('base64url');
     await this.db.insert(verification).values({
       identifier: `${PREFIX}${code}`,
       value: sessionToken,
@@ -41,10 +41,7 @@ export class OAuthHandoffService {
     const [row] = await this.db
       .delete(verification)
       .where(
-        and(
-          eq(verification.identifier, `${PREFIX}${code}`),
-          gt(verification.expiresAt, this.now()),
-        ),
+        and(eq(verification.identifier, `${PREFIX}${code}`), gt(verification.expiresAt, this.now()))
       )
       .returning({ value: verification.value });
     return row?.value ?? null;

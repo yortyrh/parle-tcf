@@ -6,10 +6,10 @@ import {
   ListObjectsV2Command,
   NotFound,
   S3Client,
-} from "@aws-sdk/client-s3";
-import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { AudioStorage, PresignedUpload } from "./audio-storage.js";
+} from '@aws-sdk/client-s3';
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import type { AudioStorage, PresignedUpload } from './audio-storage.js';
 
 export interface S3Config {
   endpoint?: string;
@@ -41,16 +41,16 @@ export class S3AudioStorage implements AudioStorage {
   async presignUpload(
     key: string,
     contentType: string,
-    maxBytes: number,
+    maxBytes: number
   ): Promise<PresignedUpload> {
     const { url, fields } = await createPresignedPost(this.client, {
       Bucket: this.config.bucket,
       Key: key,
       Conditions: [
-        ["content-length-range", 1, maxBytes],
-        ["eq", "$Content-Type", contentType],
+        ['content-length-range', 1, maxBytes],
+        ['eq', '$Content-Type', contentType],
       ],
-      Fields: { "Content-Type": contentType },
+      Fields: { 'Content-Type': contentType },
       Expires: URL_TTL_S,
     });
     return { url, fields };
@@ -59,14 +59,13 @@ export class S3AudioStorage implements AudioStorage {
   async head(key: string): Promise<{ size: number } | null> {
     try {
       const out = await this.client.send(
-        new HeadObjectCommand({ Bucket: this.config.bucket, Key: key }),
+        new HeadObjectCommand({ Bucket: this.config.bucket, Key: key })
       );
       return { size: out.ContentLength ?? 0 };
     } catch (error) {
       if (
         error instanceof NotFound ||
-        (error as { $metadata?: { httpStatusCode?: number } }).$metadata
-          ?.httpStatusCode === 404
+        (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404
       ) {
         return null;
       }
@@ -78,14 +77,12 @@ export class S3AudioStorage implements AudioStorage {
     return getSignedUrl(
       this.client,
       new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
-      { expiresIn: URL_TTL_S },
+      { expiresIn: URL_TTL_S }
     );
   }
 
   async delete(key: string): Promise<void> {
-    await this.client.send(
-      new DeleteObjectCommand({ Bucket: this.config.bucket, Key: key }),
-    );
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.config.bucket, Key: key }));
   }
 
   async deletePrefix(prefix: string): Promise<void> {
@@ -96,17 +93,15 @@ export class S3AudioStorage implements AudioStorage {
           Bucket: this.config.bucket,
           Prefix: prefix,
           ContinuationToken: token,
-        }),
+        })
       );
-      const keys = (page.Contents ?? []).flatMap((o) =>
-        o.Key ? [{ Key: o.Key }] : [],
-      );
+      const keys = (page.Contents ?? []).flatMap((o) => (o.Key ? [{ Key: o.Key }] : []));
       if (keys.length > 0) {
         await this.client.send(
           new DeleteObjectsCommand({
             Bucket: this.config.bucket,
             Delete: { Objects: keys },
-          }),
+          })
         );
       }
       token = page.IsTruncated ? page.NextContinuationToken : undefined;

@@ -1,32 +1,23 @@
-import {
-  account,
-  session,
-  user,
-  verification,
-  type Database,
-} from "@parle-tcf/db";
-import { betterAuth } from "better-auth";
-import { bearer } from "better-auth/plugins";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { getEnv, parseCorsOrigins } from "../config/env.js";
-import type { MailService } from "../mail/mail.service.js";
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { bearer } from 'better-auth/plugins';
+import { type Database, account, session, user, verification } from '@parle-tcf/db';
+import { getEnv, parseCorsOrigins } from '../config/env.js';
+import type { MailService } from '../mail/mail.service.js';
 
-export const AUTH_BASE_PATH = "/api/auth";
+export const AUTH_BASE_PATH = '/api/auth';
 
 /** Injection token for the Better Auth instance. */
-export const BETTER_AUTH = Symbol("BETTER_AUTH");
+export const BETTER_AUTH = Symbol('BETTER_AUTH');
 
 /** Email links point at web pages, which call the API with the token. */
 export function webLink(webUrl: string, path: string, token: string): string {
   const url = new URL(path, `${webUrl}/`);
-  url.searchParams.set("token", token);
+  url.searchParams.set('token', token);
   return url.toString();
 }
 
-type SocialProviders = Record<
-  string,
-  { clientId: string; clientSecret: string }
->;
+type SocialProviders = Record<string, { clientId: string; clientSecret: string }>;
 
 /** GitHub/Google are enabled when both their client id and secret are set. */
 export function socialProvidersFromEnv(env = getEnv()): SocialProviders {
@@ -53,23 +44,23 @@ export function enabledSocialProviders(env = getEnv()): string[] {
 export function createAuth(
   db: Database,
   mail: MailService,
-  onBeforeUserDelete?: (userId: string) => Promise<void>,
+  onBeforeUserDelete?: (userId: string) => Promise<void>
 ) {
   const env = getEnv();
 
   const socialProviders = socialProvidersFromEnv(env);
 
   return betterAuth({
-    appName: "parle-tcf",
+    appName: 'parle-tcf',
     baseURL: env.BETTER_AUTH_URL,
     basePath: AUTH_BASE_PATH,
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: parseCorsOrigins(env),
     database: drizzleAdapter(db, {
-      provider: "pg",
+      provider: 'pg',
       schema: { user, session, account, verification },
     }),
-    advanced: { database: { generateId: "uuid" } },
+    advanced: { database: { generateId: 'uuid' } },
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
     emailAndPassword: {
       enabled: true,
@@ -80,7 +71,7 @@ export function createAuth(
       sendResetPassword: async ({ user: target, token }) => {
         await mail.sendPasswordResetEmail(
           target.email,
-          webLink(env.WEB_URL, "/reinitialiser", token),
+          webLink(env.WEB_URL, '/reinitialiser', token)
         );
       },
     },
@@ -92,7 +83,7 @@ export function createAuth(
       sendVerificationEmail: async ({ user: target, token }) => {
         await mail.sendVerificationEmail(
           target.email,
-          webLink(env.WEB_URL, "/verifier-email", token),
+          webLink(env.WEB_URL, '/verifier-email', token)
         );
       },
     },
@@ -106,7 +97,7 @@ export function createAuth(
         sendDeleteAccountVerification: async ({ user: target, token }) => {
           await mail.sendDeleteAccountEmail(
             target.email,
-            webLink(env.WEB_URL, "/compte/suppression", token),
+            webLink(env.WEB_URL, '/compte/suppression', token)
           );
         },
         // Recordings live outside the database: remove them before the cascade.
@@ -116,7 +107,7 @@ export function createAuth(
       },
     },
     account: {
-      accountLinking: { enabled: true, trustedProviders: ["github", "google"] },
+      accountLinking: { enabled: true, trustedProviders: ['github', 'google'] },
     },
     socialProviders,
     // Sessions travel as `Authorization: Bearer`; new tokens come back in the

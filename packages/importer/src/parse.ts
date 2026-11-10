@@ -1,10 +1,6 @@
-import { load, type CheerioAPI } from "cheerio";
-import type { AnyNode, Element } from "domhandler";
-import {
-  monthPageUrl,
-  normalizeSubjectText,
-  parseMonthPageUrl,
-} from "@parle-tcf/db";
+import { type CheerioAPI, load } from 'cheerio';
+import { type AnyNode, type Element, isTag } from 'domhandler';
+import { monthPageUrl, normalizeSubjectText, parseMonthPageUrl } from '@parle-tcf/db';
 
 export interface ParsedSubject {
   task: 2 | 3;
@@ -16,7 +12,7 @@ export interface ParsedSubject {
   instruction: string | null;
 }
 
-export const INDEX_URL = "https://reussir-tcfcanada.com/expression-orale/";
+export const INDEX_URL = 'https://reussir-tcfcanada.com/expression-orale/';
 
 const HEADING = /^h[1-6]$/;
 const TASK = /t[âa]che\s*([123])/i;
@@ -24,22 +20,22 @@ const PART = /^partie\s*(\d+)\s*:?$/i;
 const INSTRUCTION_COLOR = /color\s*:\s*#00ccff/i;
 const MIN_SUBJECT_LENGTH = 30;
 
-const isElement = (node: AnyNode): node is Element => node.type === "tag";
+const isElement = (node: AnyNode): node is Element => isTag(node);
 
 function instructionAndScenario($: CheerioAPI, el: Element) {
   const spans = $(el)
-    .find("span")
-    .filter((_, span) => INSTRUCTION_COLOR.test($(span).attr("style") ?? ""));
+    .find('span')
+    .filter((_, span) => INSTRUCTION_COLOR.test($(span).attr('style') ?? ''));
   if (spans.length === 0) return { instruction: null, scenario: null };
   const instruction = normalizeSubjectText(
     spans
       .toArray()
       .map((span) => $(span).text())
-      .join(" "),
+      .join(' ')
   );
   const clone = $(el).clone();
-  clone.find("span").each((_, span) => {
-    if (INSTRUCTION_COLOR.test($(span).attr("style") ?? "")) $(span).remove();
+  clone.find('span').each((_, span) => {
+    if (INSTRUCTION_COLOR.test($(span).attr('style') ?? '')) $(span).remove();
   });
   return {
     instruction: instruction || null,
@@ -59,7 +55,7 @@ export function parseMonthPage(html: string): ParsedSubject[] {
   let part = 1;
   let position = 0;
 
-  $("*").each((_, node) => {
+  $('*').each((_, node) => {
     if (!isElement(node)) return;
     const tag = node.tagName.toLowerCase();
     const text = normalizeSubjectText($(node).text());
@@ -81,8 +77,8 @@ export function parseMonthPage(html: string): ParsedSubject[] {
       return;
     }
 
-    if (tag !== "strong" && tag !== "b") return;
-    if ($(node).parents("h1,h2,h3,h4,h5,h6").length > 0) return;
+    if (tag !== 'strong' && tag !== 'b') return;
+    if ($(node).parents('h1,h2,h3,h4,h5,h6').length > 0) return;
 
     const partMatch = PART.exec(text);
     if (partMatch) {
@@ -90,8 +86,8 @@ export function parseMonthPage(html: string): ParsedSubject[] {
       position = 0;
       return;
     }
-    if (tag !== "strong" || task === null) return;
-    if ($(node).parents("strong").length > 0) return;
+    if (tag !== 'strong' || task === null) return;
+    if ($(node).parents('strong').length > 0) return;
     if (text.length < MIN_SUBJECT_LENGTH) return;
 
     position += 1;
@@ -100,7 +96,7 @@ export function parseMonthPage(html: string): ParsedSubject[] {
       part,
       position,
       text,
-      html: ($(node).html() ?? "").trim(),
+      html: ($(node).html() ?? '').trim(),
       ...instructionAndScenario($, node),
     });
   });
@@ -110,14 +106,14 @@ export function parseMonthPage(html: string): ParsedSubject[] {
 
 /** Monthly oral-expression pages linked from the index page, newest first. */
 export function discoverMonthPages(
-  indexHtml: string,
+  indexHtml: string
 ): { year: number; month: number; url: string }[] {
   const $ = load(indexHtml);
   const found = new Map<string, { year: number; month: number; url: string }>();
-  $("a[href]").each((_, a) => {
+  $('a[href]').each((_, a) => {
     let href: string;
     try {
-      href = new URL($(a).attr("href") ?? "", INDEX_URL).href;
+      href = new URL($(a).attr('href') ?? '', INDEX_URL).href;
     } catch {
       return;
     }
@@ -130,7 +126,5 @@ export function discoverMonthPages(
         url: monthPageUrl(parsed.year, parsed.month),
       });
   });
-  return [...found.values()].sort(
-    (a, b) => b.year - a.year || b.month - a.month,
-  );
+  return [...found.values()].sort((a, b) => b.year - a.year || b.month - a.month);
 }

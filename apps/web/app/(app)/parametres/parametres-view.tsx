@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { authClient } from '@/lib/auth-client';
+import { formText } from '@/lib/form';
 import { clearSessionToken } from '@/lib/session-token';
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
@@ -58,15 +59,15 @@ export function ParametresView() {
     event.preventDefault();
     const formEl = event.currentTarget;
     const form = new FormData(formEl);
-    const apiKey = String(form.get('apiKey') ?? '').trim();
+    const apiKey = formText(form, 'apiKey').trim();
     await run(
       async () => {
         const saved = await api.saveSettings({
           provider,
           ...(apiKey ? { apiKey } : {}),
-          realtimeModel: String(form.get('realtimeModel') ?? '').trim() || null,
-          voice: String(form.get('voice') ?? '').trim() || null,
-          textModel: String(form.get('textModel') ?? '').trim() || null,
+          realtimeModel: formText(form, 'realtimeModel').trim() || null,
+          voice: formText(form, 'voice').trim() || null,
+          textModel: formText(form, 'textModel').trim() || null,
         });
         formEl.reset();
         setSettings(saved);

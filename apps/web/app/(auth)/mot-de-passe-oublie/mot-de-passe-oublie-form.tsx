@@ -6,6 +6,7 @@ import { AuthShell, FieldLabel, FormError } from '@/components/app/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
+import { formText } from '@/lib/form';
 
 export function MotDePasseOublieForm() {
   const [sent, setSent] = useState(false);
@@ -18,7 +19,7 @@ export function MotDePasseOublieForm() {
     setPending(true);
     setError(null);
     const { error: authError } = await authClient.requestPasswordReset({
-      email: String(form.get('email')),
+      email: formText(form, 'email'),
       redirectTo: `${window.location.origin}/reinitialiser`,
     });
     setPending(false);

@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createTestDb, type TestDb } from "@parle-tcf/db/testing";
-import { eq, examAttempts } from "@parle-tcf/db";
-import { AUDIO_MAX_BYTES } from "@parle-tcf/shared";
-import { AttemptsService } from "../attempts/attempts.service.js";
-import type { AudioStorage } from "./audio-storage.js";
-import { AudioService } from "./audio.service.js";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { eq, examAttempts } from '@parle-tcf/db';
+import { type TestDb, createTestDb } from '@parle-tcf/db/testing';
+import { AUDIO_MAX_BYTES } from '@parle-tcf/shared';
+import { AttemptsService } from '../attempts/attempts.service.js';
+import type { AudioStorage } from './audio-storage.js';
+import { AudioService } from './audio.service.js';
 
 function fakeStorage() {
   const calls = {
@@ -19,8 +19,8 @@ function fakeStorage() {
     presignUpload: async (key, contentType, maxBytes) => {
       calls.presigned.push({ key, contentType, maxBytes });
       return {
-        url: "https://s3.test/bucket",
-        fields: { key, "Content-Type": contentType, policy: "p" },
+        url: 'https://s3.test/bucket',
+        fields: { key, 'Content-Type': contentType, policy: 'p' },
       };
     },
     presignDownload: async (key) => `https://s3.test/get/${key}`,
@@ -38,7 +38,7 @@ function fakeStorage() {
   return { storage, calls, objects };
 }
 
-describe("AudioService", () => {
+describe('AudioService', () => {
   let testDb: TestDb;
   let attempts: AttemptsService;
   let alice: string;
@@ -51,22 +51,22 @@ describe("AudioService", () => {
   afterAll(() => testDb.close());
   beforeEach(async () => {
     await testDb.truncateAll();
-    alice = await testDb.createUser("alice@test.local");
-    bob = await testDb.createUser("bob@test.local");
+    alice = await testDb.createUser('alice@test.local');
+    bob = await testDb.createUser('bob@test.local');
     attempts = new AttemptsService(testDb.db);
     attemptId = (
       await attempts.create({
         userId: alice,
-        mode: "practice",
+        mode: 'practice',
         runId: null,
         exerciseId: null,
         task: 2,
-        model: "gpt-realtime-mini",
+        model: 'gpt-realtime-mini',
       })
     ).id;
   });
 
-  const input = () => ({ attemptId, contentType: "audio/webm" as const });
+  const input = () => ({ attemptId, contentType: 'audio/webm' as const });
   const aliceKey = () => `audio/${alice}/${attemptId}`;
   const storedKey = async (id = attemptId) => {
     const [row] = await testDb.db
@@ -76,30 +76,30 @@ describe("AudioService", () => {
     return row?.key ?? null;
   };
 
-  it("is unavailable without storage", async () => {
+  it('is unavailable without storage', async () => {
     const svc = new AudioService(testDb.db, null);
     expect(await svc.status(alice)).toEqual({
       available: false,
       consent: false,
     });
     await expect(svc.uploadUrl(alice, input())).rejects.toMatchObject({
-      code: "BAD_REQUEST",
+      code: 'BAD_REQUEST',
     });
     await expect(svc.confirmUpload(alice, attemptId)).rejects.toMatchObject({
-      code: "BAD_REQUEST",
+      code: 'BAD_REQUEST',
     });
   });
 
-  it("refuses uploads without explicit consent", async () => {
+  it('refuses uploads without explicit consent', async () => {
     const { storage, calls } = fakeStorage();
     const svc = new AudioService(testDb.db, storage);
     await expect(svc.uploadUrl(alice, input())).rejects.toMatchObject({
-      code: "FORBIDDEN",
+      code: 'FORBIDDEN',
     });
     expect(calls.presigned).toEqual([]);
   });
 
-  describe("uploadUrl", () => {
+  describe('uploadUrl', () => {
     it("signs a size-limited upload under the user's prefix", async () => {
       const { storage, calls } = fakeStorage();
       const svc = new AudioService(testDb.db, storage);
@@ -107,21 +107,21 @@ describe("AudioService", () => {
 
       const out = await svc.uploadUrl(alice, input());
       expect(out).toEqual({
-        url: "https://s3.test/bucket",
-        fields: { key: aliceKey(), "Content-Type": "audio/webm", policy: "p" },
-        contentType: "audio/webm",
+        url: 'https://s3.test/bucket',
+        fields: { key: aliceKey(), 'Content-Type': 'audio/webm', policy: 'p' },
+        contentType: 'audio/webm',
         maxBytes: AUDIO_MAX_BYTES,
       });
       expect(calls.presigned).toEqual([
         {
           key: aliceKey(),
-          contentType: "audio/webm",
+          contentType: 'audio/webm',
           maxBytes: AUDIO_MAX_BYTES,
         },
       ]);
     });
 
-    it("does not record the recording before the upload is confirmed", async () => {
+    it('does not record the recording before the upload is confirmed', async () => {
       const { storage } = fakeStorage();
       const svc = new AudioService(testDb.db, storage);
       await svc.setConsent(alice, true);
@@ -132,8 +132,8 @@ describe("AudioService", () => {
     });
   });
 
-  describe("confirmUpload", () => {
-    it("records the recording once the object exists", async () => {
+  describe('confirmUpload', () => {
+    it('records the recording once the object exists', async () => {
       const { storage, calls, objects } = fakeStorage();
       const svc = new AudioService(testDb.db, storage);
       await svc.setConsent(alice, true);
@@ -143,13 +143,11 @@ describe("AudioService", () => {
       await svc.confirmUpload(alice, attemptId);
       expect(calls.heads).toEqual([aliceKey()]);
       expect(await storedKey()).toBe(aliceKey());
-      expect((await svc.downloadUrl(alice, attemptId)).url).toContain(
-        aliceKey(),
-      );
+      expect((await svc.downloadUrl(alice, attemptId)).url).toContain(aliceKey());
       expect(calls.deleted).toEqual([]);
     });
 
-    it("accepts an object of exactly the maximum size", async () => {
+    it('accepts an object of exactly the maximum size', async () => {
       const { storage, calls, objects } = fakeStorage();
       const svc = new AudioService(testDb.db, storage);
       await svc.setConsent(alice, true);
@@ -160,38 +158,38 @@ describe("AudioService", () => {
       expect(calls.deleted).toEqual([]);
     });
 
-    it("deletes and rejects an object over the maximum size", async () => {
+    it('deletes and rejects an object over the maximum size', async () => {
       const { storage, calls, objects } = fakeStorage();
       const svc = new AudioService(testDb.db, storage);
       await svc.setConsent(alice, true);
       objects.set(aliceKey(), AUDIO_MAX_BYTES + 1);
 
       await expect(svc.confirmUpload(alice, attemptId)).rejects.toMatchObject({
-        code: "BAD_REQUEST",
+        code: 'BAD_REQUEST',
       });
       expect(calls.deleted).toEqual([aliceKey()]);
       expect(await storedKey()).toBeNull();
     });
 
-    it("rejects a confirmation when nothing was uploaded", async () => {
+    it('rejects a confirmation when nothing was uploaded', async () => {
       const { storage, calls } = fakeStorage();
       const svc = new AudioService(testDb.db, storage);
       await svc.setConsent(alice, true);
 
       await expect(svc.confirmUpload(alice, attemptId)).rejects.toMatchObject({
-        code: "BAD_REQUEST",
+        code: 'BAD_REQUEST',
       });
       expect(await storedKey()).toBeNull();
       expect(calls.deleted).toEqual([]);
     });
 
-    it("requires consent", async () => {
+    it('requires consent', async () => {
       const { storage, objects } = fakeStorage();
       const svc = new AudioService(testDb.db, storage);
       objects.set(aliceKey(), 1024);
 
       await expect(svc.confirmUpload(alice, attemptId)).rejects.toMatchObject({
-        code: "FORBIDDEN",
+        code: 'FORBIDDEN',
       });
       expect(await storedKey()).toBeNull();
     });
@@ -204,23 +202,23 @@ describe("AudioService", () => {
       objects.set(`audio/${bob}/${attemptId}`, 1024);
 
       await expect(svc.confirmUpload(bob, attemptId)).rejects.toMatchObject({
-        code: "NOT_FOUND",
+        code: 'NOT_FOUND',
       });
       expect(await storedKey()).toBeNull();
       expect(calls.deleted).toEqual([]);
     });
 
-    it("confirms only the requested attempt", async () => {
+    it('confirms only the requested attempt', async () => {
       const { storage, objects } = fakeStorage();
       const svc = new AudioService(testDb.db, storage);
       await svc.setConsent(alice, true);
       const other = await attempts.create({
         userId: alice,
-        mode: "practice",
+        mode: 'practice',
         runId: null,
         exerciseId: null,
         task: 3,
-        model: "gpt-realtime-mini",
+        model: 'gpt-realtime-mini',
       });
       objects.set(aliceKey(), 1024);
 
@@ -234,14 +232,14 @@ describe("AudioService", () => {
     const svc = new AudioService(testDb.db, storage);
     await svc.setConsent(bob, true);
     await expect(svc.uploadUrl(bob, input())).rejects.toMatchObject({
-      code: "NOT_FOUND",
+      code: 'NOT_FOUND',
     });
     await expect(svc.downloadUrl(bob, attemptId)).rejects.toMatchObject({
-      code: "NOT_FOUND",
+      code: 'NOT_FOUND',
     });
   });
 
-  it("deletes recordings when consent is withdrawn or an attempt is removed", async () => {
+  it('deletes recordings when consent is withdrawn or an attempt is removed', async () => {
     const { storage, calls, objects } = fakeStorage();
     const svc = new AudioService(testDb.db, storage);
     await svc.setConsent(alice, true);

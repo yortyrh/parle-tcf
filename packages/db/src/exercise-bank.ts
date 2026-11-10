@@ -1,28 +1,26 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 /**
  * Identity rules of the exercise bank, shared by the CSV data migration
  * (scripts/exercises-csv-to-sql.mjs), the importer (packages/importer) and the API.
  */
 
-export const TACHE1_ENTRETIEN_ID = "t1-entretien";
+export const TACHE1_ENTRETIEN_ID = 't1-entretien';
 
 /** Display form of a subject: Unicode NFC, plain spaces and apostrophes, single spaces. */
 export function normalizeSubjectText(s: string): string {
   return s
-    .normalize("NFC")
-    .replace(/[\u00a0\u202f]/g, " ")
+    .normalize('NFC')
+    .replace(/[\u00a0\u202f]/g, ' ')
     .replace(/[\u2019\u2018\u02bc]/g, "'")
     .replace(/[\u201c\u201d]/g, '"')
-    .replace(/\s+/g, " ")
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
 /** Dedupe key: SHA-256 (hex) of the normalized text. Case-sensitive on purpose. */
 export function contentHash(s: string): string {
-  return createHash("sha256")
-    .update(normalizeSubjectText(s), "utf8")
-    .digest("hex");
+  return createHash('sha256').update(normalizeSubjectText(s), 'utf8').digest('hex');
 }
 
 export interface SourceRefParts {
@@ -37,20 +35,13 @@ const inRange = (n: number, min: number, max: number) =>
   Number.isInteger(n) && n >= min && n <= max;
 
 /** `YYYY-MM-tT-pPPP-sSSS`: where a subject sits on a monthly page. */
-export function sourceRef({
-  year,
-  month,
-  task,
-  part,
-  position,
-}: SourceRefParts): string {
+export function sourceRef({ year, month, task, part, position }: SourceRefParts): string {
   if (!inRange(year, 2000, 2100)) throw new RangeError(`Invalid year ${year}`);
   if (!inRange(month, 1, 12)) throw new RangeError(`Invalid month ${month}`);
   if (!inRange(task, 1, 3)) throw new RangeError(`Invalid task ${task}`);
   if (!inRange(part, 1, 999)) throw new RangeError(`Invalid part ${part}`);
-  if (!inRange(position, 1, 999))
-    throw new RangeError(`Invalid position ${position}`);
-  const pad = (n: number, width: number) => String(n).padStart(width, "0");
+  if (!inRange(position, 1, 999)) throw new RangeError(`Invalid position ${position}`);
+  const pad = (n: number, width: number) => String(n).padStart(width, '0');
   return `${year}-${pad(month, 2)}-t${task}-p${pad(part, 3)}-s${pad(position, 3)}`;
 }
 
@@ -71,50 +62,41 @@ export function exerciseIdFor(task: number, hash: string): string {
 
 /** First day of the month, as stored in `first_seen_on` / `last_seen_on`. */
 export function sessionDate(year: number, month: number): string {
-  return `${year}-${String(month).padStart(2, "0")}-01`;
+  return `${year}-${String(month).padStart(2, '0')}-01`;
 }
 
 export const FRENCH_MONTH_SLUGS = [
-  "janvier",
-  "fevrier",
-  "mars",
-  "avril",
-  "mai",
-  "juin",
-  "juillet",
-  "aout",
-  "septembre",
-  "octobre",
-  "novembre",
-  "decembre",
+  'janvier',
+  'fevrier',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'aout',
+  'septembre',
+  'octobre',
+  'novembre',
+  'decembre',
 ] as const;
 
-const SITE_HOSTS = new Set([
-  "reussir-tcfcanada.com",
-  "www.reussir-tcfcanada.com",
-]);
+const SITE_HOSTS = new Set(['reussir-tcfcanada.com', 'www.reussir-tcfcanada.com']);
 
 export function monthPageUrl(year: number, month: number): string {
   return `https://reussir-tcfcanada.com/${FRENCH_MONTH_SLUGS[month - 1]}-${year}-expression-orale/`;
 }
 
-const stripAccents = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 /** `{ year, month }` of a monthly oral-expression page URL, else null. */
-export function parseMonthPageUrl(
-  url: string,
-): { year: number; month: number } | null {
+export function parseMonthPageUrl(url: string): { year: number; month: number } | null {
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
     return null;
   }
-  if (
-    !["http:", "https:"].includes(parsed.protocol) ||
-    !SITE_HOSTS.has(parsed.hostname)
-  ) {
+  if (!['http:', 'https:'].includes(parsed.protocol) || !SITE_HOSTS.has(parsed.hostname)) {
     return null;
   }
   let path: string;

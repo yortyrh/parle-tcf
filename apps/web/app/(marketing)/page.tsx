@@ -110,7 +110,7 @@ export default async function LandingPage() {
         />
         <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:py-24">
           <div>
-            <p className="text-primary mb-4 text-sm font-semibold tracking-widest uppercase">
+            <p className="text-primary mb-4 text-sm font-semibold uppercase tracking-widest">
               TCF · Expression orale
             </p>
             <h1 className="font-display text-headline sm:text-display">
@@ -319,7 +319,7 @@ export default async function LandingPage() {
                     <th scope="row" className="py-2 text-left font-normal">
                       Tâche {i + 1} · {s.title}
                     </th>
-                    <td className="py-2 text-right tabular-nums">≈ {formatCost(costs[i]!)}</td>
+                    <td className="py-2 text-right tabular-nums">≈ {formatCost(costs[i])}</td>
                   </tr>
                 ))}
                 <tr>

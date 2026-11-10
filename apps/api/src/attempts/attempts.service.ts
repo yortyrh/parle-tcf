@@ -1,35 +1,35 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { ORPCError } from "@orpc/server";
+import { Inject, Injectable } from '@nestjs/common';
+import { ORPCError } from '@orpc/server';
 import {
+  type Database,
+  type DbExecutor,
   and,
   asc,
   count,
   desc,
   eq,
-  examAttempts,
   evaluations,
+  examAttempts,
   examRuns,
   exercises,
   lt,
   sql,
   transcripts,
-  type Database,
-  type DbExecutor,
-} from "@parle-tcf/db";
-import { estimateCost } from "@parle-tcf/shared";
+} from '@parle-tcf/db';
+import { estimateCost } from '@parle-tcf/shared';
 import type {
   AttemptDetail,
-  CefrLevel,
-  Evaluation,
   AttemptMode,
   AttemptSummary,
+  CefrLevel,
   CompleteAttemptInput,
+  Evaluation,
   ExamRun,
   ListAttemptsInput,
   ListAttemptsOutput,
   TranscriptLine,
-} from "@parle-tcf/shared";
-import { DATABASE } from "../database/database.tokens.js";
+} from '@parle-tcf/shared';
+import { DATABASE } from '../database/database.tokens.js';
 
 type AttemptRow = typeof examAttempts.$inferSelect;
 
@@ -50,13 +50,10 @@ export interface CreateAttemptParams {
   exerciseId: string | null;
   task: number;
   model: string;
-  provider?: "openai" | "gemini";
+  provider?: 'openai' | 'gemini';
 }
 
-function toSummary(
-  row: AttemptRow,
-  globalLevel: string | null = null,
-): AttemptSummary {
+function toSummary(row: AttemptRow, globalLevel: string | null = null): AttemptSummary {
   return {
     id: row.id,
     runId: row.runId,
@@ -70,8 +67,7 @@ function toSummary(
     durationS: row.durationS,
     model: row.model,
     globalLevel: globalLevel as CefrLevel | null,
-    estimatedCostUsd:
-      row.estimatedCostUsd === null ? null : Number(row.estimatedCostUsd),
+    estimatedCostUsd: row.estimatedCostUsd === null ? null : Number(row.estimatedCostUsd),
   };
 }
 
@@ -84,20 +80,18 @@ export class AttemptsService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   private notFound(): never {
-    throw new ORPCError("NOT_FOUND", { message: "Tentative introuvable." });
+    throw new ORPCError('NOT_FOUND', { message: 'Tentative introuvable.' });
   }
 
   async findOwned(
     userId: string,
     attemptId: string,
-    executor: DbExecutor = this.db,
+    executor: DbExecutor = this.db
   ): Promise<AttemptRow> {
     const [row] = await executor
       .select()
       .from(examAttempts)
-      .where(
-        and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
-      )
+      .where(and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)))
       .limit(1);
     return row ?? this.notFound();
   }
@@ -106,22 +100,20 @@ export class AttemptsService {
   async create(params: CreateAttemptParams): Promise<AttemptRow> {
     return this.db.transaction(async (tx) => {
       let runId = params.runId;
-      if (params.mode === "full") {
+      if (params.mode === 'full') {
         if (runId) {
           const [run] = await tx
             .select({ id: examRuns.id })
             .from(examRuns)
-            .where(
-              and(eq(examRuns.id, runId), eq(examRuns.userId, params.userId)),
-            )
+            .where(and(eq(examRuns.id, runId), eq(examRuns.userId, params.userId)))
             .limit(1);
           if (!run) this.notFound();
         } else {
           const [run] = await tx
             .insert(examRuns)
-            .values({ userId: params.userId, mode: "full" })
+            .values({ userId: params.userId, mode: 'full' })
             .returning({ id: examRuns.id });
-          runId = run!.id;
+          runId = run.id;
         }
       } else {
         runId = null;
@@ -135,18 +127,18 @@ export class AttemptsService {
           mode: params.mode,
           exerciseId: params.exerciseId,
           task: params.task,
-          provider: params.provider ?? "openai",
+          provider: params.provider ?? 'openai',
           model: params.model,
         })
         .returning();
-      return attempt!;
+      return attempt;
     });
   }
 
   private async saveLines(
     tx: DbExecutor,
     attemptId: string,
-    lines: TranscriptLine[],
+    lines: TranscriptLine[]
   ): Promise<void> {
     if (lines.length === 0) return;
     await tx
@@ -166,31 +158,25 @@ export class AttemptsService {
     userId: string,
     attemptId: string,
     lines: TranscriptLine[],
-    now = new Date(),
+    now = new Date()
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
       const attempt = await this.findOwned(userId, attemptId, tx);
-      if (attempt.status !== "in_progress") return;
+      if (attempt.status !== 'in_progress') return;
       await this.saveLines(tx, attemptId, lines);
       await tx
         .update(examAttempts)
         .set({ lastActivityAt: now })
-        .where(
-          and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
-        );
+        .where(and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)));
     });
   }
 
   /** The voice session really starts now (after any preparation time). */
-  async touchStart(
-    userId: string,
-    attemptId: string,
-    now = new Date(),
-  ): Promise<AttemptRow> {
+  async touchStart(userId: string, attemptId: string, now = new Date()): Promise<AttemptRow> {
     const attempt = await this.findOwned(userId, attemptId);
-    if (attempt.status !== "in_progress") {
-      throw new ORPCError("CONFLICT", {
-        message: "Cette tentative est déjà terminée.",
+    if (attempt.status !== 'in_progress') {
+      throw new ORPCError('CONFLICT', {
+        message: 'Cette tentative est déjà terminée.',
       });
     }
     const [row] = await this.db
@@ -200,8 +186,8 @@ export class AttemptsService {
         and(
           eq(examAttempts.id, attemptId),
           eq(examAttempts.userId, userId),
-          eq(examAttempts.status, "in_progress"),
-        ),
+          eq(examAttempts.status, 'in_progress')
+        )
       )
       .returning();
     return row ?? this.notFound();
@@ -212,27 +198,19 @@ export class AttemptsService {
    * caller then starts the evaluation); a second call changes nothing. The
    * duration comes from the server clock, never from the client.
    */
-  async complete(
-    userId: string,
-    input: CompleteAttemptInput,
-    now = new Date(),
-  ): Promise<boolean> {
+  async complete(userId: string, input: CompleteAttemptInput, now = new Date()): Promise<boolean> {
     return this.db.transaction(async (tx) => {
       const attempt = await this.findOwned(userId, input.attemptId, tx);
-      if (attempt.status === "completed") return false;
+      if (attempt.status === 'completed') return false;
       await this.saveLines(tx, input.attemptId, input.lines);
       const durationS = elapsedSeconds(attempt.startedAt, now);
       const cost = input.usage
-        ? estimateCost(
-            attempt.model,
-            input.usage.inputTokens,
-            input.usage.outputTokens,
-          )
+        ? estimateCost(attempt.model, input.usage.inputTokens, input.usage.outputTokens)
         : null;
       await tx
         .update(examAttempts)
         .set({
-          status: "completed",
+          status: 'completed',
           finishedAt: now,
           lastActivityAt: now,
           durationS,
@@ -240,14 +218,9 @@ export class AttemptsService {
           inputTokens: input.usage?.inputTokens ?? null,
           outputTokens: input.usage?.outputTokens ?? null,
           estimatedCostUsd: cost === null ? null : cost.toFixed(4),
-          evaluationStatus: "pending",
+          evaluationStatus: 'pending',
         })
-        .where(
-          and(
-            eq(examAttempts.id, input.attemptId),
-            eq(examAttempts.userId, userId),
-          ),
-        );
+        .where(and(eq(examAttempts.id, input.attemptId), eq(examAttempts.userId, userId)));
       return true;
     });
   }
@@ -265,28 +238,18 @@ export class AttemptsService {
         lastActivityAt: examAttempts.lastActivityAt,
       })
       .from(examAttempts)
-      .where(
-        and(
-          eq(examAttempts.status, "in_progress"),
-          lt(examAttempts.lastActivityAt, cutoff),
-        ),
-      );
+      .where(and(eq(examAttempts.status, 'in_progress'), lt(examAttempts.lastActivityAt, cutoff)));
     for (const row of stale) {
       const durationS = elapsedSeconds(row.startedAt, row.lastActivityAt);
       await this.db
         .update(examAttempts)
         .set({
-          status: "interrupted",
+          status: 'interrupted',
           finishedAt: row.lastActivityAt,
           durationS,
           realtimeMinutes: (durationS / 60).toFixed(2),
         })
-        .where(
-          and(
-            eq(examAttempts.id, row.id),
-            eq(examAttempts.status, "in_progress"),
-          ),
-        );
+        .where(and(eq(examAttempts.id, row.id), eq(examAttempts.status, 'in_progress')));
     }
     return stale.length;
   }
@@ -303,9 +266,7 @@ export class AttemptsService {
       .select({ attempt: examAttempts, level: evaluations.globalLevel })
       .from(examAttempts)
       .leftJoin(evaluations, eq(evaluations.attemptId, examAttempts.id))
-      .where(
-        and(eq(examAttempts.runId, runId), eq(examAttempts.userId, userId)),
-      )
+      .where(and(eq(examAttempts.runId, runId), eq(examAttempts.userId, userId)))
       .orderBy(asc(examAttempts.task), asc(examAttempts.startedAt));
     return {
       id: run.id,
@@ -317,16 +278,13 @@ export class AttemptsService {
     };
   }
 
-  async list(
-    userId: string,
-    input: ListAttemptsInput,
-  ): Promise<ListAttemptsOutput> {
+  async list(userId: string, input: ListAttemptsInput): Promise<ListAttemptsOutput> {
     const limit = input.limit ?? 20;
     const offset = input.offset ?? 0;
     const where = and(
       eq(examAttempts.userId, userId),
       input.task ? eq(examAttempts.task, input.task) : undefined,
-      input.mode ? eq(examAttempts.mode, input.mode) : undefined,
+      input.mode ? eq(examAttempts.mode, input.mode) : undefined
     );
     const [rows, [total]] = await Promise.all([
       this.db
@@ -363,24 +321,17 @@ export class AttemptsService {
             .where(eq(exercises.id, attempt.exerciseId))
             .limit(1)
         : Promise.resolve([]),
-      this.db
-        .select()
-        .from(evaluations)
-        .where(eq(evaluations.attemptId, attemptId))
-        .limit(1),
+      this.db.select().from(evaluations).where(eq(evaluations.attemptId, attemptId)).limit(1),
     ]);
     return {
       ...toSummary(attempt, evaluation?.globalLevel ?? null),
       exercisePrompt: exercise[0]?.prompt ?? null,
-      realtimeMinutes:
-        attempt.realtimeMinutes === null
-          ? null
-          : Number(attempt.realtimeMinutes),
+      realtimeMinutes: attempt.realtimeMinutes === null ? null : Number(attempt.realtimeMinutes),
       evaluation: evaluation
         ? {
             globalLevel: evaluation.globalLevel as CefrLevel,
-            criteria: evaluation.levels as Evaluation["criteria"],
-            summary: evaluation.comments?.summary ?? "",
+            criteria: evaluation.levels as Evaluation['criteria'],
+            summary: evaluation.comments?.summary ?? '',
             correctorModel: evaluation.correctorModel,
             rubricVersion: evaluation.rubricVersion,
           }
@@ -399,8 +350,6 @@ export class AttemptsService {
     await this.findOwned(userId, attemptId);
     await this.db
       .delete(examAttempts)
-      .where(
-        and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)),
-      );
+      .where(and(eq(examAttempts.id, attemptId), eq(examAttempts.userId, userId)));
   }
 }

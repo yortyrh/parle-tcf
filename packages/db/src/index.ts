@@ -20,7 +20,7 @@ export {
   type SQL,
   sql,
   sum,
-} from "drizzle-orm";
+} from 'drizzle-orm';
 export {
   type CreateDbOptions,
   createDb,
@@ -28,7 +28,7 @@ export {
   type DbExecutor,
   type DbHandle,
   type Schema,
-} from "./client";
-export { MIGRATIONS_FOLDER, runMigrations } from "./migrate";
-export * from "./schema";
-export * from "./exercise-bank";
+} from './client';
+export { MIGRATIONS_FOLDER, runMigrations } from './migrate';
+export * from './schema';
+export * from './exercise-bank';

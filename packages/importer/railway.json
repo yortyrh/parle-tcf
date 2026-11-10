@@ -3,11 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "packages/importer/Dockerfile",
-    "watchPatterns": [
-      "packages/importer/**",
-      "packages/db/**",
-      "pnpm-lock.yaml"
-    ]
+    "watchPatterns": ["packages/importer/**", "packages/db/**", "pnpm-lock.yaml"]
   },
   "deploy": {
     "cronSchedule": "0 6 * * 1",

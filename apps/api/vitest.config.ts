@@ -1,9 +1,9 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    environment: "node",
-    include: ["src/**/*.spec.ts"],
+    environment: 'node',
+    include: ['src/**/*.spec.ts'],
     passWithNoTests: true,
     // PGlite cold start is slow when turbo runs every package in parallel.
     hookTimeout: 60_000,

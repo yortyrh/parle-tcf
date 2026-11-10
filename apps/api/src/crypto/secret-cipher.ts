@@ -1,6 +1,6 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
-const ALGORITHM = "aes-256-gcm";
+const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12;
 const KEY_BYTES = 32;
 
@@ -28,29 +28,25 @@ export class SecretCipher {
 
   constructor(
     keysSpec: string,
-    readonly currentVersion: string,
+    readonly currentVersion: string
   ) {
-    for (const entry of keysSpec.split(",")) {
+    for (const entry of keysSpec.split(',')) {
       const trimmed = entry.trim();
       if (!trimmed) continue;
-      const separator = trimmed.indexOf(":");
+      const separator = trimmed.indexOf(':');
       if (separator <= 0) {
-        throw new Error(
-          'Invalid ENCRYPTION_KEYS entry: expected "<version>:<base64>"',
-        );
+        throw new Error('Invalid ENCRYPTION_KEYS entry: expected "<version>:<base64>"');
       }
       const version = trimmed.slice(0, separator);
-      const key = Buffer.from(trimmed.slice(separator + 1), "base64");
+      const key = Buffer.from(trimmed.slice(separator + 1), 'base64');
       if (key.length !== KEY_BYTES) {
-        throw new Error(
-          `Encryption key "${version}" must be ${KEY_BYTES} bytes (base64-encoded)`,
-        );
+        throw new Error(`Encryption key "${version}" must be ${KEY_BYTES} bytes (base64-encoded)`);
       }
       this.keys.set(version, key);
     }
     if (!this.keys.has(currentVersion)) {
       throw new Error(
-        `ENCRYPTION_KEY_CURRENT "${currentVersion}" is not present in ENCRYPTION_KEYS`,
+        `ENCRYPTION_KEY_CURRENT "${currentVersion}" is not present in ENCRYPTION_KEYS`
       );
     }
   }
@@ -59,14 +55,11 @@ export class SecretCipher {
     const key = this.keys.get(this.currentVersion)!;
     const iv = randomBytes(IV_BYTES);
     const cipher = createCipheriv(ALGORITHM, key, iv);
-    const ciphertext = Buffer.concat([
-      cipher.update(plaintext, "utf8"),
-      cipher.final(),
-    ]);
+    const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
     return {
-      ciphertext: ciphertext.toString("base64"),
-      iv: iv.toString("base64"),
-      authTag: cipher.getAuthTag().toString("base64"),
+      ciphertext: ciphertext.toString('base64'),
+      iv: iv.toString('base64'),
+      authTag: cipher.getAuthTag().toString('base64'),
       keyVersion: this.currentVersion,
     };
   }
@@ -76,20 +69,16 @@ export class SecretCipher {
     if (!key) {
       throw new Error(`Unknown encryption key version "${secret.keyVersion}"`);
     }
-    const decipher = createDecipheriv(
-      ALGORITHM,
-      key,
-      Buffer.from(secret.iv, "base64"),
-    );
-    decipher.setAuthTag(Buffer.from(secret.authTag, "base64"));
+    const decipher = createDecipheriv(ALGORITHM, key, Buffer.from(secret.iv, 'base64'));
+    decipher.setAuthTag(Buffer.from(secret.authTag, 'base64'));
     return Buffer.concat([
-      decipher.update(Buffer.from(secret.ciphertext, "base64")),
+      decipher.update(Buffer.from(secret.ciphertext, 'base64')),
       decipher.final(),
-    ]).toString("utf8");
+    ]).toString('utf8');
   }
 
   /** True when the secret is not encrypted with the current master key. */
-  needsRotation(secret: Pick<EncryptedSecret, "keyVersion">): boolean {
+  needsRotation(secret: Pick<EncryptedSecret, 'keyVersion'>): boolean {
     return secret.keyVersion !== this.currentVersion;
   }
 

@@ -1,7 +1,7 @@
-import { Controller } from "@nestjs/common";
-import { Implement, implement } from "@orpc/nest";
-import { exercisesFeaturedProcedure } from "../contract/exam.contract.js";
-import { ExerciseService } from "./exercise.service.js";
+import { Controller } from '@nestjs/common';
+import { Implement, implement } from '@orpc/nest';
+import { exercisesFeaturedProcedure } from '../contract/exam.contract.js';
+import { ExerciseService } from './exercise.service.js';
 
 /**
  * Public routes (no session) used by the landing page. Only the teaser of the
@@ -13,8 +13,6 @@ export class PublicExerciseController {
 
   @Implement(exercisesFeaturedProcedure)
   featured() {
-    return implement(exercisesFeaturedProcedure).handler(() =>
-      this.exercises.featured(),
-    );
+    return implement(exercisesFeaturedProcedure).handler(() => this.exercises.featured());
   }
 }

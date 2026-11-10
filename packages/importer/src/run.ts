@@ -1,9 +1,9 @@
-import { type Database, eq, importRuns, monthPageUrl } from "@parle-tcf/db";
-import { fetchPage } from "./fetch";
-import { importSession } from "./import";
-import { discoverMonthPages, INDEX_URL, parseMonthPage } from "./parse";
+import { type Database, eq, importRuns, monthPageUrl } from '@parle-tcf/db';
+import { fetchPage } from './fetch';
+import { importSession } from './import';
+import { INDEX_URL, discoverMonthPages, parseMonthPage } from './parse';
 
-export type ImportStatus = "success" | "partial" | "blocked" | "failed";
+export type ImportStatus = 'success' | 'partial' | 'blocked' | 'failed';
 
 export interface RunImportOptions {
   db: Database;
@@ -29,8 +29,7 @@ export interface ImportSummary {
   errors: { url: string; message: string }[];
 }
 
-const realSleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
+const realSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /** Imports the monthly pages and records the run in `import_runs`. */
 export async function runImport({
@@ -45,7 +44,7 @@ export async function runImport({
 }: RunImportOptions): Promise<ImportSummary> {
   const [run] = await db
     .insert(importRuns)
-    .values({ trigger, status: "running", startedAt: now() })
+    .values({ trigger, status: 'running', startedAt: now() })
     .returning({ id: importRuns.id });
 
   const totals = {
@@ -67,11 +66,11 @@ export async function runImport({
   let targets: { year: number; month: number }[] = months ?? [];
   if (!months) {
     const index = await get(INDEX_URL);
-    if (index.kind === "ok") {
+    if (index.kind === 'ok') {
       const discovered = discoverMonthPages(index.html);
       targets = all ? discovered : discovered.slice(0, 2);
     } else {
-      if (index.kind === "blocked") blocked = true;
+      if (index.kind === 'blocked') blocked = true;
       errors.push({ url: INDEX_URL, message: describe(index) });
     }
   }
@@ -79,40 +78,35 @@ export async function runImport({
   for (const { year, month } of blocked ? [] : targets) {
     const url = monthPageUrl(year, month);
     const page = await get(url);
-    if (page.kind === "ok") {
+    if (page.kind === 'ok') {
       totals.sessionsScanned += 1;
       const subjects = parseMonthPage(page.html);
       if (subjects.length === 0) {
-        errors.push({ url, message: "no subjects found on the page" });
+        errors.push({ url, message: 'no subjects found on the page' });
         continue;
       }
-      const result = await importSession(
-        db,
-        { year, month, sourceUrl: url },
-        subjects,
-        {
-          now: now(),
-        },
-      );
+      const result = await importSession(db, { year, month, sourceUrl: url }, subjects, {
+        now: now(),
+      });
       totals.inserted += result.inserted;
       totals.updated += result.updated;
       totals.occurrences += result.occurrences;
       continue;
     }
     errors.push({ url, message: describe(page) });
-    if (page.kind === "blocked") {
+    if (page.kind === 'blocked') {
       blocked = true;
       break;
     }
   }
 
   const status: ImportStatus = blocked
-    ? "blocked"
+    ? 'blocked'
     : errors.length > 0 && totals.sessionsScanned === 0
-      ? "failed"
+      ? 'failed'
       : errors.length > 0
-        ? "partial"
-        : "success";
+        ? 'partial'
+        : 'success';
 
   await db
     .update(importRuns)
@@ -124,13 +118,13 @@ export async function runImport({
 
 function describe(result: Awaited<ReturnType<typeof fetchPage>>): string {
   switch (result.kind) {
-    case "blocked":
+    case 'blocked':
       return `blocked by the site (HTTP ${result.status}); not retried`;
-    case "not_found":
+    case 'not_found':
       return `page not found (HTTP ${result.status})`;
-    case "error":
+    case 'error':
       return result.message;
     default:
-      return "unexpected result";
+      return 'unexpected result';
   }
 }

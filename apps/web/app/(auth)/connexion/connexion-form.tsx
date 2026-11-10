@@ -8,6 +8,7 @@ import { OAuthButtons } from '@/components/app/oauth-buttons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
+import { formText } from '@/lib/form';
 import { safeRedirectPath } from '@/lib/safe-redirect';
 
 export function ConnexionForm() {
@@ -27,8 +28,8 @@ export function ConnexionForm() {
     setPending(true);
     setError(null);
     const { error: authError } = await authClient.signIn.email({
-      email: String(form.get('email')),
-      password: String(form.get('password')),
+      email: formText(form, 'email'),
+      password: formText(form, 'password'),
     });
     setPending(false);
     if (authError) {

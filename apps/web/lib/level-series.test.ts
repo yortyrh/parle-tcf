@@ -23,7 +23,7 @@ const points = (scores: number[]): LevelPoint[] =>
   scores.map((score, i) => ({
     id: `p${i}`,
     date: at(i + 1),
-    level: LEVEL_BY_SCORE[score]!,
+    level: LEVEL_BY_SCORE[score],
     score,
   }));
 

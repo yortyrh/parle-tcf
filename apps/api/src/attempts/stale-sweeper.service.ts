@@ -1,11 +1,6 @@
-import {
-  Injectable,
-  Logger,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from "@nestjs/common";
-import { EvaluationService } from "../evaluation/evaluation.service.js";
-import { AttemptsService } from "./attempts.service.js";
+import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { EvaluationService } from '../evaluation/evaluation.service.js';
+import { AttemptsService } from './attempts.service.js';
 
 export const SWEEP_INTERVAL_MS = 5 * 60_000;
 
@@ -21,15 +16,13 @@ export class StaleSweeperService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly evaluation: EvaluationService,
-    private readonly attempts: AttemptsService,
+    private readonly attempts: AttemptsService
   ) {}
 
   async onModuleInit(): Promise<void> {
     await this.sweep();
     this.timer = setInterval(() => {
-      this.sweep().catch((error: unknown) =>
-        this.logger.error(`Sweep failed: ${String(error)}`),
-      );
+      this.sweep().catch((error: unknown) => this.logger.error(`Sweep failed: ${String(error)}`));
     }, SWEEP_INTERVAL_MS);
     this.timer.unref();
   }

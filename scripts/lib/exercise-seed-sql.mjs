@@ -9,24 +9,24 @@
  * bank filled by the old CSV seed, and when run twice.
  */
 import {
+  TACHE1_ENTRETIEN_ID,
   contentHash,
   normalizeSubjectText,
   parseSourceRef,
   sessionDate,
-  TACHE1_ENTRETIEN_ID,
-} from "@parle-tcf/db";
+} from '@parle-tcf/db';
 
-const BREAKPOINT = "\n--> statement-breakpoint\n";
+const BREAKPOINT = '\n--> statement-breakpoint\n';
 const BATCH = 500;
-const TASKS = { "Tâche 2": 2, "Tâche 3": 3 };
+const TASKS = { 'Tâche 2': 2, 'Tâche 3': 3 };
 const TACHE1_PROMPT =
-  "Entretien dirigé : présentation de soi, puis questions sur des sujets quotidiens.";
+  'Entretien dirigé : présentation de soi, puis questions sur des sujets quotidiens.';
 
 /** @param {string | number | boolean | null} value */
 function lit(value) {
-  if (value === null || value === undefined) return "NULL";
-  if (typeof value === "number") return String(value);
-  if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
+  if (value === null || value === undefined) return 'NULL';
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
@@ -34,7 +34,7 @@ function lit(value) {
 function inserts(head, tuples, tail) {
   const out = [];
   for (let i = 0; i < tuples.length; i += BATCH) {
-    out.push(`${head}\n${tuples.slice(i, i + BATCH).join(",\n")}\n${tail};`);
+    out.push(`${head}\n${tuples.slice(i, i + BATCH).join(',\n')}\n${tail};`);
   }
   return out;
 }
@@ -50,8 +50,8 @@ export function buildExerciseSeedSql(rows) {
     if (byId.has(row.id)) continue;
     const task = TASKS[row.taskType];
     const ref = parseSourceRef(row.id);
-    const prompt = normalizeSubjectText(row.content ?? "");
-    if (!task || !ref || ref.task !== task || prompt === "") continue;
+    const prompt = normalizeSubjectText(row.content ?? '');
+    if (!task || !ref || ref.task !== task || prompt === '') continue;
     byId.set(row.id, {
       ...row,
       task,
@@ -67,12 +67,9 @@ export function buildExerciseSeedSql(rows) {
   const sessions = new Map();
   for (const r of valid) {
     const key = `${r.ref.year}-${r.ref.month}`;
-    if (!sessions.has(key))
-      sessions.set(key, { year: r.ref.year, month: r.ref.month, url: r.url });
+    if (!sessions.has(key)) sessions.set(key, { year: r.ref.year, month: r.ref.month, url: r.url });
   }
-  const sessionList = [...sessions.values()].sort(
-    (a, b) => a.year - b.year || a.month - b.month,
-  );
+  const sessionList = [...sessions.values()].sort((a, b) => a.year - b.year || a.month - b.month);
 
   // Groups of identical subjects; canonical = smallest id.
   /** @type {Map<string, any[]>} */
@@ -88,9 +85,7 @@ export function buildExerciseSeedSql(rows) {
   for (const members of groups.values()) {
     members.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     const canonical = members[0];
-    const dates = members
-      .map((m) => sessionDate(m.ref.year, m.ref.month))
-      .sort();
+    const dates = members.map((m) => sessionDate(m.ref.year, m.ref.month)).sort();
     exercises.push({
       ...canonical,
       firstSeen: dates[0],
@@ -98,8 +93,7 @@ export function buildExerciseSeedSql(rows) {
     });
     for (const m of members) {
       canonicalOf.set(m.id, canonical.id);
-      if (m.id !== canonical.id)
-        aliases.push({ alias: m.id, target: canonical.id });
+      if (m.id !== canonical.id) aliases.push({ alias: m.id, target: canonical.id });
     }
   }
   exercises.sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -109,23 +103,21 @@ export function buildExerciseSeedSql(rows) {
   const statements = [
     ...inserts(
       'INSERT INTO "exercise_sessions" ("year", "month", "source_url") VALUES',
-      sessionList.map(
-        (s) => `(${lit(s.year)}, ${lit(s.month)}, ${lit(s.url || null)})`,
-      ),
-      'ON CONFLICT ("year", "month") DO UPDATE SET "source_url" = EXCLUDED."source_url"',
+      sessionList.map((s) => `(${lit(s.year)}, ${lit(s.month)}, ${lit(s.url || null)})`),
+      'ON CONFLICT ("year", "month") DO UPDATE SET "source_url" = EXCLUDED."source_url"'
     ),
     ...inserts(
       'INSERT INTO "exercises" ("id", "task", "prompt", "content_hash", "source_url", "image_url", "is_image_based", "first_seen_on", "last_seen_on") VALUES',
       exercises.map(
         (e) =>
-          `(${lit(e.id)}, ${lit(e.task)}, ${lit(e.prompt)}, ${lit(e.hash)}, ${lit(e.url || null)}, ${lit(e.imageUrl || null)}, ${lit(e.isImageBased === "TRUE")}, ${lit(e.firstSeen)}, ${lit(e.lastSeen)})`,
+          `(${lit(e.id)}, ${lit(e.task)}, ${lit(e.prompt)}, ${lit(e.hash)}, ${lit(e.url || null)}, ${lit(e.imageUrl || null)}, ${lit(e.isImageBased === 'TRUE')}, ${lit(e.firstSeen)}, ${lit(e.lastSeen)})`
       ),
-      'ON CONFLICT ("id") DO UPDATE SET "task" = EXCLUDED."task", "prompt" = EXCLUDED."prompt", "content_hash" = EXCLUDED."content_hash", "source_url" = EXCLUDED."source_url", "image_url" = EXCLUDED."image_url", "is_image_based" = EXCLUDED."is_image_based", "first_seen_on" = EXCLUDED."first_seen_on", "last_seen_on" = EXCLUDED."last_seen_on"',
+      'ON CONFLICT ("id") DO UPDATE SET "task" = EXCLUDED."task", "prompt" = EXCLUDED."prompt", "content_hash" = EXCLUDED."content_hash", "source_url" = EXCLUDED."source_url", "image_url" = EXCLUDED."image_url", "is_image_based" = EXCLUDED."is_image_based", "first_seen_on" = EXCLUDED."first_seen_on", "last_seen_on" = EXCLUDED."last_seen_on"'
     ),
     ...inserts(
       'INSERT INTO "exercise_aliases" ("alias_id", "exercise_id") VALUES',
       aliases.map((a) => `(${lit(a.alias)}, ${lit(a.target)})`),
-      'ON CONFLICT ("alias_id") DO UPDATE SET "exercise_id" = EXCLUDED."exercise_id"',
+      'ON CONFLICT ("alias_id") DO UPDATE SET "exercise_id" = EXCLUDED."exercise_id"'
     ),
     'UPDATE "exam_attempts" SET "exercise_id" = a."exercise_id" FROM "exercise_aliases" a WHERE "exam_attempts"."exercise_id" = a."alias_id";',
     'DELETE FROM "exercises" WHERE "id" IN (SELECT "alias_id" FROM "exercise_aliases");',
@@ -133,9 +125,9 @@ export function buildExerciseSeedSql(rows) {
       'INSERT INTO "exercise_occurrences" ("source_ref", "exercise_id", "session_id", "task", "part", "position")\nSELECT v."source_ref", v."exercise_id", s."id", v."task", v."part", v."position" FROM (VALUES',
       occurrences.map(
         (o) =>
-          `(${lit(o.id)}, ${lit(canonicalOf.get(o.id))}, ${o.ref.year}::smallint, ${o.ref.month}::smallint, ${o.task}::smallint, ${o.ref.part}::smallint, ${o.ref.position}::smallint)`,
+          `(${lit(o.id)}, ${lit(canonicalOf.get(o.id))}, ${o.ref.year}::smallint, ${o.ref.month}::smallint, ${o.task}::smallint, ${o.ref.part}::smallint, ${o.ref.position}::smallint)`
       ),
-      ') AS v("source_ref", "exercise_id", "year", "month", "task", "part", "position")\nJOIN "exercise_sessions" s ON s."year" = v."year" AND s."month" = v."month"\nON CONFLICT ("source_ref") DO UPDATE SET "exercise_id" = EXCLUDED."exercise_id", "session_id" = EXCLUDED."session_id"',
+      ') AS v("source_ref", "exercise_id", "year", "month", "task", "part", "position")\nJOIN "exercise_sessions" s ON s."year" = v."year" AND s."month" = v."month"\nON CONFLICT ("source_ref") DO UPDATE SET "exercise_id" = EXCLUDED."exercise_id", "session_id" = EXCLUDED."session_id"'
     ),
     `INSERT INTO "exercises" ("id", "task", "prompt", "content_hash") VALUES (${lit(TACHE1_ENTRETIEN_ID)}, 1, ${lit(TACHE1_PROMPT)}, ${lit(contentHash(TACHE1_PROMPT))})\nON CONFLICT ("id") DO UPDATE SET "content_hash" = EXCLUDED."content_hash";`,
     `UPDATE "exercises" SET "content_hash" = 'legacy:' || "id" WHERE "content_hash" IS NULL;`,

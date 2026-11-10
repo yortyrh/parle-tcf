@@ -111,7 +111,7 @@ export function ResultView({ attemptId }: { attemptId: string }) {
           <div className="bg-primary text-primary-foreground shadow-raised flex flex-col justify-between gap-4 rounded-2xl p-6">
             <h2
               id="eval-title"
-              className="text-sm font-semibold tracking-widest uppercase opacity-80"
+              className="text-sm font-semibold uppercase tracking-widest opacity-80"
             >
               Niveau global
             </h2>
@@ -160,6 +160,8 @@ export function ResultView({ attemptId }: { attemptId: string }) {
 
       {audioUrl && (
         <section aria-label="Réécouter l'enregistrement" className="mb-8">
+          {/* The candidate's own voice; the transcript below is its text alternative. */}
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <audio controls src={audioUrl} className="w-full">
             Votre navigateur ne peut pas lire cet enregistrement.
           </audio>

@@ -1,11 +1,10 @@
-import { ActionEmail } from "./action-email";
+import { ActionEmail } from './action-email';
 
 export interface ResetPasswordProps {
   url: string;
 }
 
-export const resetPasswordSubject = () =>
-  "Réinitialisation de votre mot de passe";
+export const resetPasswordSubject = () => 'Réinitialisation de votre mot de passe';
 
 export default function ResetPassword({ url }: ResetPasswordProps) {
   return (
@@ -13,8 +12,8 @@ export default function ResetPassword({ url }: ResetPasswordProps) {
       preview="Choisissez un nouveau mot de passe"
       heading="Réinitialiser votre mot de passe"
       paragraphs={[
-        "Vous avez demandé à réinitialiser votre mot de passe.",
-        "Ce lien est valable une heure.",
+        'Vous avez demandé à réinitialiser votre mot de passe.',
+        'Ce lien est valable une heure.',
       ]}
       cta="Choisir un nouveau mot de passe"
       url={url}
@@ -24,5 +23,5 @@ export default function ResetPassword({ url }: ResetPasswordProps) {
 }
 
 ResetPassword.PreviewProps = {
-  url: "http://localhost:3000/reinitialiser?token=exemple",
+  url: 'http://localhost:3000/reinitialiser?token=exemple',
 } satisfies ResetPasswordProps;

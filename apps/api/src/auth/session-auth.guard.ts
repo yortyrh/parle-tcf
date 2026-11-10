@@ -1,12 +1,12 @@
+import type { Request } from 'express';
 import {
   type CanActivate,
   type ExecutionContext,
   Inject,
   Injectable,
   UnauthorizedException,
-} from "@nestjs/common";
-import type { Request } from "express";
-import { type Auth, BETTER_AUTH } from "./better-auth.js";
+} from '@nestjs/common';
+import { type Auth, BETTER_AUTH } from './better-auth.js';
 
 export interface AuthUser {
   id: string;
@@ -27,16 +27,16 @@ export class SessionAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const authorization = request.headers.authorization ?? "";
+    const authorization = request.headers.authorization ?? '';
     if (!/^bearer\s+\S+/i.test(authorization)) {
-      throw new UnauthorizedException("Authentification requise");
+      throw new UnauthorizedException('Authentification requise');
     }
     const result = await this.auth.api
       .getSession({ headers: new Headers({ authorization }) })
       .catch(() => null);
 
     if (!result?.user) {
-      throw new UnauthorizedException("Authentification requise");
+      throw new UnauthorizedException('Authentification requise');
     }
     request.user = {
       id: result.user.id,

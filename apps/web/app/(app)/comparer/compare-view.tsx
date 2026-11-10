@@ -39,7 +39,7 @@ function Column({ attempt }: { attempt: AttemptDetail }) {
       ) : (
         <p className="text-muted-foreground text-sm">Pas d’évaluation disponible.</p>
       )}
-      <h3 className="mt-4 mb-2 text-sm font-semibold">Transcription</h3>
+      <h3 className="mb-2 mt-4 text-sm font-semibold">Transcription</h3>
       {attempt.transcript.length === 0 ? (
         <p className="text-muted-foreground text-sm">Aucune transcription.</p>
       ) : (
@@ -83,7 +83,7 @@ function Comparison({ a, b }: { a: string; b: string }) {
   return (
     <>
       {left.attempt.exercisePrompt && (
-        <p className="text-muted-foreground mb-4 text-sm whitespace-pre-line">
+        <p className="text-muted-foreground mb-4 whitespace-pre-line text-sm">
           {left.attempt.exercisePrompt}
         </p>
       )}

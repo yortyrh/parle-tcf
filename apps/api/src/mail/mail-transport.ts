@@ -6,9 +6,9 @@
  * 3. Neither: messages are only logged. Refused in production at startup.
  */
 export type MailTransport =
-  | { kind: "resend"; apiKey: string }
-  | { kind: "smtp"; url: string }
-  | { kind: "log" };
+  | { kind: 'resend'; apiKey: string }
+  | { kind: 'smtp'; url: string }
+  | { kind: 'log' };
 
 export interface OutgoingMail {
   to: string;
@@ -23,24 +23,21 @@ export function resolveMailTransport(env: {
   SMTP_URL?: string;
 }): MailTransport {
   const apiKey = env.RESEND_API_KEY?.trim();
-  if (apiKey) return { kind: "resend", apiKey };
+  if (apiKey) return { kind: 'resend', apiKey };
   const url = env.SMTP_URL?.trim();
-  if (url) return { kind: "smtp", url };
-  return { kind: "log" };
+  if (url) return { kind: 'smtp', url };
+  return { kind: 'log' };
 }
 
-export function assertTransportAllowed(
-  transport: MailTransport,
-  nodeEnv: string,
-): void {
-  if (transport.kind === "log" && nodeEnv === "production") {
+export function assertTransportAllowed(transport: MailTransport, nodeEnv: string): void {
+  if (transport.kind === 'log' && nodeEnv === 'production') {
     throw new Error(
-      "[MailService] A mail transport is required in production: set RESEND_API_KEY or SMTP_URL.",
+      '[MailService] A mail transport is required in production: set RESEND_API_KEY or SMTP_URL.'
     );
   }
 }
 
-export const RESEND_ENDPOINT = "https://api.resend.com/emails";
+export const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
 export async function sendWithResend({
   apiKey,
@@ -54,10 +51,10 @@ export async function sendWithResend({
   fetchImpl?: typeof fetch;
 }): Promise<void> {
   const response = await fetchImpl(RESEND_ENDPOINT, {
-    method: "POST",
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       from,
@@ -68,9 +65,7 @@ export async function sendWithResend({
     }),
   });
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `Resend rejected the email (HTTP ${response.status}): ${detail}`,
-    );
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Resend rejected the email (HTTP ${response.status}): ${detail}`);
   }
 }

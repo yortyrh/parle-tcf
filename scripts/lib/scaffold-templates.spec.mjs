@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   apiControllerTemplate,
   apiServiceTemplate,
@@ -6,207 +6,189 @@ import {
   sharedSchemaTemplate,
   webPageTemplate,
   webViewTemplate,
-} from "./scaffold-templates.mjs";
+} from './scaffold-templates.mjs';
 
 const EXERCISE_BANK = {
-  kebab: "exercise-bank",
-  camel: "exerciseBank",
-  pascal: "ExerciseBank",
+  kebab: 'exercise-bank',
+  camel: 'exerciseBank',
+  pascal: 'ExerciseBank',
 };
 
 const SUJETS_DU_MOIS = {
-  kebab: "sujets-du-mois",
-  camel: "sujetsDuMois",
-  pascal: "SujetsDuMois",
+  kebab: 'sujets-du-mois',
+  camel: 'sujetsDuMois',
+  pascal: 'SujetsDuMois',
 };
 
-const escapeRegExp = (text) => text.replace(/[.*+?^$()|[\]\\{}]/g, "\\$&");
+const escapeRegExp = (text) => text.replace(/[.*+?^$()|[\]\\{}]/g, '\\$&');
 
 /** Matches `import { ...name... } from "<from>";` (optionally `import type`). */
 const namedImport = (name, from) =>
   new RegExp(
-    `import\\s+(?:type\\s+)?\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*"${escapeRegExp(from)}";`,
+    `import\\s+(?:type\\s+)?\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*"${escapeRegExp(from)}";`
   );
 
 /** Every relative specifier in a `from "..."` clause. */
 const relativeSpecifiers = (source) =>
   [...source.matchAll(/from\s+["'](\.\.?\/[^"']*)["']/g)].map((m) => m[1]);
 
-describe("sharedSchemaTemplate", () => {
+describe('sharedSchemaTemplate', () => {
   let source;
   beforeAll(() => {
     source = sharedSchemaTemplate(EXERCISE_BANK);
   });
 
-  it("returns a non-empty string", () => {
-    expect(typeof source).toBe("string");
-    expect(source.trim()).not.toBe("");
+  it('returns a non-empty string', () => {
+    expect(typeof source).toBe('string');
+    expect(source.trim()).not.toBe('');
   });
 
-  it("imports zod with double quotes", () => {
+  it('imports zod with double quotes', () => {
     expect(source).toContain('import { z } from "zod";');
     expect(source).not.toMatch(/from '/);
   });
 
-  it("exports the list input schema as a zod object", () => {
+  it('exports the list input schema as a zod object', () => {
+    expect(source).toMatch(/export const listExerciseBankInputSchema\s*=\s*z\s*\.object\(/);
+  });
+
+  it('exports the list output schema as a zod object with an items array', () => {
     expect(source).toMatch(
-      /export const listExerciseBankInputSchema\s*=\s*z\s*\.object\(/,
+      /export const listExerciseBankOutputSchema\s*=\s*z\s*\.object\(\s*\{[\s\S]*\bitems:\s*z\s*\.array\(/
     );
   });
 
-  it("exports the list output schema as a zod object with an items array", () => {
+  it('exports the inferred input and output types', () => {
     expect(source).toMatch(
-      /export const listExerciseBankOutputSchema\s*=\s*z\s*\.object\(\s*\{[\s\S]*\bitems:\s*z\s*\.array\(/,
+      /export type ListExerciseBankInput\s*=\s*z\.infer<\s*typeof listExerciseBankInputSchema\s*>/
+    );
+    expect(source).toMatch(
+      /export type ListExerciseBankOutput\s*=\s*z\.infer<\s*typeof listExerciseBankOutputSchema\s*>/
     );
   });
 
-  it("exports the inferred input and output types", () => {
-    expect(source).toMatch(
-      /export type ListExerciseBankInput\s*=\s*z\.infer<\s*typeof listExerciseBankInputSchema\s*>/,
-    );
-    expect(source).toMatch(
-      /export type ListExerciseBankOutput\s*=\s*z\.infer<\s*typeof listExerciseBankOutputSchema\s*>/,
-    );
-  });
-
-  it("uses the given names, not hard-coded ones", () => {
+  it('uses the given names, not hard-coded ones', () => {
     const other = sharedSchemaTemplate(SUJETS_DU_MOIS);
     expect(other).toMatch(/export const listSujetsDuMoisInputSchema\b/);
     expect(other).toMatch(/export const listSujetsDuMoisOutputSchema\b/);
     expect(other).toMatch(/export type ListSujetsDuMoisInput\b/);
     expect(other).toMatch(/export type ListSujetsDuMoisOutput\b/);
-    expect(other).not.toContain("ExerciseBank");
+    expect(other).not.toContain('ExerciseBank');
   });
 });
 
-describe("apiControllerTemplate", () => {
+describe('apiControllerTemplate', () => {
   let source;
   beforeAll(() => {
     source = apiControllerTemplate(EXERCISE_BANK);
   });
 
-  it("declares the controller class with its decorators", () => {
+  it('declares the controller class with its decorators', () => {
     expect(source).toMatch(
-      /@Controller\(\)\s*@UseGuards\(SessionAuthGuard\)\s*export class ExerciseBankController\b/,
+      /@Controller\(\)\s*@UseGuards\(SessionAuthGuard\)\s*export class ExerciseBankController\b/
     );
   });
 
-  it("imports the Nest decorators from @nestjs/common", () => {
-    expect(source).toMatch(namedImport("Controller", "@nestjs/common"));
-    expect(source).toMatch(namedImport("Req", "@nestjs/common"));
-    expect(source).toMatch(namedImport("UseGuards", "@nestjs/common"));
+  it('imports the Nest decorators from @nestjs/common', () => {
+    expect(source).toMatch(namedImport('Controller', '@nestjs/common'));
+    expect(source).toMatch(namedImport('Req', '@nestjs/common'));
+    expect(source).toMatch(namedImport('UseGuards', '@nestjs/common'));
   });
 
-  it("imports Implement and implement from @orpc/nest", () => {
-    expect(source).toMatch(namedImport("Implement", "@orpc/nest"));
-    expect(source).toMatch(namedImport("implement", "@orpc/nest"));
+  it('imports Implement and implement from @orpc/nest', () => {
+    expect(source).toMatch(namedImport('Implement', '@orpc/nest'));
+    expect(source).toMatch(namedImport('implement', '@orpc/nest'));
   });
 
-  it("imports the procedure from the contract with a .js extension", () => {
+  it('imports the procedure from the contract with a .js extension', () => {
     expect(source).toMatch(
-      namedImport("exerciseBankListProcedure", "../contract/exam.contract.js"),
+      namedImport('exerciseBankListProcedure', '../contract/exam.contract.js')
     );
   });
 
-  it("imports the guard and request type from the session guard", () => {
+  it('imports the guard and request type from the session guard', () => {
+    expect(source).toMatch(namedImport('SessionAuthGuard', '../auth/session-auth.guard.js'));
+    expect(source).toMatch(namedImport('AuthenticatedRequest', '../auth/session-auth.guard.js'));
+  });
+
+  it('imports currentUserId and the service', () => {
+    expect(source).toMatch(namedImport('currentUserId', '../auth/current-user.js'));
+    expect(source).toMatch(namedImport('ExerciseBankService', './exercise-bank.service.js'));
+  });
+
+  it('injects the service under the camel name', () => {
     expect(source).toMatch(
-      namedImport("SessionAuthGuard", "../auth/session-auth.guard.js"),
-    );
-    expect(source).toMatch(
-      namedImport("AuthenticatedRequest", "../auth/session-auth.guard.js"),
+      /constructor\(\s*private readonly exerciseBank: ExerciseBankService,?\s*\)/
     );
   });
 
-  it("imports currentUserId and the service", () => {
+  it('implements the list procedure on a list method', () => {
     expect(source).toMatch(
-      namedImport("currentUserId", "../auth/current-user.js"),
-    );
-    expect(source).toMatch(
-      namedImport("ExerciseBankService", "./exercise-bank.service.js"),
+      /@Implement\(exerciseBankListProcedure\)\s*list\(@Req\(\) req: AuthenticatedRequest\)/
     );
   });
 
-  it("injects the service under the camel name", () => {
-    expect(source).toMatch(
-      /constructor\(\s*private readonly exerciseBank: ExerciseBankService,?\s*\)/,
-    );
-  });
-
-  it("implements the list procedure on a list method", () => {
-    expect(source).toMatch(
-      /@Implement\(exerciseBankListProcedure\)\s*list\(@Req\(\) req: AuthenticatedRequest\)/,
-    );
-  });
-
-  it("resolves the user and delegates to the service", () => {
+  it('resolves the user and delegates to the service', () => {
     expect(source).toMatch(/currentUserId\(req\)/);
     expect(source).toMatch(/implement\(exerciseBankListProcedure\)/);
-    expect(source).toContain("this.exerciseBank.list(userId, input)");
+    expect(source).toContain('this.exerciseBank.list(userId, input)');
   });
 
-  it("uses only double quotes and .js relative imports", () => {
+  it('uses only double quotes and .js relative imports', () => {
     expect(source).not.toMatch(/from '/);
     const relative = relativeSpecifiers(source);
     expect(relative.length).toBeGreaterThanOrEqual(4);
     for (const specifier of relative) expect(specifier).toMatch(/\.js$/);
   });
 
-  it("uses the given names, not hard-coded ones", () => {
+  it('uses the given names, not hard-coded ones', () => {
     const other = apiControllerTemplate(SUJETS_DU_MOIS);
     expect(other).toMatch(/export class SujetsDuMoisController\b/);
-    expect(other).toMatch(
-      namedImport("SujetsDuMoisService", "./sujets-du-mois.service.js"),
-    );
+    expect(other).toMatch(namedImport('SujetsDuMoisService', './sujets-du-mois.service.js'));
     expect(other).toMatch(/@Implement\(sujetsDuMoisListProcedure\)/);
-    expect(other).toContain("this.sujetsDuMois.list(userId, input)");
+    expect(other).toContain('this.sujetsDuMois.list(userId, input)');
     expect(other).not.toMatch(/exercise|Exercise/);
   });
 });
 
-describe("apiServiceTemplate", () => {
+describe('apiServiceTemplate', () => {
   let source;
   beforeAll(() => {
     source = apiServiceTemplate(EXERCISE_BANK);
   });
 
-  it("declares an injectable service class", () => {
-    expect(source).toMatch(
-      /@Injectable\(\)\s*export class ExerciseBankService\b/,
-    );
-    expect(source).toMatch(namedImport("Injectable", "@nestjs/common"));
+  it('declares an injectable service class', () => {
+    expect(source).toMatch(/@Injectable\(\)\s*export class ExerciseBankService\b/);
+    expect(source).toMatch(namedImport('Injectable', '@nestjs/common'));
   });
 
-  it("declares the typed async list method", () => {
+  it('declares the typed async list method', () => {
     expect(source).toMatch(
-      /async list\(\s*userId: string,\s*input: ListExerciseBankInput,?\s*\):\s*Promise<ListExerciseBankOutput>/,
+      /async list\(\s*userId: string,\s*input: ListExerciseBankInput,?\s*\):\s*Promise<ListExerciseBankOutput>/
     );
   });
 
-  it("returns an empty list of items", () => {
+  it('returns an empty list of items', () => {
     expect(source).toMatch(/return \{ items: \[\] \};?/);
   });
 
-  it("imports the input and output types from @parle-tcf/shared", () => {
-    expect(source).toMatch(
-      namedImport("ListExerciseBankInput", "@parle-tcf/shared"),
-    );
-    expect(source).toMatch(
-      namedImport("ListExerciseBankOutput", "@parle-tcf/shared"),
-    );
+  it('imports the input and output types from @parle-tcf/shared', () => {
+    expect(source).toMatch(namedImport('ListExerciseBankInput', '@parle-tcf/shared'));
+    expect(source).toMatch(namedImport('ListExerciseBankOutput', '@parle-tcf/shared'));
   });
 
-  it("contains a TODO about filtering every query by userId", () => {
+  it('contains a TODO about filtering every query by userId', () => {
     expect(source).toMatch(/TODO[\s\S]{0,200}userId/);
   });
 
-  it("uses only double quotes", () => {
+  it('uses only double quotes', () => {
     expect(source).not.toMatch(/from '/);
     for (const specifier of relativeSpecifiers(source)) {
       expect(specifier).toMatch(/\.js$/);
     }
   });
 
-  it("uses the given names, not hard-coded ones", () => {
+  it('uses the given names, not hard-coded ones', () => {
     const other = apiServiceTemplate(SUJETS_DU_MOIS);
     expect(other).toMatch(/export class SujetsDuMoisService\b/);
     expect(other).toMatch(/Promise<ListSujetsDuMoisOutput>/);
@@ -215,183 +197,164 @@ describe("apiServiceTemplate", () => {
   });
 });
 
-describe("webPageTemplate", () => {
+describe('webPageTemplate', () => {
   let source;
   beforeAll(() => {
     source = webPageTemplate({
-      pascal: "SujetsDuMois",
-      title: "Sujets du mois",
-      fileBase: "du-mois",
+      pascal: 'SujetsDuMois',
+      title: 'Sujets du mois',
+      fileBase: 'du-mois',
     });
   });
 
-  it("imports the view from the sibling view file with single quotes", () => {
-    expect(source).toContain(
-      "import { SujetsDuMoisView } from './du-mois-view';",
-    );
+  it('imports the view from the sibling view file with single quotes', () => {
+    expect(source).toContain("import { SujetsDuMoisView } from './du-mois-view';");
   });
 
-  it("exports the page metadata title", () => {
-    expect(source).toContain(
-      "export const metadata = { title: 'Sujets du mois' };",
-    );
+  it('exports the page metadata title', () => {
+    expect(source).toContain("export const metadata = { title: 'Sujets du mois' };");
   });
 
-  it("leaves the site suffix to the root layout title template", () => {
-    expect(source).not.toContain("parle-tcf");
-    expect(source).not.toContain(" · ");
+  it('leaves the site suffix to the root layout title template', () => {
+    expect(source).not.toContain('parle-tcf');
+    expect(source).not.toContain(' · ');
   });
 
-  it("escapes single quotes and backslashes in the metadata title", () => {
+  it('escapes single quotes and backslashes in the metadata title', () => {
     const quoted = webPageTemplate({
-      pascal: "Ete",
+      pascal: 'Ete',
       title: "L'été",
-      fileBase: "ete",
+      fileBase: 'ete',
     });
     expect(quoted).toContain("export const metadata = { title: 'L\\'été' };");
     const slashed = webPageTemplate({
-      pascal: "Slash",
+      pascal: 'Slash',
       title: "A\\B'C",
-      fileBase: "slash",
+      fileBase: 'slash',
     });
-    expect(slashed).toContain(
-      "export const metadata = { title: 'A\\\\B\\'C' };",
-    );
+    expect(slashed).toContain("export const metadata = { title: 'A\\\\B\\'C' };");
   });
 
-  it("keeps a title with a middle dot as given", () => {
+  it('keeps a title with a middle dot as given', () => {
     const other = webPageTemplate({
-      pascal: "Preparation",
-      title: "Préparation · Tâche 2",
-      fileBase: "preparation",
+      pascal: 'Preparation',
+      title: 'Préparation · Tâche 2',
+      fileBase: 'preparation',
     });
-    expect(other).toContain(
-      "export const metadata = { title: 'Préparation · Tâche 2' };",
-    );
+    expect(other).toContain("export const metadata = { title: 'Préparation · Tâche 2' };");
   });
 
-  it("default-exports the page component rendering the view", () => {
+  it('default-exports the page component rendering the view', () => {
     expect(source).toMatch(/export default function SujetsDuMoisPage\(/);
-    expect(source).toContain("<SujetsDuMoisView />");
+    expect(source).toContain('<SujetsDuMoisView />');
   });
 
-  it("does not use double-quoted imports", () => {
+  it('does not use double-quoted imports', () => {
     expect(source).not.toMatch(/from "/);
   });
 
-  it("uses the given fileBase, pascal and title", () => {
+  it('uses the given fileBase, pascal and title', () => {
     const other = webPageTemplate({
-      pascal: "Historique",
-      title: "Historique",
-      fileBase: "historique",
+      pascal: 'Historique',
+      title: 'Historique',
+      fileBase: 'historique',
     });
-    expect(other).toContain(
-      "import { HistoriqueView } from './historique-view';",
-    );
+    expect(other).toContain("import { HistoriqueView } from './historique-view';");
     expect(other).toContain("export const metadata = { title: 'Historique' };");
     expect(other).toMatch(/export default function HistoriquePage\(/);
-    expect(other).toContain("<HistoriqueView />");
+    expect(other).toContain('<HistoriqueView />');
     expect(other).not.toMatch(/SujetsDuMois|du-mois/);
   });
 });
 
-describe("webViewTemplate", () => {
+describe('webViewTemplate', () => {
   let source;
   beforeAll(() => {
     source = webViewTemplate({
-      pascal: "SujetsDuMois",
-      title: "Sujets du mois",
+      pascal: 'SujetsDuMois',
+      title: 'Sujets du mois',
     });
   });
 
-  it("starts with the use client directive", () => {
-    expect(source.split("\n")[0]).toBe("'use client';");
+  it('starts with the use client directive', () => {
+    expect(source.split('\n')[0]).toBe("'use client';");
   });
 
-  it("imports PageShell through the @/ alias with single quotes", () => {
-    expect(source).toMatch(
-      /import \{ PageShell \} from '@\/components\/app\/page-shell';/,
-    );
+  it('imports PageShell through the @/ alias with single quotes', () => {
+    expect(source).toMatch(/import \{ PageShell \} from '@\/components\/app\/page-shell';/);
     expect(source).not.toMatch(/from "/);
   });
 
-  it("exports the view component rendering PageShell with the title", () => {
+  it('exports the view component rendering PageShell with the title', () => {
     expect(source).toMatch(/export function SujetsDuMoisView\(/);
     expect(source).toContain('<PageShell title="Sujets du mois">');
   });
 
-  it("escapes double quotes in the title for the JSX attribute", () => {
+  it('escapes double quotes in the title for the JSX attribute', () => {
     const other = webViewTemplate({
-      pascal: "Quotes",
+      pascal: 'Quotes',
       title: 'Le "grand" test',
     });
     expect(other).toContain('<PageShell title="Le &quot;grand&quot; test">');
     expect(other).not.toContain('"grand"');
   });
 
-  it("leaves a title without double quotes unescaped", () => {
+  it('leaves a title without double quotes unescaped', () => {
     const other = webViewTemplate({
-      pascal: "Prep",
-      title: "Préparation · Tâche 2",
+      pascal: 'Prep',
+      title: 'Préparation · Tâche 2',
     });
     expect(other).toContain('<PageShell title="Préparation · Tâche 2">');
-    expect(other).not.toContain("&quot;");
+    expect(other).not.toContain('&quot;');
     expect(other).toMatch(/export function PrepView\(/);
   });
 });
 
-describe("packageFiles", () => {
+describe('packageFiles', () => {
   let files;
   beforeAll(() => {
-    files = packageFiles({ kebab: "exam-utils" });
+    files = packageFiles({ kebab: 'exam-utils' });
   });
 
-  it("returns exactly the expected file paths", () => {
+  it('returns exactly the expected file paths', () => {
     expect(Object.keys(files).sort()).toEqual(
       [
-        "package.json",
-        "tsconfig.json",
-        "tsconfig.build.json",
-        "eslint.config.mjs",
-        "vitest.config.ts",
-        "src/index.ts",
-      ].sort(),
+        'package.json',
+        'tsconfig.json',
+        'tsconfig.build.json',
+        'eslint.config.mjs',
+        'vitest.config.ts',
+        'src/index.ts',
+      ].sort()
     );
   });
 
-  it("returns non-empty string contents for every file", () => {
+  it('returns non-empty string contents for every file', () => {
     for (const contents of Object.values(files)) {
-      expect(typeof contents).toBe("string");
-      expect(contents.trim()).not.toBe("");
+      expect(typeof contents).toBe('string');
+      expect(contents.trim()).not.toBe('');
     }
   });
 
-  it("writes a package.json with the required fields", () => {
-    const pkg = JSON.parse(files["package.json"]);
-    expect(pkg.name).toBe("@parle-tcf/exam-utils");
+  it('writes a package.json with the required fields', () => {
+    const pkg = JSON.parse(files['package.json']);
+    expect(pkg.name).toBe('@parle-tcf/exam-utils');
     expect(pkg.private).toBe(true);
-    expect(pkg.main).toBe("./dist/index.js");
-    expect(pkg.types).toBe("./dist/index.d.ts");
-    for (const script of [
-      "build",
-      "typecheck",
-      "lint",
-      "format",
-      "format:check",
-      "test",
-    ]) {
-      expect(typeof pkg.scripts[script]).toBe("string");
-      expect(pkg.scripts[script].trim()).not.toBe("");
+    expect(pkg.main).toBe('./dist/index.js');
+    expect(pkg.types).toBe('./dist/index.d.ts');
+    for (const script of ['build', 'typecheck', 'lint', 'format', 'format:check', 'test']) {
+      expect(typeof pkg.scripts[script]).toBe('string');
+      expect(pkg.scripts[script].trim()).not.toBe('');
     }
   });
 
-  it("writes a strict tsconfig.json", () => {
-    const tsconfig = JSON.parse(files["tsconfig.json"]);
+  it('writes a strict tsconfig.json', () => {
+    const tsconfig = JSON.parse(files['tsconfig.json']);
     expect(tsconfig.compilerOptions.strict).toBe(true);
   });
 
-  it("names the package after the given kebab", () => {
-    const other = packageFiles({ kebab: "scoring" });
-    expect(JSON.parse(other["package.json"]).name).toBe("@parle-tcf/scoring");
+  it('names the package after the given kebab', () => {
+    const other = packageFiles({ kebab: 'scoring' });
+    expect(JSON.parse(other['package.json']).name).toBe('@parle-tcf/scoring');
   });
 });

@@ -1,15 +1,15 @@
-import { randomBytes } from "node:crypto";
-import { SecretCipher } from "./crypto/secret-cipher.js";
+import { randomBytes } from 'node:crypto';
+import { SecretCipher } from './crypto/secret-cipher.js';
 import {
-  VoiceProviderRegistry,
-  type ProviderId,
   type MintClientSecretParams,
-  VerifyKeyResult,
-  VoiceProvider,
-} from "./providers/voice-provider.js";
+  type ProviderId,
+  type VerifyKeyResult,
+  type VoiceProvider,
+  VoiceProviderRegistry,
+} from './providers/voice-provider.js';
 
 export function testCipher(): SecretCipher {
-  return new SecretCipher(`v1:${randomBytes(32).toString("base64")}`, "v1");
+  return new SecretCipher(`v1:${randomBytes(32).toString('base64')}`, 'v1');
 }
 
 export interface FakeVoiceProvider extends VoiceProvider {
@@ -22,9 +22,7 @@ export function registryOf(...providers: VoiceProvider[]) {
   return new VoiceProviderRegistry(providers);
 }
 
-export function fakeVoiceProvider(
-  id: ProviderId = "openai",
-): FakeVoiceProvider {
+export function fakeVoiceProvider(id: ProviderId = 'openai'): FakeVoiceProvider {
   const fake: FakeVoiceProvider = {
     id,
     mintCalls: [],
@@ -33,7 +31,7 @@ export function fakeVoiceProvider(
     async mintClientSecret(apiKey, params) {
       fake.mintCalls.push({ apiKey, params });
       if (fake.mintError) throw fake.mintError;
-      return "ek_test_ephemeral";
+      return 'ek_test_ephemeral';
     },
     async verifyKey() {
       return fake.verifyResult;

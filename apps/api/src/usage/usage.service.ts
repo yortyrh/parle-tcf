@@ -1,16 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { ORPCError } from "@orpc/server";
-import {
-  and,
-  eq,
-  examAttempts,
-  gte,
-  sql,
-  usageLimits,
-  type Database,
-} from "@parle-tcf/db";
-import type { Usage } from "@parle-tcf/shared";
-import { DATABASE } from "../database/database.tokens.js";
+import { Inject, Injectable } from '@nestjs/common';
+import { ORPCError } from '@orpc/server';
+import { type Database, and, eq, examAttempts, gte, sql, usageLimits } from '@parle-tcf/db';
+import type { Usage } from '@parle-tcf/shared';
+import { DATABASE } from '../database/database.tokens.js';
 
 const DEFAULT_DAILY_MINUTES = 60;
 const DEFAULT_MONTHLY_COST_USD = 10;
@@ -31,11 +23,9 @@ export class UsageService {
 
   async get(userId: string, now = new Date()): Promise<Usage> {
     const startOfDay = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
     );
-    const startOfMonth = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-    );
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
     const [[today], [month], [limits]] = await Promise.all([
       this.db
@@ -47,39 +37,24 @@ export class UsageService {
           end), 0)`,
         })
         .from(examAttempts)
-        .where(
-          and(
-            eq(examAttempts.userId, userId),
-            gte(examAttempts.startedAt, startOfDay),
-          ),
-        ),
+        .where(and(eq(examAttempts.userId, userId), gte(examAttempts.startedAt, startOfDay))),
       this.db
         .select({
           cost: sql<string>`coalesce(sum(${examAttempts.estimatedCostUsd}), 0)`,
         })
         .from(examAttempts)
-        .where(
-          and(
-            eq(examAttempts.userId, userId),
-            gte(examAttempts.startedAt, startOfMonth),
-          ),
-        ),
-      this.db
-        .select()
-        .from(usageLimits)
-        .where(eq(usageLimits.userId, userId))
-        .limit(1),
+        .where(and(eq(examAttempts.userId, userId), gte(examAttempts.startedAt, startOfMonth))),
+      this.db.select().from(usageLimits).where(eq(usageLimits.userId, userId)).limit(1),
     ]);
 
     return {
       todayMinutes: Number(today?.minutes ?? 0),
       dailyMinutesLimit:
-        limits?.dailyMinutes ??
-        envNumber("DEFAULT_DAILY_MINUTES", DEFAULT_DAILY_MINUTES),
+        limits?.dailyMinutes ?? envNumber('DEFAULT_DAILY_MINUTES', DEFAULT_DAILY_MINUTES),
       monthCostUsd: Number(month?.cost ?? 0),
       monthlyCostLimitUsd: limits
         ? Number(limits.monthlyCostUsd)
-        : envNumber("DEFAULT_MONTHLY_COST_USD", DEFAULT_MONTHLY_COST_USD),
+        : envNumber('DEFAULT_MONTHLY_COST_USD', DEFAULT_MONTHLY_COST_USD),
     };
   }
 
@@ -95,13 +70,13 @@ export class UsageService {
   async assertWithinLimits(userId: string): Promise<void> {
     const usage = await this.get(userId);
     if (usage.todayMinutes >= usage.dailyMinutesLimit) {
-      throw new ORPCError("LIMIT_REACHED", {
+      throw new ORPCError('LIMIT_REACHED', {
         status: 429,
         message: `Limite quotidienne atteinte (${usage.dailyMinutesLimit} min). Réessayez demain.`,
       });
     }
     if (usage.monthCostUsd >= usage.monthlyCostLimitUsd) {
-      throw new ORPCError("LIMIT_REACHED", {
+      throw new ORPCError('LIMIT_REACHED', {
         status: 429,
         message: `Limite mensuelle de coût atteinte (${usage.monthlyCostLimitUsd} $).`,
       });
