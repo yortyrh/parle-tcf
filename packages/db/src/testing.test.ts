@@ -65,6 +65,26 @@ describe('createTestDb', () => {
     }
   });
 
+  it('passes the schema to drizzle, so relational queries work', async () => {
+    // A database of its own: per-test coverage (Stryker) must see createTestDb run here.
+    const other = await createTestDb();
+    try {
+      const id = await other.createUser('query@test.local');
+      const found = await other.db.query.user.findFirst({ where: eq(user.id, id) });
+      expect(found?.email).toBe('query@test.local');
+      expect(await other.db.query.exerciseSessions.findFirst()).toBeDefined();
+    } finally {
+      await other.close();
+    }
+  });
+
+  it('close() shuts the database down', async () => {
+    const other = await createTestDb();
+    await other.db.select().from(user);
+    await other.close();
+    await expect(other.db.select().from(user)).rejects.toThrow();
+  });
+
   describe('createUser', () => {
     it('inserts a verified user with the given email and returns its uuid', async () => {
       const id = await first.createUser('alice@test.local');

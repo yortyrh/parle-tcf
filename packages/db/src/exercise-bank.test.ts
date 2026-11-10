@@ -138,8 +138,12 @@ describe('sourceRef', () => {
     ['position 1000', { position: 1000 }],
     ['position 2.5', { position: 2.5 }],
     ['position -1', { position: -1 }],
-  ])('throws a RangeError for %s', (_label, override) => {
+  ])('throws a RangeError naming the field for %s', (_label, override) => {
+    const [[field, value]] = Object.entries(override);
     expect(() => sourceRef({ ...valid, ...override })).toThrow(RangeError);
+    expect(() => sourceRef({ ...valid, ...override })).toThrow(
+      new RangeError(`Invalid ${field} ${String(value)}`)
+    );
   });
 
   it.each([

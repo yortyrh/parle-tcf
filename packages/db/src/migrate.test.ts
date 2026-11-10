@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MIGRATIONS_FOLDER, runMigrations } from './migrate';
@@ -58,9 +59,11 @@ describe('runMigrations', () => {
 });
 
 describe('migrate CLI', () => {
-  const tsx = path.join(PACKAGE_DIR, 'node_modules', '.bin', 'tsx');
+  // tsx's CLI by its real path, not the node_modules/.bin shim: the shim resolves a
+  // path relative to itself, which breaks when node_modules is a symlink (Stryker sandboxes).
+  const tsxCli = createRequire(__filename).resolve('tsx/cli');
   const run = (env: NodeJS.ProcessEnv) =>
-    spawnSync(tsx, [path.join(PACKAGE_DIR, 'src', 'migrate.ts')], {
+    spawnSync(process.execPath, [tsxCli, path.join(PACKAGE_DIR, 'src', 'migrate.ts')], {
       cwd: PACKAGE_DIR,
       env: { PATH: process.env.PATH, ...env },
       encoding: 'utf8',
