@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   nextExerciseIdRandom,
   nextExerciseIdSequential,
@@ -39,5 +39,39 @@ describe('nextExerciseIdRandom', () => {
     for (let i = 0; i < 20; i++) {
       expect(nextExerciseIdRandom(ids, 'only-a')).toBe('only-b');
     }
+  });
+});
+
+describe('edge cases', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('every picker rejects an empty list', () => {
+    expect(() => nextExerciseIdSequential([], 'a')).toThrow('orderedIds must be non-empty');
+    expect(() => previousExerciseIdSequential([], 'a')).toThrow('orderedIds must be non-empty');
+    expect(() => nextExerciseIdRandom([], 'a')).toThrow('orderedIds must be non-empty');
+  });
+
+  it('starts at the first or last id without a current id', () => {
+    expect(nextExerciseIdSequential(['x', 'y'], undefined)).toBe('x');
+    expect(previousExerciseIdSequential(['x', 'y'], undefined)).toBe('y');
+  });
+
+  it('returns the only id of a single-subject list', () => {
+    expect(nextExerciseIdSequential(['solo'], 'solo')).toBe('solo');
+    expect(previousExerciseIdSequential(['solo'], 'solo')).toBe('solo');
+    expect(nextExerciseIdRandom(['solo'], 'solo')).toBe('solo');
+  });
+
+  it('picks among every id without a current id', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    expect(nextExerciseIdRandom(['a', 'b', 'c'], undefined)).toBe('c');
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    expect(nextExerciseIdRandom(['a', 'b', 'c'], undefined)).toBe('a');
+  });
+
+  it('falls back to the first id when every id equals the current one', () => {
+    expect(nextExerciseIdRandom(['a', 'a'], 'a')).toBe('a');
   });
 });

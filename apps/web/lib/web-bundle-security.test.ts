@@ -8,7 +8,16 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const webRoot = resolve(currentDir, '..');
 
 const SCAN_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs']);
-const SKIP_DIRS = new Set(['node_modules', '.next', 'coverage', 'dist', '.turbo', 'public']);
+// Build output (.next, and .next-e2e for end-to-end builds) is checked by the last test only.
+const SKIP_DIRS = new Set([
+  'node_modules',
+  '.next',
+  '.next-e2e',
+  'coverage',
+  'dist',
+  '.turbo',
+  'public',
+]);
 // This file holds the regexes it asserts on; scanning itself would self-match.
 const SELF_PATH = 'lib/web-bundle-security.test.ts';
 
