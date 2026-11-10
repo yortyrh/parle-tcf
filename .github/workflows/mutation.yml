@@ -1,0 +1,39 @@
+# Nightly mutation testing (Stryker, incremental thanks to the cached reports).
+name: Mutation
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Stryker
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-monorepo
+      - run: pnpm build
+      - name: Restore incremental results
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/reports/stryker-incremental.json
+            apps/web/reports/stryker-incremental.json
+            packages/db/reports/stryker-incremental.json
+            packages/importer/reports/stryker-incremental.json
+            packages/shared/reports/stryker-incremental.json
+          key: stryker-${{ github.sha }}
+          restore-keys: stryker-
+      - run: pnpm mutate:full
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutation-report
+          path: |
+            apps/*/reports/mutation
+            packages/*/reports/mutation

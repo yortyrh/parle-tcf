@@ -1,7 +1,11 @@
-# Monorepo CI (web + api + shared)
+# Monorepo CI: quality → unit tests with coverage + build → integration (Testcontainers)
+# → end-to-end (Playwright + axe), plus the scaffold smoke test.
 name: CI
 
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -13,58 +17,87 @@ permissions:
 
 jobs:
   quality:
-    name: Lint, format & types
+    name: Format, lint and types
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-monorepo
+      - run: node scripts/check-node-version.mjs
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10.33.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: ESLint (all packages)
-        run: pnpm run lint
-
-      - name: Prettier (check)
-        run: pnpm run format:check
-
-      - name: Typecheck (all packages)
-        run: pnpm run typecheck
-
-  build-and-test:
-    name: Build & tests
+  test-and-build:
+    name: Unit tests (coverage) and build
+    needs: quality
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v5
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-monorepo
+      - run: pnpm test:coverage
+      - run: pnpm test:scripts
+      - run: pnpm build
+      - run: pnpm env-schema:check
+      - uses: codecov/codecov-action@v5
+        if: always()
         with:
-          version: 10.33.0
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/api/coverage/lcov.info,apps/web/coverage/lcov.info,packages/db/coverage/lcov.info,packages/shared/coverage/lcov.info,packages/importer/coverage/lcov.info,packages/email-templates/coverage/lcov.info
+          fail_ci_if_error: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+  integration:
+    name: Integration (Supertest + Testcontainers)
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-monorepo
+      - run: pnpm test:integration
+
+  e2e:
+    name: End-to-end (Playwright + axe)
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: parle
+          POSTGRES_PASSWORD: parle
+          POSTGRES_DB: parle
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U parle" --health-interval 5s --health-timeout 5s --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.33.0
+        ports: ['1025:1025', '8025:8025']
+    env:
+      DATABASE_URL: postgresql://parle:parle@localhost:5432/parle
+      BETTER_AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-0123
+      ENCRYPTION_KEYS: v1:BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=
+      ENCRYPTION_KEY_CURRENT: v1
+      MAILPIT_URL: http://localhost:8025
+      MAILPIT_SMTP_URL: smtp://localhost:1025
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-monorepo
+      - run: pnpm --filter @parle-tcf/db build && node packages/db/dist/migrate.js
+      - run: pnpm --filter @parle-tcf/e2e exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
         with:
-          node-version: 24
-          cache: pnpm
+          name: playwright-traces
+          path: |
+            apps/e2e/playwright-report
+            apps/e2e/test-results
+          retention-days: 7
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build (Turborepo)
-        run: pnpm run build
-
-      - name: Unit tests (Turborepo)
-        run: pnpm run test
+  scaffold-smoke:
+    name: Scaffold smoke test
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-monorepo
+      - run: pnpm scaffold:smoke
