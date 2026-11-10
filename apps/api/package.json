@@ -50,6 +50,7 @@
     "@electric-sql/pglite": "^0.3.16",
     "@eslint/js": "^9.21.0",
     "@nestjs/cli": "^11.0.14",
+    "@nestjs/schematics": "^11.0.10",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^7.0.12",

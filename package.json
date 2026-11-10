@@ -18,7 +18,12 @@
     "push": "node scripts/push.mjs",
     "db:generate": "pnpm --filter @parle-tcf/db db:generate",
     "db:migrate": "pnpm --filter @parle-tcf/db build && pnpm --filter @parle-tcf/db db:migrate",
-    "db:seed": "pnpm --filter @parle-tcf/db db:seed"
+    "db:seed": "pnpm --filter @parle-tcf/db db:seed",
+    "scaffold:api-feature": "node scripts/scaffold.mjs api-feature",
+    "scaffold:web-page": "node scripts/scaffold.mjs web-page",
+    "scaffold:package": "node scripts/scaffold.mjs package",
+    "scaffold:smoke": "node scripts/scaffold.mjs smoke",
+    "db:generate:custom": "pnpm --filter @parle-tcf/db exec drizzle-kit generate --custom --name"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

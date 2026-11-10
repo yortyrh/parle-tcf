@@ -125,6 +125,9 @@ importers:
       '@nestjs/cli':
         specifier: ^11.0.14
         version: 11.0.17(@types/node@24.19.2)
+      '@nestjs/schematics':
+        specifier: ^11.0.10
+        version: 11.0.10(chokidar@4.0.3)(typescript@5.9.3)
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.6
