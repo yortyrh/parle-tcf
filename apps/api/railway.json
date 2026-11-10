@@ -3,9 +3,16 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "apps/api/Dockerfile",
-    "watchPatterns": ["apps/api/**", "packages/shared/**", "pnpm-lock.yaml"]
+    "watchPatterns": [
+      "apps/api/**",
+      "packages/shared/**",
+      "packages/db/**",
+      "packages/email-templates/**",
+      "pnpm-lock.yaml"
+    ]
   },
   "deploy": {
+    "preDeployCommand": ["node packages/db/dist/migrate.js"],
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE"

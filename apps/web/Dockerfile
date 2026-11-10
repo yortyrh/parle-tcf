@@ -35,6 +35,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Browser must know the public API URL at build time (inlined into the client bundle).
 ARG NEXT_PUBLIC_EXAM_API_URL=http://localhost:3001
 ENV NEXT_PUBLIC_EXAM_API_URL=$NEXT_PUBLIC_EXAM_API_URL
+# Show the GitHub/Google buttons only when the API has the matching credentials.
+ARG NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=false
+ENV NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED=$NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED
+ARG NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=false
+ENV NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=$NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED
 RUN turbo run build --filter=@parle-tcf/web
 
 # --- Stage 4: Production runner ---
