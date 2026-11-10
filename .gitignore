@@ -71,3 +71,14 @@ next-env.d.ts
 .security-audit.json
 audit-report.json
 
+
+# Claude Code: local-only settings and worktrees (settings.json and skills are tracked)
+.claude/settings.local.json
+.claude/worktrees/
+
+# Local dev fixtures (generated passwords)
+.samples/local-credentials.json
+
+# Mutation testing
+reports/
+.stryker-tmp/

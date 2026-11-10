@@ -1,0 +1,23 @@
+# https://lefthook.dev/configuration/
+pre-commit:
+  piped: true
+  commands:
+    prettier:
+      glob: "*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,md,yml,yaml,css}"
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  commands:
+    verified-commit:
+      # `pnpm push` (scripts/push.mjs) runs `pnpm verify` before connecting to the remote and
+      # records the verified HEAD in .git/. This hook only compares the pushed commits with that
+      # record (milliseconds), so a plain `git push` of an unverified commit is rejected.
+      # {all_files} opts out of lefthook's "no matching push files" skip.
+      use_stdin: true
+      run: ": {all_files}; node scripts/check-push-stamp.mjs"

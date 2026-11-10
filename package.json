@@ -10,10 +10,25 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "turbo run format",
-    "format:check": "turbo run format:check"
+    "format:check": "turbo run format:check",
+    "prepare": "lefthook install",
+    "lint:fix": "turbo run lint -- --fix",
+    "test:scripts": "vitest run --config vitest.config.mjs",
+    "verify": "node scripts/check-node-version.mjs && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:scripts && pnpm build",
+    "push": "node scripts/push.mjs",
+    "db:generate": "pnpm --filter @parle-tcf/db db:generate",
+    "db:migrate": "pnpm --filter @parle-tcf/db build && pnpm --filter @parle-tcf/db db:migrate",
+    "db:seed": "pnpm --filter @parle-tcf/db db:seed"
   },
   "devDependencies": {
-    "turbo": "^2.9.4"
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "lefthook": "^2.2.2",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "turbo": "^2.9.4",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=24.0.0",
