@@ -10,6 +10,7 @@ import { StaleSweeperService } from './attempts/stale-sweeper.service.js';
 import { AudioController } from './audio/audio.controller.js';
 import { AudioModule } from './audio/audio.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { getEnv } from './config/env.js';
 import { ExamConfigService } from './config/exam-config.service.js';
 import { CryptoModule } from './crypto/crypto.module.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -18,11 +19,13 @@ import {
   LANGUAGE_MODEL_FACTORY,
   providerModelFactory,
 } from './evaluation/evaluation.service.js';
+import { fakeModelFactory } from './evaluation/fake-language-model.js';
 import { ExerciseController } from './exercise/exercise.controller.js';
 import { ExerciseService } from './exercise/exercise.service.js';
 import { PublicExerciseController } from './exercise/public-exercise.controller.js';
 import { loggerParams } from './logging/logger.config.js';
 import { MailModule } from './mail/mail.module.js';
+import { FakeVoiceProvider } from './providers/fake-voice.provider.js';
 import { GeminiLiveProvider } from './providers/gemini-live.provider.js';
 import { OpenAiRealtimeProvider } from './providers/openai-realtime.provider.js';
 import { VoiceProviderRegistry } from './providers/voice-provider.js';
@@ -37,7 +40,9 @@ import { UsageService } from './usage/usage.service.js';
     LoggerModule.forRoot(loggerParams({ NODE_ENV: process.env.NODE_ENV ?? 'development' })),
     ORPCModule.forRoot({}),
     // Per-IP limit on every Nest route (Better Auth applies its own limits under /api/auth).
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRootAsync({
+      useFactory: () => [{ ttl: 60_000, limit: getEnv().THROTTLE_LIMIT_PER_MINUTE }],
+    }),
     DatabaseModule,
     CryptoModule,
     MailModule,
@@ -62,14 +67,23 @@ import { UsageService } from './usage/usage.service.js';
     AttemptsService,
     EvaluationService,
     UsageService,
-    { provide: LANGUAGE_MODEL_FACTORY, useValue: providerModelFactory },
+    {
+      provide: LANGUAGE_MODEL_FACTORY,
+      useFactory: () =>
+        getEnv().VOICE_PROVIDER === 'fake' ? fakeModelFactory : providerModelFactory,
+    },
     OpenAiRealtimeProvider,
     GeminiLiveProvider,
     {
       provide: VoiceProviderRegistry,
       inject: [OpenAiRealtimeProvider, GeminiLiveProvider],
       useFactory: (openai: OpenAiRealtimeProvider, gemini: GeminiLiveProvider) =>
-        new VoiceProviderRegistry([openai, gemini]),
+        getEnv().VOICE_PROVIDER === 'fake'
+          ? new VoiceProviderRegistry([
+              new FakeVoiceProvider('openai'),
+              new FakeVoiceProvider('gemini'),
+            ])
+          : new VoiceProviderRegistry([openai, gemini]),
     },
     StaleSweeperService,
   ],

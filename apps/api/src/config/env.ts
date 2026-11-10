@@ -49,9 +49,19 @@ const envSchema = z.object({
   /** Default usage limits for users without a `usage_limits` row (phase 2). */
   DEFAULT_DAILY_MINUTES: z.coerce.number().default(60),
   DEFAULT_MONTHLY_COST_USD: z.coerce.number().default(10),
+  /**
+   * `fake` swaps the voice providers and the corrector for local stand-ins
+   * (integration and end-to-end tests). Refused when NODE_ENV=production.
+   */
+  VOICE_PROVIDER: z.enum(['real', 'fake']).default('real'),
+  /** Requests per minute and client before 429 (the integration tests raise it). */
+  THROTTLE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
 });
 
 export type Env = z.infer<typeof envSchema>;
+
+/** Every variable the API reads through this schema (checked against .env.example). */
+export const ENV_KEYS = Object.keys(envSchema.shape);
 
 let cached: Env | null = null;
 
@@ -64,6 +74,9 @@ export function getEnv(): Env {
       .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
       .join('\n');
     throw new Error(`Invalid environment:\n${details}`);
+  }
+  if (parsed.data.VOICE_PROVIDER === 'fake' && parsed.data.NODE_ENV === 'production') {
+    throw new Error('Invalid environment:\n  - VOICE_PROVIDER: fake is not allowed in production');
   }
   cached = parsed.data;
   return cached;

@@ -2,10 +2,7 @@ import 'reflect-metadata';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { toNodeHandler } from 'better-auth/node';
 import dotenv from 'dotenv';
-import type { Express } from 'express';
-import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { NestFactory } from '@nestjs/core';
 
@@ -17,25 +14,14 @@ dotenv.config({ path: existsSync(localEnv) ? localEnv : rootEnv });
 async function bootstrap(): Promise<void> {
   // Imported after dotenv so module-level env reads see the loaded values.
   const { AppModule } = await import('./app.module.js');
-  const { AUTH_BASE_PATH, BETTER_AUTH } = await import('./auth/better-auth.js');
-  const { getEnv, parseCorsOrigins } = await import('./config/env.js');
+  const { configureApp } = await import('./app-setup.js');
+  const { getEnv } = await import('./config/env.js');
 
   const env = getEnv();
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
-  // JSON API only: helmet's defaults (no sniffing, no framing, strict CSP) are safe here.
-  app.use(helmet());
-
-  app.enableCors({
-    origin: parseCorsOrigins(env),
-    credentials: true,
-    exposedHeaders: ['set-auth-token'],
-  });
-
-  // Better Auth parses its own body, so it is mounted before Nest's parsers.
-  const server = app.getHttpAdapter().getInstance() as Express;
-  server.all(`${AUTH_BASE_PATH}/*splat`, toNodeHandler(app.get(BETTER_AUTH)));
+  configureApp(app, env);
 
   await app.listen(env.PORT);
   app.get(Logger).log(`listening on http://localhost:${env.PORT}`, 'Bootstrap');
