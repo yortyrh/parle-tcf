@@ -1,0 +1,31 @@
+{
+  "name": "@parle-tcf/importer",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@parle-tcf/db": "workspace:*",
+    "cheerio": "^1.2.0",
+    "domhandler": "^5.0.3"
+  }
+}

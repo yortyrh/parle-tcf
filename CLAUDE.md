@@ -31,7 +31,9 @@ If an installed tool or a repo script can produce something, run it and then edi
 | New workspace package (`packages/<name>`)                                                                      | `pnpm scaffold:package <kebab-name>`                                                                                 |
 | DB migration after editing `packages/db/src/schema`                                                            | `pnpm db:generate`                                                                                                   |
 | Empty SQL migration (data migrations)                                                                          | `pnpm db:generate:custom <snake_name>`                                                                               |
-| Apply migrations / seed exercises                                                                              | `pnpm db:migrate` / `pnpm db:seed`                                                                                   |
+| Apply migrations                                                                                               | `pnpm db:migrate`                                                                                                    |
+| Import new monthly subjects (`packages/importer`)                                                              | `pnpm exercises:import [--month YYYY-MM \| --all \| --file page.html --month YYYY-MM] [--dry-run]`                   |
+| Rebuild the unapplied exercise data migration from a CSV export                                                | `pnpm exercises:seed-sql <csv>`                                                                                      |
 | Lint / format fixes                                                                                            | `pnpm lint:fix`, `pnpm format`                                                                                       |
 | Dependencies                                                                                                   | `pnpm add` / `pnpm remove` (`-w` at root, `--filter` per package), never edit `package.json` or the lockfile by hand |
 
@@ -49,7 +51,7 @@ When a new generator or script is added, add it to this table.
 
 ## Commands
 
-- Setup (Docker or Podman): `pnpm install && pnpm infra:up && pnpm setup:env && pnpm db:seed && pnpm samples:seed`. `infra:up` starts Postgres + Mailpit (`docker-compose.dev.yml`) and migrates; `setup:env` writes `apps/api/.env` and `apps/web/.env.local` (keeps secrets, OAuth credentials, port overrides). `pnpm infra:down` / `infra:reset` stop or wipe it.
+- Setup (Docker or Podman): `pnpm install && pnpm infra:up && pnpm setup:env && pnpm samples:seed` (the exercise bank arrives with the migrations). `infra:up` starts Postgres + Mailpit (`docker-compose.dev.yml`) and migrates; `setup:env` writes `apps/api/.env` and `apps/web/.env.local` (keeps secrets, OAuth credentials, port overrides). `pnpm infra:down` / `infra:reset` stop or wipe it.
 - Dev login: `developer@parle-tcf.local`, password from `pnpm local:credentials`.
 - `pnpm dev`: web :3000 + api :3001. Mailpit UI: http://localhost:8025 (all local emails land there).
 - `pnpm verify`: full pipeline (node version, format:check, lint, typecheck, tests, script tests, build). `pnpm push` runs it.
@@ -61,6 +63,7 @@ When a new generator or script is added, add it to this table.
 - **Config:** `apps/api/config/` (YAML agents, `service.yml`, `français/rubrique-v1.md` = corrector prompt). `src/paths.ts` resolves it from the monorepo root too (Docker). Details: `EXERCISES.md`, `apps/api/config/SERVICE_CONFIG.md`.
 - **Auth:** Better Auth in the API with the `bearer()` plugin. The web app is on another site, so it never relies on cookies: the token from `set-auth-token` is kept in localStorage (`apps/web/lib/session-token.ts`) and sent as `Authorization: Bearer`; `SessionAuthGuard` accepts bearer only. Email links (verify, reset, account deletion) open web pages that call the API. GitHub/Google: `GET /auth/oauth/:provider` → provider → `/auth/oauth/complete` (one-time code in `verification`) → web `/connexion/retour` → `POST /auth/oauth/exchange`. Local OAuth needs real dev apps (see README).
 - **Email:** templates in `packages/email-templates` (React Email, preview with `pnpm --filter @parle-tcf/email-templates preview`); `MailService.send(template, to, props)`. Transport: `RESEND_API_KEY` > `SMTP_URL` > log (refused in production).
+- **Exercise bank:** `exercises` (one row per distinct subject, dedupe key `content_hash` from `packages/db/src/exercise-bank.ts`), `exercise_occurrences` (month/part/position), `exercise_sessions`, `exercise_aliases`, `import_runs`. The importer makes plain HTTP requests only and stops when the site blocks it: never add browser automation or anything that works around bot protection.
 - **Migrations at deploy:** Railway pre-deploy runs `node packages/db/dist/migrate.js`; `docker-compose.yml` has a one-shot `migrate` service.
 - **Web bundle boundary:** `apps/web/lib/web-bundle-security.test.ts` fails if web code imports server-only modules or secrets.
 - **Deploy:** Railway, two services (`apps/{api,web}/railway.json`, monorepo root). `NEXT_PUBLIC_EXAM_API_URL` is inlined at web build time; set the API's `CORS_ORIGINS` to the web URL. Order: API → web → CORS.

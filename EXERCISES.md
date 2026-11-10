@@ -18,10 +18,10 @@ Files live in **`apps/api/config/agents/`** and are loaded by the API when creat
 
 ### Supported tasks
 
-| File | Task |
-| --- | --- |
-| `tache1.yml` | Tâche 1 — entretien dirigé |
-| `tache2.yml` | Tâche 2 — exercice en interaction |
+| File         | Task                                   |
+| ------------ | -------------------------------------- |
+| `tache1.yml` | Tâche 1 — entretien dirigé             |
+| `tache2.yml` | Tâche 2 — exercice en interaction      |
 | `tache3.yml` | Tâche 3 — expression d'un point de vue |
 
 ### What the API appends to the prompt
@@ -42,14 +42,11 @@ See [apps/api/config/SERVICE_CONFIG.md](./apps/api/config/SERVICE_CONFIG.md) for
 
 ## Exercise database (Tâches 2 and 3)
 
-- CSV source: **`apps/api/config/tcf-exercises.csv`** (columns `id,taskType,content,url,imageUrl,imagePath,isImageBased`)
-- Runtime store: PostgreSQL table **`exercises`**
-
-After changing the CSV:
-
-```bash
-pnpm --filter @parle-tcf/db db:seed
-```
+- Store: PostgreSQL. `exercises` holds one row per distinct subject (deduplicated on task + `content_hash`, see `packages/db/src/exercise-bank.ts`); `exercise_occurrences` records every month, part and position where a subject was published; `exercise_sessions` is one row per month; `exercise_aliases` keeps old ids of merged subjects working; `import_runs` logs each import.
+- Initial data: migration `packages/db/migrations/0003_exercise_bank_data.sql`, generated from the original CSV (in git history) with `pnpm exercises:seed-sql <csv>`. It is applied by `pnpm db:migrate` like any migration.
+- New months: `pnpm exercises:import` (default: the two newest months; `--month YYYY-MM`, `--all`, `--dry-run`). It sends one plain request per page with a pause in between and **stops when the site refuses the request** (the run is recorded as `blocked`; it is never retried or worked around). A page saved from a browser can be imported with `pnpm exercises:import --file page.html --month YYYY-MM`.
+- In production the importer runs as a Railway cron service (`packages/importer/railway.json`, Mondays 06:00 UTC).
+- Candidates browse subjects at `/sujets` (by task, month and keywords).
 
 ---
 

@@ -6,12 +6,13 @@ Monorepo (Turborepo + pnpm) for practising the **speaking test (expression orale
 
 ## Project layout
 
-| Package               | Role                                                                                                                          |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **`apps/web`**        | Next.js 15 — candidate UI, auth, Realtime session, results, history and progression.                                          |
-| **`apps/api`**        | NestJS — Better Auth, encrypted per-user API keys, `client_secrets`, attempts, CEFR evaluation, usage limits (oRPC contract). |
-| **`packages/db`**     | Drizzle schema, migrations and exercise seed (PostgreSQL).                                                                    |
-| **`packages/shared`** | Task types and Zod schemas for the session contract — `tsc` build → `dist/`.                                                  |
+| Package                 | Role                                                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`apps/web`**          | Next.js 15 — candidate UI, auth, Realtime session, results, history and progression.                                          |
+| **`apps/api`**          | NestJS — Better Auth, encrypted per-user API keys, `client_secrets`, attempts, CEFR evaluation, usage limits (oRPC contract). |
+| **`packages/importer`** | Imports monthly subjects into the exercise bank (Railway cron).                                                               |
+| **`packages/db`**       | Drizzle schema and migrations, including the exercise bank data (PostgreSQL).                                                 |
+| **`packages/shared`**   | Task types and Zod schemas for the session contract — `tsc` build → `dist/`.                                                  |
 
 ## Quick start (Docker Compose)
 
@@ -89,7 +90,6 @@ Requires Node 24 (`.nvmrc`), pnpm 10 and Docker (or Podman).
 pnpm install
 pnpm infra:up        # Postgres + Mailpit (docker-compose.dev.yml), then migrations
 pnpm setup:env       # writes apps/api/.env and apps/web/.env.local (secrets generated once, then kept)
-pnpm db:seed         # exercise bank
 pnpm samples:seed    # dev users; passwords: pnpm local:credentials
 pnpm dev             # web http://localhost:3000, api http://localhost:3001
 ```
@@ -117,7 +117,6 @@ Set `RESEND_API_KEY` (HTTPS API, works on hosts that block outbound SMTP such as
 | Script                                | Description                                                            |
 | ------------------------------------- | ---------------------------------------------------------------------- |
 | `dev` / `build` / `start`             | NestJS                                                                 |
-| `db:seed` (`@parle-tcf/db`)           | TCF CSV → PostgreSQL `exercises` table (root: `pnpm db:seed`)          |
 | `evals`                               | Corrector evals against `evals/dataset` (needs `OPENAI_API_KEY_EVALS`) |
 | `rotate-keys`                         | Re-encrypt stored API keys with the current master key                 |
 | `lint`, `typecheck`, `format`, `test` | Quality                                                                |
