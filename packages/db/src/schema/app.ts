@@ -195,6 +195,8 @@ export const examAttempts = pgTable(
       .notNull()
       .default("pending"),
     startedAt: timestamptz("started_at").notNull().defaultNow(),
+    /** Last sign of life (session start, checkpoint): bounds in-progress usage. */
+    lastActivityAt: timestamptz("last_activity_at").notNull().defaultNow(),
     finishedAt: timestamptz("finished_at"),
     durationS: integer("duration_s"),
     provider: providerEnum("provider").notNull(),
@@ -207,6 +209,8 @@ export const examAttempts = pgTable(
       scale: 4,
     }),
     audioKey: text("audio_key"),
+    /** When the current evaluation started running (stale-run sweeper). */
+    evaluationStartedAt: timestamptz("evaluation_started_at"),
   },
   (t) => [
     index("exam_attempts_user_id_idx").on(t.userId),

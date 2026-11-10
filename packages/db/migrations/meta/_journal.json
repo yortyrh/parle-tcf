@@ -36,6 +36,20 @@
       "when": 1794280113711,
       "tag": "0004_exercise_content_hash_not_null",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794311171270,
+      "tag": "0005_attempt_activity",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794311181618,
+      "tag": "0006_attempt_activity_backfill",
+      "breakpoints": true
     }
   ]
 }
