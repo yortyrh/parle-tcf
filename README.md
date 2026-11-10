@@ -76,9 +76,10 @@ For each service, set Railway **Root Directory** to empty (monorepo root), then 
 
 **Web service** — build-time variables
 
-| Variable                   | Required | Description                                         |
-| -------------------------- | -------- | --------------------------------------------------- |
-| `NEXT_PUBLIC_EXAM_API_URL` | Yes      | **Public HTTPS** API URL as seen by the **browser** |
+| Variable                   | Required | Description                                                                                      |
+| -------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_EXAM_API_URL` | Yes      | **Public HTTPS** API URL as seen by the **browser**                                              |
+| `NEXT_PUBLIC_SITE_URL`     | No       | Public web URL for canonical links, Open Graph and the sitemap (default `http://localhost:3000`) |
 
 ---
 

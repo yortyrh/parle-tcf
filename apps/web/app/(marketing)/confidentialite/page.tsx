@@ -1,11 +1,11 @@
 import Link from 'next/link';
 
-export const metadata = { title: 'Confidentialité · parle-tcf' };
+export const metadata = { title: 'Confidentialité' };
 
 export default function ConfidentialitePage() {
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-4 sm:p-8">
-      <h1 className="text-2xl font-semibold">Confidentialité</h1>
+    <div className="mx-auto max-w-2xl space-y-6 px-4 py-12 sm:px-6">
+      <h1 className="font-display text-headline">Confidentialité</h1>
 
       <section aria-labelledby="donnees" className="space-y-2">
         <h2 id="donnees" className="text-lg font-semibold">
@@ -15,8 +15,8 @@ export default function ConfidentialitePage() {
           <li>Votre compte : adresse e-mail, nom et mot de passe (haché).</li>
           <li>Vos tentatives : date, durée, tâche, transcription du texte et évaluation.</li>
           <li>
-            Votre clé API OpenAI, <strong>chiffrée</strong> (AES-256-GCM). Elle n’est jamais
-            renvoyée au navigateur : seuls ses quatre derniers caractères sont affichés.
+            Votre clé API OpenAI ou Gemini, <strong>chiffrée</strong> (AES-256-GCM). Elle n’est
+            jamais renvoyée au navigateur : seuls ses quatre derniers caractères sont affichés.
           </li>
         </ul>
       </section>
@@ -26,11 +26,11 @@ export default function ConfidentialitePage() {
           Audio
         </h2>
         <p className="text-sm">
-          Votre voix est envoyée en direct à OpenAI avec votre propre clé pour la conversation. Par
-          défaut, seule la transcription est gardée. Si vous activez l’enregistrement audio dans les
-          paramètres (facultatif), votre micro est enregistré et stocké de façon privée ; il est
-          supprimé avec la tentative, si vous retirez votre consentement ou si vous supprimez votre
-          compte.
+          Votre voix est envoyée en direct au fournisseur choisi (OpenAI ou Google Gemini) avec
+          votre propre clé pour la conversation. Par défaut, seule la transcription est gardée. Si
+          vous activez l’enregistrement audio dans les paramètres (facultatif), votre micro est
+          enregistré et stocké de façon privée ; il est supprimé avec la tentative, si vous retirez
+          votre consentement ou si vous supprimez votre compte.
         </p>
       </section>
 
@@ -39,8 +39,8 @@ export default function ConfidentialitePage() {
           Services tiers
         </h2>
         <p className="text-sm">
-          La transcription est envoyée à OpenAI pour être évaluée. Les conditions d’OpenAI
-          s’appliquent à ces échanges, facturés sur votre compte OpenAI.
+          La transcription est envoyée au même fournisseur (OpenAI ou Google Gemini) pour être
+          évaluée. Ses conditions s’appliquent à ces échanges, facturés sur votre compte chez lui.
         </p>
       </section>
 
@@ -68,6 +68,6 @@ export default function ConfidentialitePage() {
       <Link href="/" className="text-sm underline">
         ← Retour
       </Link>
-    </main>
+    </div>
   );
 }
