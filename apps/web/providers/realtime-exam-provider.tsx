@@ -24,6 +24,7 @@ import { toastAlert } from '@/components/ui/alert-toast';
 import { ApiError, api } from '@/lib/api';
 import { AttemptRecorder } from '@/lib/audio-recorder';
 import { restartOptions } from '@/lib/exam-flow';
+import { FakeLiveSession, isFakeVoice } from '@/lib/fake-live';
 import { GeminiLiveSession } from '@/lib/gemini-live';
 import {
   nextExerciseIdRandom,
@@ -208,7 +209,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
   const historySnapshotRef = useRef<RealtimeItem[]>([]);
   const assistantStreamBufRef = useRef<Record<string, string>>({});
   const recorderRef = useRef<AttemptRecorder | null>(null);
-  const geminiRef = useRef<GeminiLiveSession | null>(null);
+  const geminiRef = useRef<GeminiLiveSession | FakeLiveSession | null>(null);
   const finishTaskRef = useRef<() => Promise<void>>(async () => {});
   const restartExamRef = useRef<() => Promise<void>>(async () => {});
   const attemptIdRef = useRef<string | null>(null);
@@ -613,7 +614,9 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           setTimeout(() => void finishTaskRef.current(), FAREWELL_GRACE_MS);
         };
 
-        if (data.provider === 'gemini') {
+        // Gemini, or the scripted fake session of end-to-end test builds.
+        const fakeVoice = isFakeVoice(clientSecret);
+        if (data.provider === 'gemini' || fakeVoice) {
           const geminiStream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true },
           });
@@ -637,7 +640,8 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
           );
           startUserVad(geminiStream);
 
-          const live = new GeminiLiveSession({
+          const LiveSession = fakeVoice ? FakeLiveSession : GeminiLiveSession;
+          const live = new LiveSession({
             token: clientSecret,
             model: data.agentConfig.model,
             voice: data.agentConfig.voice,
