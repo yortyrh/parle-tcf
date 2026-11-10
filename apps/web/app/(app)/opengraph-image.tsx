@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 import { getAppConfig } from '@/lib/utils';
 
 // Image metadata
-export const alt = 'TCF Voice Agent';
+export const alt = 'parle-tcf';
 export const size = {
   width: 1200,
   height: 628,

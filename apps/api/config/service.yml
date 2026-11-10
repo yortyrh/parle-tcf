@@ -6,7 +6,7 @@ llm:
   # Sent to OpenAI client_secrets. Use "realtime" to mean "default Realtime model"
   # (overridable with env OPENAI_REALTIME_MODEL in ExamSessionService).
   model: "realtime"
-  voice: "alloy" # OpenAI Realtime output voices: alloy, echo, fable, onyx, nova, shimmer
+  voice: "alloy" # OpenAI Realtime voices: alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar
   modalities:
     - "text"
     - "audio"

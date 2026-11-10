@@ -4,9 +4,9 @@ This file lives at **`apps/api/config/service.yml`**. The NestJS **`ExamConfigSe
 
 ## What the API actually uses
 
-| Field | Effect |
-| --- | --- |
-| `llm.voice` | OpenAI Realtime output voice; passed to `POST /v1/realtime/client_secrets` and echoed in `agentConfig.voice`. |
+| Field       | Effect                                                                                                                                                                           |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `llm.voice` | OpenAI Realtime output voice; passed to `POST /v1/realtime/client_secrets` and echoed in `agentConfig.voice`.                                                                    |
 | `llm.model` | If `realtime` (or empty treated as default branch), resolved via `process.env.OPENAI_REALTIME_MODEL` or a code default. Any other string is used as the model id sent to OpenAI. |
 
 `llm.provider` and `llm.modalities` are **not** read by the current session path; they remain for documentation / future use.
@@ -25,12 +25,7 @@ llm:
 
 ### OpenAI Realtime voices
 
-- `alloy` — default, neutral
-- `echo` — male, professional
-- `fable` — female, expressive
-- `onyx` — male, deep
-- `nova` — female, energetic
-- `shimmer` — female, warm
+`alloy` (default), `ash`, `ballad`, `coral`, `echo`, `sage`, `shimmer`, `verse`, `marin` and `cedar` (OpenAI recommends `marin` and `cedar` for the best quality). `fable`, `onyx` and `nova` are text-to-speech voices only and are rejected by Realtime. A per-user voice set in the settings page overrides this value; Gemini uses its own voices (default `Puck`).
 
 ## Environment override
 

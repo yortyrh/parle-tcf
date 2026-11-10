@@ -4,14 +4,10 @@ import { useMemo, useRef, useState } from 'react';
 import type { AppConfig } from '@/app-config';
 import { ViewController } from '@/components/app/view-controller';
 import { Toaster } from '@/components/ui/toaster';
-import { useDebugMode } from '@/hooks/useDebug';
 import { useRealtimeExamFatalToast } from '@/hooks/useRealtimeExamFatalToast';
 import { RealtimeExamProvider } from '@/providers/realtime-exam-provider';
 
-const IN_DEVELOPMENT = process.env.NODE_ENV !== 'production';
-
 function AppSetup() {
-  useDebugMode({ enabled: IN_DEVELOPMENT });
   useRealtimeExamFatalToast();
   return null;
 }
