@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 const NAV = [
   { href: '/tcf', label: 'S’entraîner' },
+  { href: '/sujets', label: 'Sujets' },
   { href: '/examen', label: 'Examen complet' },
   { href: '/historique', label: 'Historique' },
   { href: '/progression', label: 'Progression' },

@@ -8,8 +8,11 @@ import {
   type CompleteAttemptInput,
   type CreateExamSessionOutput,
   type CreateExamSessionRequest,
+  type ExerciseSession,
   type ListAttemptsInput,
   type ListAttemptsOutput,
+  type ListExercisesInput,
+  type ListExercisesOutput,
   type ProviderSettings,
   type TestProviderSettingsOutput,
   type UpsertProviderSettingsInput,
@@ -96,4 +99,8 @@ export const api = {
   getUsage: () => call<Usage>(API_ROUTES.usageGet, {}),
   deleteAttempt: (attemptId: string) =>
     call<{ ok: true }>(API_ROUTES.attemptsDelete, { attemptId }),
+  listExercises: (input: ListExercisesInput) =>
+    call<ListExercisesOutput>(API_ROUTES.exercisesList, input),
+  listExerciseSessions: () =>
+    call<{ sessions: ExerciseSession[] }>(API_ROUTES.exercisesSessions, {}),
 };

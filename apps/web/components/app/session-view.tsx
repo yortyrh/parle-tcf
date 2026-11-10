@@ -419,6 +419,7 @@ export function SessionView({ selectedTask }: SessionViewProps) {
             >
               <ConsigneTabContent
                 announcementText={announcementText}
+                imageUrl={exam.exerciseData?.imageUrl}
                 showExerciseSkeleton={showExerciseSkeleton}
                 showMicHint={showMicHint}
               />

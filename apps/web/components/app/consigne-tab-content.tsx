@@ -4,12 +4,15 @@ import React from 'react';
 
 interface ConsigneTabContentProps {
   announcementText: string;
+  /** Picture some subjects rely on; shown under the instructions. */
+  imageUrl?: string;
   showExerciseSkeleton: boolean;
   showMicHint: boolean;
 }
 
 export const ConsigneTabContent = React.memo(function ConsigneTabContent({
   announcementText,
+  imageUrl,
   showExerciseSkeleton,
   showMicHint,
 }: ConsigneTabContentProps) {
@@ -31,6 +34,18 @@ export const ConsigneTabContent = React.memo(function ConsigneTabContent({
             {announcementText}
           </p>
         </div>
+      )}
+
+      {!showExerciseSkeleton && imageUrl && (
+        // Remote image from the subject's source page; plain <img> avoids a Next image domain allowlist.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageUrl}
+          alt="Document du sujet"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="mx-auto max-h-80 w-auto rounded-lg border object-contain"
+        />
       )}
 
       {showMicHint &&
