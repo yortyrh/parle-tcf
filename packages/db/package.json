@@ -33,11 +33,9 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate && prettier --write --log-level warn migrations",
-    "db:migrate": "node --env-file-if-exists=../../apps/api/.env dist/migrate.js",
-    "db:seed": "node --env-file-if-exists=../../apps/api/.env dist/seed-exercises.js"
+    "db:migrate": "node --env-file-if-exists=../../apps/api/.env dist/migrate.js"
   },
   "dependencies": {
-    "csv-parse": "^5.6.0",
     "drizzle-orm": "^0.45.4",
     "pg": "^8.16.0"
   },

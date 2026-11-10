@@ -31,8 +31,4 @@ export {
 } from "./client";
 export { MIGRATIONS_FOLDER, runMigrations } from "./migrate";
 export * from "./schema";
-export {
-  parseExerciseCsv,
-  seedExercises,
-  type SeedReport,
-} from "./seed-exercises";
+export * from "./exercise-bank";

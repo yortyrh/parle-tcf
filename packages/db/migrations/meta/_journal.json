@@ -15,6 +15,27 @@
       "when": 1794241179335,
       "tag": "0001_outstanding_luke_cage",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794279883227,
+      "tag": "0002_exercise_bank",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794279885480,
+      "tag": "0003_exercise_bank_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794280113711,
+      "tag": "0004_exercise_content_hash_not_null",
+      "breakpoints": true
     }
   ]
 }

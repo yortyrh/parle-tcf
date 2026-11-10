@@ -1,6 +1,6 @@
 # API config directory
 
-YAML agent prompts and the exercise CSV (seeded into PostgreSQL with `pnpm --filter @parle-tcf/db db:seed`).
+YAML agent prompts and model reference material. The exercise bank lives in PostgreSQL (see EXERCISES.md).
 
 ---
 

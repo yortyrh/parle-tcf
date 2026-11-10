@@ -1,0 +1,1 @@
+ALTER TABLE "exercises" ALTER COLUMN "content_hash" SET NOT NULL;
