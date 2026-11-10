@@ -354,6 +354,16 @@ describe('parseMonthPageUrl', () => {
       'https://reussir-tcfcanada.com/SEPTEMBRE-2025-expression-orale/',
       { year: 2025, month: 9 },
     ],
+    [
+      'the first accepted year (2000)',
+      'https://reussir-tcfcanada.com/janvier-2000-expression-orale/',
+      { year: 2000, month: 1 },
+    ],
+    [
+      'the last accepted year (2100)',
+      'https://reussir-tcfcanada.com/decembre-2100-expression-orale/',
+      { year: 2100, month: 12 },
+    ],
   ])('accepts %s', (_label, url, expected) => {
     expect(parseMonthPageUrl(url)).toEqual(expected);
   });
@@ -398,6 +408,9 @@ describe('parseMonthPageUrl', () => {
     ['a relative path', '/decembre-2025-expression-orale/'],
     ['an invalid URL string', 'not a url'],
     ['an empty string', ''],
+    ['a malformed percent escape', 'https://reussir-tcfcanada.com/%E0%A4%A-2025-expression-orale/'],
+    ['a year before 2000', 'https://reussir-tcfcanada.com/decembre-1999-expression-orale/'],
+    ['a year after 2100', 'https://reussir-tcfcanada.com/decembre-2101-expression-orale/'],
   ])('returns null for %s', (_label, url) => {
     expect(parseMonthPageUrl(url)).toBeNull();
   });
