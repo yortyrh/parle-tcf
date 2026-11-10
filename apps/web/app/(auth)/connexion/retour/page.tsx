@@ -1,6 +1,6 @@
 import { OAuthReturn } from './oauth-return';
 
-export const metadata = { title: 'Connexion · parle-tcf' };
+export const metadata = { title: 'Connexion' };
 
 export default async function OAuthReturnPage({
   searchParams,

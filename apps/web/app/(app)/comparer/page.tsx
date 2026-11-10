@@ -1,6 +1,6 @@
 import { CompareView } from './compare-view';
 
-export const metadata = { title: 'Comparer · parle-tcf' };
+export const metadata = { title: 'Comparer' };
 
 export default async function ComparePage({
   searchParams,

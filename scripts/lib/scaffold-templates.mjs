@@ -74,7 +74,7 @@ export class ${pascal}Service {
 export function webPageTemplate({ pascal, title, fileBase }) {
   return `import { ${pascal}View } from './${fileBase}-view';
 
-export const metadata = { title: '${title.replace(/\\/g, "\\\\").replace(/'/g, "\\'")} · parle-tcf' };
+export const metadata = { title: '${title.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}' };
 
 export default function ${pascal}Page() {
   return <${pascal}View />;

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { AuthShell } from '@/components/app/auth-shell';
 import { VerifyToken } from './verify-token';
 
-export const metadata = { title: 'Vérifiez votre e-mail · parle-tcf' };
+export const metadata = { title: 'Vérifiez votre e-mail' };
 
 export default async function VerifierEmailPage({
   searchParams,

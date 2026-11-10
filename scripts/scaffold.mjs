@@ -141,7 +141,7 @@ function webPage(route, title) {
   write(view, webViewTemplate({ pascal: names.pascal, title: pageTitle }));
   format([page, view]);
   console.log(
-    `\nCreated /${names.route}. Add it to the navigation in components/app/page-shell.tsx if needed.`,
+    `\nCreated /${names.route}. Add it to APP_NAV in components/app/app-shell.tsx if it belongs in the navigation.`,
   );
   return [page, view];
 }

@@ -11,16 +11,12 @@ export interface AppConfig {
   pageTitle: string;
   pageDescription: string;
   startButtonText: string;
-  accent?: string;
-  accentDark?: string;
   tasks: Task[];
 }
 
 export const APP_CONFIG_DEFAULTS: AppConfig = {
   pageTitle: 'parle-tcf',
   pageDescription: "Entraînement à l'expression orale du TCF avec un examinateur IA",
-  accent: '#06b6d4', // Cyan turquoise from logo
-  accentDark: '#3dd6d0', // Lighter cyan for dark mode
   startButtonText: 'Commencer',
   tasks: [
     {

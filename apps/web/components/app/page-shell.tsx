@@ -1,31 +1,27 @@
-import Link from 'next/link';
+import { AppHeader } from '@/components/app/app-shell';
 
-const NAV = [
-  { href: '/tcf', label: 'S’entraîner' },
-  { href: '/sujets', label: 'Sujets' },
-  { href: '/examen', label: 'Examen complet' },
-  { href: '/historique', label: 'Historique' },
-  { href: '/progression', label: 'Progression' },
-  { href: '/parametres', label: 'Paramètres' },
-  { href: '/confidentialite', label: 'Confidentialité' },
-];
+interface PageShellProps {
+  title: string;
+  /** One line under the title. */
+  description?: React.ReactNode;
+  /** Buttons aligned with the title (right on wide screens). */
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}
 
-export function PageShell({ title, children }: { title: string; children: React.ReactNode }) {
+/** Every signed-in page except the live session: app header, then a titled content column. */
+export function PageShell({ title, description, actions, children }: PageShellProps) {
   return (
-    <div className="mx-auto w-full max-w-4xl p-4 sm:p-8">
-      <nav aria-label="Navigation principale" className="mb-6 flex flex-wrap gap-4 text-sm">
-        {NAV.map((n) => (
-          <Link
-            key={n.href}
-            href={n.href}
-            className="text-muted-foreground hover:text-foreground underline"
-          >
-            {n.label}
-          </Link>
-        ))}
-      </nav>
-      <main>
-        <h1 className="mb-6 text-2xl font-semibold">{title}</h1>
+    <div className="flex min-h-svh flex-col">
+      <AppHeader />
+      <main id="contenu" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-display text-headline">{title}</h1>
+            {description && <p className="text-muted-foreground mt-2 max-w-prose">{description}</p>}
+          </div>
+          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+        </div>
         {children}
       </main>
     </div>

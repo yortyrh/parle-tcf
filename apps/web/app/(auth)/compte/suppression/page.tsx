@@ -1,6 +1,6 @@
 import { ConfirmDeletion } from './confirm-deletion';
 
-export const metadata = { title: 'Suppression du compte · parle-tcf' };
+export const metadata = { title: 'Suppression du compte' };
 
 export default async function AccountDeletionPage({
   searchParams,

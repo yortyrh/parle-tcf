@@ -17,20 +17,7 @@ export function getAppConfig(): AppConfig {
   return APP_CONFIG_DEFAULTS;
 }
 
-/**
- * Generate custom CSS styles for theme colors
- */
-export function getStyles(appConfig: AppConfig): string {
-  const { accent, accentDark } = appConfig;
-
-  return [
-    accent
-      ? `:root { --primary: ${accent}; --primary-hover: color-mix(in srgb, ${accent} 80%, #000); }`
-      : '',
-    accentDark
-      ? `.dark { --primary: ${accentDark}; --primary-hover: color-mix(in srgb, ${accentDark} 80%, #000); }`
-      : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+/** Public URL of the web app (canonical links, Open Graph). */
+export function getSiteUrl(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
 }
