@@ -37,6 +37,8 @@ const envSchema = z.object({
     .string()
     .min(1, "ENCRYPTION_KEY_CURRENT is required"),
   AUTH_EMAIL_VERIFICATION_ENABLED: bool.default(true),
+  /** Resend HTTPS API key; takes precedence over SMTP_URL (see mail/mail-transport.ts). */
+  RESEND_API_KEY: optionalString,
   SMTP_URL: optionalString,
   MAIL_FROM: z.string().default("parle-tcf <no-reply@localhost>"),
   /** S3-compatible storage (R2, MinIO, S3) for attempt recordings; unset = audio disabled. */
@@ -51,7 +53,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
   /** Default usage limits for users without a `usage_limits` row (phase 2). */
-  DEFAULT_DAILY_MINUTES: z.coerce.number().default(30),
+  DEFAULT_DAILY_MINUTES: z.coerce.number().default(60),
   DEFAULT_MONTHLY_COST_USD: z.coerce.number().default(10),
 });
 

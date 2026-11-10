@@ -1,91 +1,106 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { createTransport, type Transporter } from "nodemailer";
+import {
+  Inject,
+  Injectable,
+  Logger,
+  Optional,
+  type OnModuleInit,
+} from "@nestjs/common";
+import {
+  renderEmail,
+  type EmailTemplateName,
+  type EmailTemplateProps,
+} from "@parle-tcf/email-templates";
+import { createTransport } from "nodemailer";
 import { getEnv } from "../config/env.js";
+import {
+  assertTransportAllowed,
+  resolveMailTransport,
+  sendWithResend,
+  type OutgoingMail,
+} from "./mail-transport.js";
 
-export interface OutgoingMail {
-  to: string;
-  subject: string;
-  text: string;
-  html: string;
+export type { OutgoingMail } from "./mail-transport.js";
+
+interface SmtpSender {
+  sendMail(message: OutgoingMail & { from: string }): Promise<unknown>;
+}
+
+/** Optional overrides for tests; not provided in the app, so the defaults apply. */
+export const MAIL_SERVICE_DEPS = Symbol("MAIL_SERVICE_DEPS");
+
+export interface MailServiceDeps {
+  fetchImpl?: typeof fetch;
+  smtpFactory?: (url: string) => SmtpSender;
 }
 
 /**
- * Transactional email over SMTP (`SMTP_URL`, e.g. Mailpit locally). Without a
- * transport the message is only logged, which is enough for local development.
- * Mail bodies are in French like the rest of the candidate-facing UI.
+ * Transactional email rendered from `@parle-tcf/email-templates` (French, like the
+ * candidate UI) and sent through Resend, SMTP or the log (see mail-transport.ts).
  */
 @Injectable()
-export class MailService {
+export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
-  private transporter: Transporter | null = null;
+  private readonly fetchImpl: typeof fetch;
+  private readonly smtpFactory: (url: string) => SmtpSender;
+  private smtp: { url: string; sender: SmtpSender } | null = null;
 
-  private transport(): Transporter | null {
-    const { SMTP_URL } = getEnv();
-    if (!SMTP_URL) return null;
-    this.transporter ??= createTransport(SMTP_URL);
-    return this.transporter;
+  constructor(
+    @Optional() @Inject(MAIL_SERVICE_DEPS) deps: MailServiceDeps = {},
+  ) {
+    this.fetchImpl = deps?.fetchImpl ?? ((...args) => fetch(...args));
+    this.smtpFactory = deps?.smtpFactory ?? ((url) => createTransport(url));
   }
 
-  async send(mail: OutgoingMail): Promise<void> {
-    const transport = this.transport();
-    if (!transport) {
-      this.logger.log(
-        `[mail] to=${mail.to} subject="${mail.subject}"\n${mail.text}`,
-      );
-      return;
+  onModuleInit(): void {
+    const env = getEnv();
+    assertTransportAllowed(resolveMailTransport(env), env.NODE_ENV);
+  }
+
+  async send<K extends EmailTemplateName>(
+    template: K,
+    to: string,
+    props: EmailTemplateProps[K],
+  ): Promise<void> {
+    const env = getEnv();
+    const { subject, html, text } = await renderEmail(template, props);
+    const mail: OutgoingMail = { to, subject, html, text };
+    const transport = resolveMailTransport(env);
+    switch (transport.kind) {
+      case "resend":
+        await sendWithResend({
+          apiKey: transport.apiKey,
+          from: env.MAIL_FROM,
+          mail,
+          fetchImpl: this.fetchImpl,
+        });
+        return;
+      case "smtp":
+        await this.smtpSender(transport.url).sendMail({
+          from: env.MAIL_FROM,
+          ...mail,
+        });
+        return;
+      case "log":
+        this.logger.log(`[mail] to=${to} subject="${subject}"\n${text}`);
+        return;
     }
-    await transport.sendMail({ from: getEnv().MAIL_FROM, ...mail });
+  }
+
+  private smtpSender(url: string): SmtpSender {
+    if (this.smtp?.url !== url)
+      this.smtp = { url, sender: this.smtpFactory(url) };
+    return this.smtp.sender;
   }
 
   sendVerificationEmail(to: string, url: string): Promise<void> {
-    return this.send(
-      actionMail(
-        to,
-        "Confirmez votre adresse e-mail",
-        [
-          "Bienvenue sur parle-tcf !",
-          "Confirmez votre adresse e-mail pour activer votre compte.",
-        ],
-        "Confirmer mon e-mail",
-        url,
-      ),
-    );
+    return this.send("verify-email", to, { url });
   }
 
   sendPasswordResetEmail(to: string, url: string): Promise<void> {
-    return this.send(
-      actionMail(
-        to,
-        "Réinitialisation de votre mot de passe",
-        [
-          "Vous avez demandé à réinitialiser votre mot de passe.",
-          "Ce lien est valable une heure. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.",
-        ],
-        "Choisir un nouveau mot de passe",
-        url,
-      ),
-    );
+    return this.send("reset-password", to, { url });
   }
-}
 
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-export function actionMail(
-  to: string,
-  subject: string,
-  paragraphs: string[],
-  cta: string,
-  url: string,
-): OutgoingMail {
-  const text = `${paragraphs.join("\n\n")}\n\n${cta} : ${url}\n`;
-  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px">${paragraphs
-    .map((p) => `<p>${escapeHtml(p)}</p>`)
-    .join("")}<p><a href="${escapeHtml(url)}">${escapeHtml(cta)}</a></p></div>`;
-  return { to, subject, text, html };
+  sendDeleteAccountEmail(to: string, url: string): Promise<void> {
+    return this.send("delete-account", to, { url });
+  }
 }
