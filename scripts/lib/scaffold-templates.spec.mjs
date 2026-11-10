@@ -233,7 +233,40 @@ describe("webPageTemplate", () => {
 
   it("exports the page metadata title", () => {
     expect(source).toContain(
-      "export const metadata = { title: 'Sujets du mois · parle-tcf' };",
+      "export const metadata = { title: 'Sujets du mois' };",
+    );
+  });
+
+  it("leaves the site suffix to the root layout title template", () => {
+    expect(source).not.toContain("parle-tcf");
+    expect(source).not.toContain(" · ");
+  });
+
+  it("escapes single quotes and backslashes in the metadata title", () => {
+    const quoted = webPageTemplate({
+      pascal: "Ete",
+      title: "L'été",
+      fileBase: "ete",
+    });
+    expect(quoted).toContain("export const metadata = { title: 'L\\'été' };");
+    const slashed = webPageTemplate({
+      pascal: "Slash",
+      title: "A\\B'C",
+      fileBase: "slash",
+    });
+    expect(slashed).toContain(
+      "export const metadata = { title: 'A\\\\B\\'C' };",
+    );
+  });
+
+  it("keeps a title with a middle dot as given", () => {
+    const other = webPageTemplate({
+      pascal: "Preparation",
+      title: "Préparation · Tâche 2",
+      fileBase: "preparation",
+    });
+    expect(other).toContain(
+      "export const metadata = { title: 'Préparation · Tâche 2' };",
     );
   });
 
@@ -255,9 +288,7 @@ describe("webPageTemplate", () => {
     expect(other).toContain(
       "import { HistoriqueView } from './historique-view';",
     );
-    expect(other).toContain(
-      "export const metadata = { title: 'Historique · parle-tcf' };",
-    );
+    expect(other).toContain("export const metadata = { title: 'Historique' };");
     expect(other).toMatch(/export default function HistoriquePage\(/);
     expect(other).toContain("<HistoriqueView />");
     expect(other).not.toMatch(/SujetsDuMois|du-mois/);

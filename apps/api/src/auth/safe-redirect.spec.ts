@@ -2,14 +2,15 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_REDIRECT, safeRedirectPath } from "./safe-redirect.js";
 
 describe("safeRedirectPath", () => {
-  it("defaults to /tcf", () => {
-    expect(DEFAULT_REDIRECT).toBe("/tcf");
+  it("defaults to /tableau-de-bord", () => {
+    expect(DEFAULT_REDIRECT).toBe("/tableau-de-bord");
   });
 
   it.each([
     "/",
     "/tcf",
     "/tcf/tache2?x=1&y=2",
+    "/tableau-de-bord",
     "/a/b#c",
     "/a//b",
     "/a?next=//x",
@@ -40,6 +41,6 @@ describe("safeRedirectPath", () => {
   ];
 
   it.each(rejected)("rejects %j", (value) => {
-    expect(safeRedirectPath(value as string)).toBe("/tcf");
+    expect(safeRedirectPath(value as string)).toBe("/tableau-de-bord");
   });
 });

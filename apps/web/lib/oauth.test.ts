@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { enabledOAuthProviders, oauthStartUrl } from './oauth';
 
 describe('oauthStartUrl', () => {
-  it('replaces an unsafe redirect with /tcf and trims the trailing slash', () => {
+  it('replaces an unsafe redirect with /tableau-de-bord and trims the trailing slash', () => {
     expect(oauthStartUrl('github', 'https://evil.com', 'http://api/')).toBe(
-      'http://api/auth/oauth/github?redirect=%2Ftcf'
+      'http://api/auth/oauth/github?redirect=%2Ftableau-de-bord'
     );
   });
 
@@ -27,10 +27,10 @@ describe('oauthStartUrl', () => {
   });
 
   it.each(['//evil.com', '/\\evil.com', 'tcf', '/a\nb', ''])(
-    'falls back to /tcf for %j',
+    'falls back to /tableau-de-bord for %j',
     (next) => {
       expect(oauthStartUrl('github', next, 'http://api')).toBe(
-        'http://api/auth/oauth/github?redirect=%2Ftcf'
+        'http://api/auth/oauth/github?redirect=%2Ftableau-de-bord'
       );
     }
   );

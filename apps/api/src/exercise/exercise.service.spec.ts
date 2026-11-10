@@ -88,6 +88,25 @@ describe("ExerciseService", () => {
       }
     });
 
+    it("features the latest migrated session with at most 3 subjects per task", async () => {
+      const [latest] = await service.listSessions();
+      const out = await service.featured();
+      expect(out.session).toEqual(latest);
+      const t2 = await service.listExercises({
+        task: 2,
+        sessionId: latest!.id,
+      });
+      const t3 = await service.listExercises({
+        task: 3,
+        sessionId: latest!.id,
+      });
+      expect(out.items).toEqual([
+        ...t2.items.slice(0, 3),
+        ...t3.items.slice(0, 3),
+      ]);
+      expect(out.items.length).toBeLessThanOrEqual(6);
+    });
+
     it("resolves a migrated alias to its canonical exercise", async () => {
       const [alias] = await testDb.db.select().from(exerciseAliases).limit(1);
       expect(alias).toBeDefined();
@@ -424,6 +443,205 @@ describe("ExerciseService", () => {
         expect(out.items).toHaveLength(expected);
         expect(out.items[0]!.id).toBe("a-2");
         expect(out.total).toBe(4);
+      });
+    });
+
+    describe("featured", () => {
+      it("returns no session and no items on an empty bank", async () => {
+        expect(await service.featured()).toEqual({ session: null, items: [] });
+      });
+
+      it("returns no session when no session has occurrences", async () => {
+        await insertExercises([
+          { id: "e2", task: 2, prompt: "Sujet sans publication." },
+          { id: "e3", task: 3, prompt: "Autre sujet sans publication." },
+        ]);
+        await insertSession(2026, 1);
+        expect(await service.featured()).toEqual({ session: null, items: [] });
+        expect(await service.featured(5)).toEqual({ session: null, items: [] });
+      });
+
+      describe("with several sessions", () => {
+        let older: number;
+        let latest: number;
+        let emptyNewer: number;
+
+        beforeEach(async () => {
+          // Ids do not follow the alphabetical order of lastSeenOn, and tâche 3
+          // subjects are the most recent, so a single global ordering would
+          // put them first.
+          await insertExercises([
+            {
+              id: "t2-d",
+              task: 2,
+              prompt: "Sujet T2 D",
+              lastSeenOn: "2025-12-01",
+            },
+            {
+              id: "t2-a",
+              task: 2,
+              prompt: "Sujet T2 A",
+              lastSeenOn: "2025-10-01",
+            },
+            {
+              id: "t2-c",
+              task: 2,
+              prompt: "Sujet T2 C",
+              lastSeenOn: "2025-12-01",
+            },
+            {
+              id: "t2-b",
+              task: 2,
+              prompt: "Sujet T2 B",
+              lastSeenOn: "2025-11-01",
+            },
+            {
+              id: "t2-old",
+              task: 2,
+              prompt: "Sujet T2 ancien",
+              lastSeenOn: "2026-02-01",
+            },
+            {
+              id: "t3-z",
+              task: 3,
+              prompt: "Sujet T3 Z",
+              lastSeenOn: "2026-01-01",
+            },
+            {
+              id: "t3-y",
+              task: 3,
+              prompt: "Sujet T3 Y",
+              lastSeenOn: "2026-01-01",
+            },
+            {
+              id: "t3-x",
+              task: 3,
+              prompt: "Sujet T3 X",
+              lastSeenOn: "2025-12-15",
+            },
+            {
+              id: "t3-w",
+              task: 3,
+              prompt: "Sujet T3 W",
+              lastSeenOn: "2025-12-20",
+            },
+            {
+              id: "t3-old",
+              task: 3,
+              prompt: "Sujet T3 ancien",
+              lastSeenOn: "2026-03-01",
+            },
+          ]);
+          // Inserted out of date order so that ids do not follow dates.
+          latest = await insertSession(2025, 12);
+          older = await insertSession(2025, 11);
+          // Newer but without occurrences: not a "session" for listSessions.
+          emptyNewer = await insertSession(2026, 2);
+          expect(emptyNewer).toBeGreaterThan(latest);
+
+          for (const id of ["t2-a", "t2-b", "t2-c", "t2-d"]) {
+            await insertOccurrence(id, latest, 2);
+          }
+          // Published twice in the same month: still one subject.
+          await insertOccurrence("t2-c", latest, 2);
+          for (const id of ["t3-w", "t3-x", "t3-y", "t3-z"]) {
+            await insertOccurrence(id, latest, 3);
+          }
+          await insertOccurrence("t2-old", older, 2);
+          await insertOccurrence("t3-old", older, 3);
+          await insertOccurrence("t2-a", older, 2);
+        });
+
+        it("uses the most recent session, as listSessions()[0]", async () => {
+          const out = await service.featured();
+          const [first] = await service.listSessions();
+          expect(out.session).toEqual(first);
+          expect(out.session).toMatchObject({
+            id: latest,
+            year: 2025,
+            month: 12,
+          });
+        });
+
+        it("caps each task at 3 by default, tâche 2 first, in listExercises order", async () => {
+          const out = await service.featured();
+          const t2 = await service.listExercises({
+            task: 2,
+            sessionId: latest,
+          });
+          const t3 = await service.listExercises({
+            task: 3,
+            sessionId: latest,
+          });
+          expect(out.items).toEqual([
+            ...t2.items.slice(0, 3),
+            ...t3.items.slice(0, 3),
+          ]);
+          expect(out.items.map((i) => i.id)).toEqual([
+            "t2-c",
+            "t2-d",
+            "t2-b",
+            "t3-y",
+            "t3-z",
+            "t3-w",
+          ]);
+          expect(out.items.map((i) => i.task)).toEqual([2, 2, 2, 3, 3, 3]);
+        });
+
+        it("keeps the list item fields, publication counts included", async () => {
+          const out = await service.featured();
+          expect(out.items[0]).toEqual({
+            id: "t2-c",
+            task: 2,
+            prompt: "Sujet T2 C",
+            firstSeenOn: null,
+            lastSeenOn: "2025-12-01",
+            timesPublished: 2,
+            isImageBased: false,
+          });
+        });
+
+        it("never includes subjects only published in an older session", async () => {
+          const out = await service.featured(10);
+          const ids = out.items.map((i) => i.id);
+          expect(ids).not.toContain("t2-old");
+          expect(ids).not.toContain("t3-old");
+        });
+
+        it.each([
+          [1, ["t2-c", "t3-y"]],
+          [2, ["t2-c", "t2-d", "t3-y", "t3-z"]],
+          [4, ["t2-c", "t2-d", "t2-b", "t2-a", "t3-y", "t3-z", "t3-w", "t3-x"]],
+          [5, ["t2-c", "t2-d", "t2-b", "t2-a", "t3-y", "t3-z", "t3-w", "t3-x"]],
+        ])("caps each task at perTask = %i", async (perTask, ids) => {
+          const out = await service.featured(perTask);
+          expect(out.items.map((i) => i.id)).toEqual(ids);
+          expect(out.session?.id).toBe(latest);
+        });
+      });
+
+      it("returns only the tasks the latest session has", async () => {
+        await insertExercises([
+          {
+            id: "only-3",
+            task: 3,
+            prompt: "Seul sujet T3",
+            lastSeenOn: "2026-01-01",
+          },
+          {
+            id: "prev-2",
+            task: 2,
+            prompt: "Ancien sujet T2",
+            lastSeenOn: "2025-12-01",
+          },
+        ]);
+        const prev = await insertSession(2025, 12);
+        const cur = await insertSession(2026, 1);
+        await insertOccurrence("prev-2", prev, 2);
+        await insertOccurrence("only-3", cur, 3);
+        const out = await service.featured();
+        expect(out.session).toMatchObject({ id: cur, tache2: 0, tache3: 1 });
+        expect(out.items.map((i) => i.id)).toEqual(["only-3"]);
       });
     });
 
