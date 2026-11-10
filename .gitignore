@@ -82,3 +82,6 @@ audit-report.json
 # Mutation testing
 reports/
 .stryker-tmp/
+**/.next-e2e
+**/playwright-report/
+**/test-results/

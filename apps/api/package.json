@@ -11,6 +11,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "rotate-keys": "tsx scripts/rotate-keys.ts",
     "evals": "tsx evals/run.ts"
   },
@@ -51,13 +53,21 @@
     "@electric-sql/pglite": "^0.3.16",
     "@nestjs/cli": "^11.0.14",
     "@nestjs/schematics": "^11.0.10",
+    "@nestjs/testing": "11.1.17",
+    "@swc/core": "^1.16.22",
+    "@testcontainers/postgresql": "^12.2.1",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^7.0.12",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^3.2.7",
     "dotenv": "^16.4.7",
     "prettier": "^3.4.2",
+    "supertest": "^7.3.2",
+    "testcontainers": "^12.2.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
+    "unplugin-swc": "^2.0.0",
     "vitest": "^3.2.4"
   }
 }

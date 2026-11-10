@@ -35,6 +35,11 @@ If an installed tool or a repo script can produce something, run it and then edi
 | Import new monthly subjects (`packages/importer`)                                                              | `pnpm exercises:import [--month YYYY-MM \| --all \| --file page.html --month YYYY-MM] [--dry-run]`                   |
 | Rebuild the unapplied exercise data migration from a CSV export                                                | `pnpm exercises:seed-sql <csv>`                                                                                      |
 | Lint / format fixes                                                                                            | `pnpm lint:fix`, `pnpm format`                                                                                       |
+| Unit tests with coverage thresholds (per package `vitest.config.ts`)                                           | `pnpm test:coverage`                                                                                                 |
+| Integration tests (Supertest, Postgres + Mailpit in Testcontainers; Docker or Podman)                          | `pnpm test:integration`                                                                                              |
+| End-to-end tests (Playwright + axe; needs `pnpm infra:up`, fake voice provider)                                | `pnpm test:e2e`                                                                                                      |
+| Mutation testing on files changed vs `origin/main` / on everything                                             | `pnpm mutate` / `pnpm mutate:full`                                                                                   |
+| Check every API env variable is documented in `apps/api/.env.example`                                          | `pnpm env-schema:check`                                                                                              |
 | Dependencies                                                                                                   | `pnpm add` / `pnpm remove` (`-w` at root, `--filter` per package), never edit `package.json` or the lockfile by hand |
 
 Scaffold logic lives in `scripts/scaffold.mjs` with pure, tested helpers in `scripts/lib/scaffold-*.mjs`. If a repeated change has no scaffold yet, add one (helper + spec + table row) instead of writing the boilerplate again. After changing a scaffold or the files it edits (`app.module.ts`, `exam.contract.ts`, `packages/shared/src/index.ts`), run `pnpm scaffold:smoke` on a clean tree: it scaffolds a throw-away feature and page, typechecks and lints them, then reverts.
@@ -45,7 +50,7 @@ When a new generator or script is added, add it to this table.
 
 - **Separate agents:** one agent never writes both the tests and the production code of the same change. The test agent writes tests from the requirement (PRD, issue) and the public interface; the code agent makes them pass and must not edit them. If a test looks wrong, report it instead of changing it.
 - **Separate commits:** the `test(...)` commit comes before the implementation commit.
-- **Mutation mindset:** review every change as if mutants were applied (boundaries `<`/`<=`, negated conditions, removed guards such as `user_id` filters and auth checks, swapped operators, dropped return values) and add tests so each would fail. Aim for ≥ 80% mutation score on touched code once Stryker is installed; ignore equivalent mutants with a short reason.
+- **Mutation mindset:** review every change as if mutants were applied (boundaries `<`/`<=`, negated conditions, removed guards such as `user_id` filters and auth checks, swapped operators, dropped return values) and add tests so each would fail. After any change, run `pnpm mutate` (Stryker, incremental, on the files changed against `origin/main`), aim for ≥ 80% on the touched files and report the score; surviving mutants are fixed by the test agent only. Ignore equivalent mutants with a short reason.
 - **User isolation is in the API, not the DB** (no RLS): every query filters by `user_id`. Add a cross-user test with any new query.
 - Unit tests are colocated (`*.test.ts` / `*.spec.ts`, Vitest everywhere). DB-backed specs run on PGlite with the real migrations.
 
@@ -54,7 +59,9 @@ When a new generator or script is added, add it to this table.
 - Setup (Docker or Podman): `pnpm install && pnpm infra:up && pnpm setup:env && pnpm samples:seed` (the exercise bank arrives with the migrations). `infra:up` starts Postgres + Mailpit (`docker-compose.dev.yml`) and migrates; `setup:env` writes `apps/api/.env` and `apps/web/.env.local` (keeps secrets, OAuth credentials, port overrides). `pnpm infra:down` / `infra:reset` stop or wipe it.
 - Dev login: `developer@parle-tcf.local`, password from `pnpm local:credentials`.
 - `pnpm dev`: web :3000 + api :3001. Mailpit UI: http://localhost:8025 (all local emails land there).
-- `pnpm verify`: full pipeline (node version, format:check, lint, typecheck, tests, script tests, build). `pnpm push` runs it.
+- `pnpm verify`: full pipeline (node version, format:check, lint, typecheck, unit tests with coverage thresholds, script tests, build, env-schema:check). `pnpm push` runs it. Integration, e2e and mutation tests run separately (CI: `ci.yml`, nightly `mutation.yml`).
+- Lint and format: one root `eslint.config.mjs` (typed rules, `import/no-cycle`, Next/React/a11y for web) and one root `.prettierrc.json`; exam content under `apps/api/config/` is never reformatted.
+- Test modes: `VOICE_PROVIDER=fake` (API) swaps OpenAI/Gemini and the corrector for local fakes (refused in production); web builds with `NEXT_PUBLIC_FAKE_VOICE=true` play a scripted session (`lib/fake-live.ts`). Integration specs use `apps/api/test/integration/create-test-app.ts`.
 - Single test: `pnpm --filter @parle-tcf/<api|web|db|shared> exec vitest run <path>`.
 
 ## Architecture notes

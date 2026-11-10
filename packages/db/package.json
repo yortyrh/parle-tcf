@@ -30,6 +30,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate && prettier --write --log-level warn migrations",
     "db:migrate": "node --env-file-if-exists=../../apps/api/.env dist/migrate.js"
   },
@@ -41,6 +42,7 @@
     "@electric-sql/pglite": "^0.3.14",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.15.0",
+    "@vitest/coverage-v8": "^3.2.7",
     "drizzle-kit": "^0.31.5",
     "prettier": "^3.4.2",
     "typescript": "^5.9.3",
