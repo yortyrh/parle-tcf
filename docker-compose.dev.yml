@@ -1,0 +1,34 @@
+# Local development infrastructure only: the apps run on the host (`pnpm dev`).
+# Start with `pnpm infra:up` (also applies migrations), stop with `pnpm infra:down`.
+# Ports are overridable; `pnpm setup:env` reads the same variables.
+name: parle-tcf-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: parle
+      POSTGRES_PASSWORD: parle
+      POSTGRES_DB: parle
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - parle-tcf-dev-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parle -d parle"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # SMTP sink for verification, reset and account-deletion emails. Inbox UI on :8025.
+  mailpit:
+    image: axllent/mailpit:v1.33.0
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+
+volumes:
+  parle-tcf-dev-pgdata:
