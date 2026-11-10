@@ -32,4 +32,6 @@ export const API_ROUTES = {
   audioDownloadUrl: "/audio/download-url",
   exercisesList: "/exercises/list",
   exercisesSessions: "/exercises/sessions",
+  /** Public (no session): landing page teaser. */
+  exercisesFeatured: "/exercises/featured",
 } as const;

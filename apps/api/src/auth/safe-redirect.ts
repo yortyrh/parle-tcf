@@ -1,5 +1,5 @@
 /** Default landing page after sign-in (mirrors apps/web/lib/safe-redirect.ts). */
-export const DEFAULT_REDIRECT = "/tcf";
+export const DEFAULT_REDIRECT = "/tableau-de-bord";
 
 /**
  * Accepts only app-relative paths (`/tcf/tache2`), rejecting absolute and

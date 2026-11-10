@@ -224,6 +224,24 @@ export class ExerciseService {
   }
 
   /**
+   * Public teaser for the landing page: a few subjects of each task from the
+   * latest month (tâche 2 first, in the topic browser's order).
+   */
+  async featured(perTask = 3): Promise<{
+    session: ExerciseSessionSummary | null;
+    items: ExerciseListItem[];
+  }> {
+    const [session] = await this.listSessions();
+    if (!session) return { session: null, items: [] };
+    const [t2, t3] = await Promise.all(
+      ([2, 3] as const).map((task) =>
+        this.listExercises({ task, sessionId: session.id, limit: perTask }),
+      ),
+    );
+    return { session, items: [...t2!.items, ...t3!.items] };
+  }
+
+  /**
    * Picks the exercise for a task. A requested id must belong to that task;
    * otherwise it is ignored (null) rather than silently serving another one.
    */

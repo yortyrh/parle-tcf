@@ -28,6 +28,7 @@ import {
   listExercisesInputSchema,
   listExercisesOutputSchema,
   listExerciseSessionsOutputSchema,
+  featuredExercisesOutputSchema,
 } from "@parle-tcf/shared";
 import { z } from "zod";
 
@@ -102,6 +103,10 @@ export const exercisesSessionsProcedure = post(API_ROUTES.exercisesSessions)
   .input(z.object({}).optional())
   .output(listExerciseSessionsOutputSchema);
 
+export const exercisesFeaturedProcedure = post(API_ROUTES.exercisesFeatured)
+  .input(z.object({}).optional())
+  .output(featuredExercisesOutputSchema);
+
 export const examContract = populateContractRouterPaths({
   exam: {
     session: {
@@ -135,5 +140,6 @@ export const examContract = populateContractRouterPaths({
   exercises: {
     list: exercisesListProcedure,
     sessions: exercisesSessionsProcedure,
+    featured: exercisesFeaturedProcedure,
   },
 });

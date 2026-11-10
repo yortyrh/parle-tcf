@@ -30,6 +30,7 @@ import { ProviderSettingsService } from "./settings/provider-settings.service.js
 import { SettingsController } from "./settings/settings.controller.js";
 import { ExerciseController } from "./exercise/exercise.controller.js";
 import { StaleSweeperService } from "./attempts/stale-sweeper.service.js";
+import { PublicExerciseController } from "./exercise/public-exercise.controller.js";
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { StaleSweeperService } from "./attempts/stale-sweeper.service.js";
     AttemptsController,
     AudioController,
     ExerciseController,
+    PublicExerciseController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

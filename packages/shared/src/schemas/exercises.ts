@@ -35,6 +35,13 @@ export const listExerciseSessionsOutputSchema = z.object({
   sessions: z.array(exerciseSessionSchema),
 });
 
+/** Landing page teaser: the latest month and a few of its subjects. */
+export const featuredExercisesOutputSchema = z.object({
+  session: exerciseSessionSchema.nullable(),
+  items: z.array(exerciseListItemSchema),
+});
+
+export type FeaturedExercises = z.infer<typeof featuredExercisesOutputSchema>;
 export type ListExercisesInput = z.input<typeof listExercisesInputSchema>;
 export type ListExercisesOutput = z.infer<typeof listExercisesOutputSchema>;
 export type ExerciseListItem = z.infer<typeof exerciseListItemSchema>;
