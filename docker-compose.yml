@@ -18,14 +18,22 @@ services:
       timeout: 5s
       retries: 10
 
-  # Applies the Drizzle migrations once; the API waits for it to finish.
+  # Applies the Drizzle migrations once, then fills an empty exercise bank: the private bank
+  # with EXERCISE_DATA_TOKEN, the public sample bank otherwise. The API waits for it to finish.
   migrate:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    command: ['node', 'packages/db/dist/migrate.js']
+    command:
+      - sh
+      - -c
+      - >-
+        node packages/db/dist/migrate.js &&
+        if [ -n "$$EXERCISE_DATA_TOKEN" ]; then node packages/db/dist/load-exercise-bank.js;
+        else node packages/db/dist/load-exercise-bank.js --file packages/db/seed/sample-exercise-bank.sql; fi
     environment:
       - DATABASE_URL=postgresql://parle:parle@postgres:5432/parle
+      - EXERCISE_DATA_TOKEN=${EXERCISE_DATA_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

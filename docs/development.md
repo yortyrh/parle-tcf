@@ -33,12 +33,13 @@ Requires Docker or Podman for PostgreSQL, Mailpit and the S3-compatible storage.
 
 ```bash
 pnpm install
-pnpm infra:up        # Postgres + Mailpit + RustFS (docker-compose.dev.yml), migrations, audio bucket
+pnpm infra:up        # Postgres + Mailpit + RustFS, migrations, exercise bank, audio bucket
 pnpm setup:env       # writes apps/api/.env and apps/web/.env.local (secrets generated once, then kept)
 pnpm samples:seed    # dev users; passwords: pnpm local:credentials
 pnpm dev             # web http://localhost:3000, api http://localhost:3001
 ```
 
+- Exercise bank: without `EXERCISE_DATA_TOKEN`, `pnpm infra:up` loads the original sample bank (32 subjects). Maintainers with access to the private data repository run `EXERCISE_DATA_TOKEN=$(gh auth token) pnpm exercises:load --force` for the real one; anyone can add real subjects with `pnpm exercises:import`.
 - Dev login: `developer@parle-tcf.local`, password from `pnpm local:credentials`. Then add an OpenAI or Gemini API key under **Paramètres**.
 - Email: every local email lands in Mailpit (http://localhost:8025).
 - Audio storage: RustFS on http://localhost:9000 (console on http://localhost:9001).

@@ -38,6 +38,7 @@
     "samples:seed": "pnpm --filter @parle-tcf/db build && node scripts/seed-dev-users.mjs",
     "local:credentials": "node scripts/show-local-credentials.mjs",
     "exercises:seed-sql": "pnpm --filter @parle-tcf/db build && node scripts/exercises-csv-to-sql.mjs",
+    "exercises:load": "pnpm --filter @parle-tcf/db build && node --env-file-if-exists=apps/api/.env packages/db/dist/load-exercise-bank.js",
     "exercises:import": "pnpm --filter @parle-tcf/importer... build && node --env-file-if-exists=apps/api/.env packages/importer/dist/cli.js",
     "deploy:railway": "node scripts/deploy.mjs"
   },

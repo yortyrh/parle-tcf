@@ -23,7 +23,8 @@
   },
   "files": [
     "dist",
-    "migrations"
+    "migrations",
+    "seed"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -5,7 +5,9 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/schema/**'],
+      // load-exercise-bank.ts is the CLI entry (env, Postgres pool, exit codes); its logic lives
+      // in exercise-bank-loader.ts, which is tested.
+      exclude: ['src/**/*.test.ts', 'src/schema/**', 'src/load-exercise-bank.ts'],
       reporter: ['text-summary', 'html', 'lcov', 'json-summary'],
       reportsDirectory: 'coverage',
       thresholds: { lines: 80, branches: 75, functions: 80, statements: 80 },

@@ -1,17 +1,25 @@
 #!/usr/bin/env node
 /**
  * Runs after `docker compose up --wait` (`pnpm infra:up`): applies the Drizzle
- * migrations to the local database and creates the audio bucket with its CORS
- * rules, retrying while Postgres and the object storage finish starting.
- * Idempotent; safe to re-run.
+ * migrations to the local database, fills an empty exercise bank (the private bank when
+ * EXERCISE_DATA_TOKEN is set, otherwise the public sample bank) and creates the audio
+ * bucket with its CORS rules, retrying while Postgres and the object storage finish
+ * starting. Idempotent; safe to re-run.
  */
+import { readFileSync } from 'node:fs';
 import {
   CreateBucketCommand,
   HeadBucketCommand,
   PutBucketCorsCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { runMigrations } from '@parle-tcf/db';
+import {
+  SAMPLE_EXERCISE_BANK_PATH,
+  createDb,
+  fetchExerciseBankSql,
+  loadExerciseBank,
+  runMigrations,
+} from '@parle-tcf/db';
 import { devInfra, devStorage, storageCorsRules } from './lib/local-env.mjs';
 
 const infra = devInfra(process.env);
@@ -59,6 +67,30 @@ async function ensureBucket() {
 
 await retry('migrations', () => runMigrations(url));
 console.log(`infra:init: migrations applied (${url.replace(/:[^:@/]+@/, ':***@')})`);
+/** Fills an empty bank; a bank that already has subjects is left alone. */
+async function loadBank() {
+  const token = process.env.EXERCISE_DATA_TOKEN?.trim();
+  const handle = createDb({ url, max: 1 });
+  try {
+    const text = token
+      ? await fetchExerciseBankSql({ token })
+      : readFileSync(SAMPLE_EXERCISE_BANK_PATH, 'utf8');
+    const result = await loadExerciseBank(handle.db, text);
+    return `${result} (${token ? 'private bank' : 'sample bank'})`;
+  } finally {
+    await handle.close();
+  }
+}
+
+try {
+  console.log(`infra:init: exercise bank ${await loadBank()}`);
+} catch (error) {
+  console.error(
+    'infra:init: exercise bank failed:',
+    error instanceof Error ? error.message : error
+  );
+  process.exit(1);
+}
 await retry(`bucket setup on ${storage.endpoint}`, ensureBucket);
 console.log(`infra:init: bucket ${storage.bucket} ready on ${storage.endpoint}`);
 console.log(`infra:init: Mailpit inbox on http://localhost:${infra.mailpitUiPort}`);

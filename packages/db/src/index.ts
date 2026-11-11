@@ -32,3 +32,4 @@ export {
 export { MIGRATIONS_FOLDER, runMigrations } from './migrate';
 export * from './schema';
 export * from './exercise-bank';
+export * from './exercise-bank-loader';

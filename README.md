@@ -17,7 +17,7 @@ The app is in French; the code and documentation are in English.
 - **CEFR evaluation of every task:** global level, five criteria (task fulfilment, coherence, vocabulary, grammar, fluency) with a comment each, and an overall level for the full exam.
 - **Corrected transcript:** each of your sentences with its errors highlighted by type and a corrected version next to it.
 - **Progress over time:** history, progression charts per task, side-by-side comparison of two attempts on the same subject, and a dashboard that suggests what to practise next.
-- **Monthly exam subjects:** a bank of real Tâche 2 and 3 subjects, searchable by month and keyword.
+- **Monthly exam subjects:** a bank of Tâche 2 and 3 subjects, searchable by month and keyword, kept up to date by an importer (the repository ships an original sample bank).
 - **Your key, your costs:** API keys are encrypted at rest (AES-256-GCM) and never sent back to the browser. Costs are shown before and after each session, with daily and monthly caps.
 - **Private by default:** optional audio recording only with explicit consent; deleting an attempt or the account deletes everything.
 
@@ -46,7 +46,7 @@ Requirements: [pnpm](https://pnpm.io/installation) and Docker (or Podman). pnpm 
 
 ```bash
 pnpm install
-pnpm infra:up        # Postgres + Mailpit + S3 storage, migrations (exercise bank included)
+pnpm infra:up        # Postgres + Mailpit + S3 storage, migrations, sample exercise bank
 pnpm setup:env       # writes apps/api/.env and apps/web/.env.local
 pnpm samples:seed    # dev users; passwords: pnpm local:credentials
 pnpm dev             # web http://localhost:3000, api http://localhost:3001

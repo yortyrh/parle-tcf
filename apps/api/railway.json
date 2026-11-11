@@ -5,7 +5,9 @@
     "dockerfilePath": "apps/api/Dockerfile"
   },
   "deploy": {
-    "preDeployCommand": ["node packages/db/dist/migrate.js"],
+    "preDeployCommand": [
+      "node packages/db/dist/migrate.js && node packages/db/dist/load-exercise-bank.js"
+    ],
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE"

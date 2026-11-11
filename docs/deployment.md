@@ -13,7 +13,7 @@ docker compose up -d --build
 ```
 
 - Web on http://localhost (host port 80 → container 3000); API on http://localhost:3001 (`/health`).
-- A one-shot `migrate` service applies the migrations before the API starts.
+- A one-shot `migrate` service applies the migrations and fills an empty exercise bank (private bank with `EXERCISE_DATA_TOKEN`, sample bank otherwise) before the API starts.
 - The web image inlines `NEXT_PUBLIC_EXAM_API_URL` at build time (build args in `docker-compose.yml`).
 
 More details: [`DOCKER.md`](../DOCKER.md).
@@ -22,10 +22,10 @@ More details: [`DOCKER.md`](../DOCKER.md).
 
 Two services from the same repository, root directory empty (monorepo root):
 
-| Service | Config file             | Notes                                                                       |
-| ------- | ----------------------- | --------------------------------------------------------------------------- |
-| API     | `apps/api/railway.json` | Pre-deploy `node packages/db/dist/migrate.js` applies migrations; `/health` |
-| Web     | `apps/web/railway.json` | Needs the API's public URL at build time                                    |
+| Service | Config file             | Notes                                                                                                                                |
+| ------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| API     | `apps/api/railway.json` | Pre-deploy applies migrations, then fills an empty exercise bank from the private data repository (`EXERCISE_DATA_TOKEN`); `/health` |
+| Web     | `apps/web/railway.json` | Needs the API's public URL at build time                                                                                             |
 
 Order: deploy the **API**, set the web service's `NEXT_PUBLIC_EXAM_API_URL` to its public URL and deploy the **web** app, then set the API's `CORS_ORIGINS` to the web URL. Rebuild the web app whenever the API URL changes (Next.js inlines it at build time).
 
@@ -35,18 +35,19 @@ Order: deploy the **API**, set the web service's `NEXT_PUBLIC_EXAM_API_URL` to i
 
 Every API variable is documented in `apps/api/.env.example` (`pnpm env-schema:check` fails otherwise) and validated at boot by `apps/api/src/config/env.ts`. The main ones:
 
-| Variable                                             | Required    | Description                                                                 |
-| ---------------------------------------------------- | ----------- | --------------------------------------------------------------------------- |
-| `DATABASE_URL`                                       | Yes         | PostgreSQL connection string                                                |
-| `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` / `WEB_URL` | Yes         | Auth secret (32+ chars), public API URL, public web URL                     |
-| `ENCRYPTION_KEYS` / `ENCRYPTION_KEY_CURRENT`         | Yes         | Master keys for users' provider API keys (`v1:<base64 32 bytes>`)           |
-| `RESEND_API_KEY` or `SMTP_URL`, and `MAIL_FROM`      | Yes in prod | Transactional email; production refuses to start without a transport        |
-| `CORS_ORIGINS`                                       | Yes in prod | Web origins allowed to call the API                                         |
-| `GITHUB_*` / `GOOGLE_*`                              | No          | OAuth providers (client id and secret)                                      |
-| `OPENAI_REALTIME_MODEL` / `GEMINI_LIVE_MODEL`        | No          | Default voice models (built-in: `gpt-realtime-2.1-mini`, `gemini-3.8-live`) |
-| `DEFAULT_DAILY_MINUTES` / `DEFAULT_MONTHLY_COST_USD` | No          | Usage caps per user (defaults 60 min/day, 10 USD/month)                     |
-| `S3_*`                                               | No          | Audio recording storage; unset disables recording                           |
-| `THROTTLE_LIMIT_PER_MINUTE`                          | No          | Requests per minute per client before HTTP 429 (default 120)                |
+| Variable                                             | Required    | Description                                                                            |
+| ---------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                       | Yes         | PostgreSQL connection string                                                           |
+| `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` / `WEB_URL` | Yes         | Auth secret (32+ chars), public API URL, public web URL                                |
+| `ENCRYPTION_KEYS` / `ENCRYPTION_KEY_CURRENT`         | Yes         | Master keys for users' provider API keys (`v1:<base64 32 bytes>`)                      |
+| `RESEND_API_KEY` or `SMTP_URL`, and `MAIL_FROM`      | Yes in prod | Transactional email; production refuses to start without a transport                   |
+| `CORS_ORIGINS`                                       | Yes in prod | Web origins allowed to call the API                                                    |
+| `GITHUB_*` / `GOOGLE_*`                              | No          | OAuth providers (client id and secret)                                                 |
+| `OPENAI_REALTIME_MODEL` / `GEMINI_LIVE_MODEL`        | No          | Default voice models (built-in: `gpt-realtime-2.1-mini`, `gemini-3.8-live`)            |
+| `DEFAULT_DAILY_MINUTES` / `DEFAULT_MONTHLY_COST_USD` | No          | Usage caps per user (defaults 60 min/day, 10 USD/month)                                |
+| `S3_*`                                               | No          | Audio recording storage; unset disables recording                                      |
+| `EXERCISE_DATA_TOKEN`                                | New envs    | Read-only token for the private exercise bank, loaded into an empty bank at pre-deploy |
+| `THROTTLE_LIMIT_PER_MINUTE`                          | No          | Requests per minute per client before HTTP 429 (default 120)                           |
 
 Web build-time variables (`apps/web/.env.example`): `NEXT_PUBLIC_EXAM_API_URL` (required), `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_AUTH_GITHUB_OAUTH_ENABLED`, `NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED`.
 

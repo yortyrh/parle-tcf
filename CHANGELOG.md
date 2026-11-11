@@ -31,6 +31,7 @@ Earlier history of the web app lives in [`apps/web/CHANGELOG.md`](./apps/web/CHA
 - Examiner prompts restructured after the OpenAI and Gemini prompting guides (labelled sections, French pinned, unclear-audio and tool rules, no contradictions).
 - Dependencies updated within their ranges, plus Next.js 15.5.29 and nodemailer 10, fixing the known advisories that had a patch.
 - Documentation: one page per feature in `docs/`, `llms.txt`, rewritten README; every document is in English (PRD translated to `docs/prd.md`).
+- The real exercise bank (third-party texts) moved to the private repository `yortyrh/parle-tcf-data`, loaded into an empty bank at pre-deploy, by `pnpm infra:up` and by `pnpm exercises:load`; the public repository ships an original sample bank and migration 0003 keeps only its structural part (ADR 0006).
 - Docker builds no longer send nested `node_modules`/build output to the context; the Turborepo cache no longer stores `.next/cache`.
 - Renamed the project to **parle-tcf** and the workspace scope to `@parle-tcf/*`.
 - Zod 4 everywhere (`apps/api` and `packages/shared` moved from Zod 3).

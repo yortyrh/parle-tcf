@@ -1,6 +1,6 @@
 /**
- * Builds the SQL of the exercise-bank data migration (packages/db/migrations/0003_*)
- * from apps/api/config/tcf-exercises.csv. Pure: CSV records in, SQL text out.
+ * Builds exercise-bank SQL (the public sample bank, or the real bank kept in the private
+ * repository yortyrh/parle-tcf-data) from a CSV export. Pure: CSV records in, SQL text out.
  * Regenerate with `pnpm exercises:seed-sql` (scripts/exercises-csv-to-sql.mjs).
  *
  * Subjects republished in several months collapse into one exercise (smallest id
