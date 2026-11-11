@@ -24,3 +24,4 @@ apps/web/fonts/
 .cursor/
 *.pem
 **/.next-e2e
+**/.next-dev

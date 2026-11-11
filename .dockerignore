@@ -3,6 +3,7 @@ node_modules
 
 # Build artifacts (rebuilt inside Docker)
 .next
+.next-dev
 dist
 .turbo
 

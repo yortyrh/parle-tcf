@@ -85,5 +85,6 @@ audit-report.json
 reports/
 .stryker-tmp/
 **/.next-e2e
+**/.next-dev
 **/playwright-report/
 **/test-results/

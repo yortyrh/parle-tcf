@@ -27,6 +27,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/.next/**',
       '**/.next-e2e/**',
+      '**/.next-dev/**',
       '**/coverage/**',
       '**/.turbo/**',
       '**/reports/**',
