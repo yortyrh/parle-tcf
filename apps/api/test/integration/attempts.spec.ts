@@ -175,7 +175,8 @@ describe('attempts', () => {
       expect(detail.evaluation).toMatchObject({
         globalLevel: 'B1',
         summary: 'Évaluation simulée (mode test).',
-        correctorModel: 'gpt-4o-mini',
+        // The default OpenAI corrector (the user set no text model).
+        correctorModel: 'gpt-6-luna',
       });
       expect(Object.values(detail.evaluation?.criteria ?? {}).map((c) => c.level)).toEqual([
         'B1',

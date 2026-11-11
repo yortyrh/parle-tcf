@@ -144,6 +144,25 @@ describe('runEvaluation', () => {
     expect(res).toEqual({ output: goodOutput, inputTokens: 7, outputTokens: 3 });
     expect(userPromptOf(model)).toBe('le prompt');
   });
+
+  it('asks for no reasoning and temperature 0 on every try', async () => {
+    let n = 0;
+    const model = new MockLanguageModelV4({
+      doGenerate: () => {
+        n += 1;
+        if (n < 3) return Promise.reject(new Error(`échec ${n}`));
+        return Promise.resolve(result(JSON.stringify(goodOutput)));
+      },
+    });
+
+    await runEvaluation(model, 'p');
+
+    expect(model.doGenerateCalls).toHaveLength(3);
+    for (const call of model.doGenerateCalls) {
+      expect(call.providerOptions).toEqual({ openai: { reasoningEffort: 'none' } });
+      expect(call.temperature).toBe(0);
+    }
+  });
 });
 
 describe('providerModelFactory', () => {
@@ -334,13 +353,15 @@ describe('EvaluationService', () => {
       return { calls, factory };
     };
 
+    it('defaults OpenAI users to gpt-6-luna (gpt-4o-mini is removed)', () => {
+      expect(DEFAULT_TEXT_MODEL).toBe('gpt-6-luna');
+    });
+
     it('uses the default OpenAI text model with the user key', async () => {
       const { calls, factory } = recordingFactory(goodModel());
       await new EvaluationService(testDb.db, settings, factory).evaluate(userId, attemptId);
-      expect(calls).toEqual([['openai', KEY, DEFAULT_TEXT_MODEL]]);
-      expect((await attempts.get(userId, attemptId)).evaluation?.correctorModel).toBe(
-        DEFAULT_TEXT_MODEL
-      );
+      expect(calls).toEqual([['openai', KEY, 'gpt-6-luna']]);
+      expect((await attempts.get(userId, attemptId)).evaluation?.correctorModel).toBe('gpt-6-luna');
     });
 
     it('defaults Gemini users to gemini-3.5-flash-lite (gemini-2.5-flash shuts down)', () => {
@@ -443,7 +464,8 @@ describe('EvaluationService', () => {
         new MockLanguageModelV4({ doGenerate: result(JSON.stringify(goodOutput), tokens) })
       ).evaluate(userId, attemptId);
       const added = estimateCost(DEFAULT_TEXT_MODEL, tokens.input, tokens.output) ?? 0;
-      expect(added).toBeGreaterThan(0.5);
+      // gpt-6-luna: 2 M × 0.1 $/M + 1 M × 0.5 $/M.
+      expect(added).toBeCloseTo(0.7, 6);
       expect(Number((await rowOf(attemptId)).estimatedCostUsd)).toBeCloseTo(before + added, 4);
     });
 
