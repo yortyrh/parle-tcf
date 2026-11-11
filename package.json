@@ -12,7 +12,7 @@
     "test": "turbo run test",
     "format": "prettier --write . --log-level warn",
     "format:check": "prettier --check . --log-level warn",
-    "prepare": "lefthook install",
+    "prepare": "if [ -e .git ]; then lefthook install; fi",
     "lint:fix": "turbo run lint -- --fix",
     "test:scripts": "vitest run --config vitest.config.mjs",
     "verify": "node scripts/check-node-version.mjs && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm test:scripts && pnpm build && pnpm env-schema:check",

@@ -1,11 +1,10 @@
 # syntax=docker/dockerfile:1
 # Exercise importer, run as a Railway cron service. Plain HTTP only (no browser).
 # Build context MUST be the repository root.
-
-ARG NODE_VERSION=24
+# Node 24 is pinned in every FROM (not a build ARG): Railway overrode the ARG with 22.
 
 # --- Stage 1: Prune ---
-FROM node:${NODE_VERSION}-slim AS pruner
+FROM node:24-slim AS pruner
 
 RUN npm install -g pnpm@10 turbo@^2
 WORKDIR /app
@@ -13,7 +12,7 @@ COPY . .
 RUN turbo prune @parle-tcf/importer --docker
 
 # --- Stage 2: Install ---
-FROM node:${NODE_VERSION}-slim AS installer
+FROM node:24-slim AS installer
 
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y ca-certificates python3 make g++ && \
@@ -26,7 +25,7 @@ COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 
 # --- Stage 3: Build ---
-FROM node:${NODE_VERSION}-slim AS builder
+FROM node:24-slim AS builder
 
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y ca-certificates python3 make g++ && \
@@ -40,7 +39,7 @@ COPY --from=pruner /app/out/full/ .
 RUN turbo run build --filter=@parle-tcf/importer
 
 # --- Stage 4: Runner ---
-FROM node:${NODE_VERSION}-slim AS runner
+FROM node:24-slim AS runner
 
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y ca-certificates && \
