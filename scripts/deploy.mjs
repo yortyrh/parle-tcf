@@ -145,16 +145,28 @@ for (const service of services) {
 
   const deadline = Date.now() + DEPLOY_TIMEOUT_MS;
   let outcome = 'pending';
+  let deploymentId = null;
   while (outcome === 'pending' && Date.now() < deadline) {
     const latest = await latestDeployment(service);
-    if (latest && latest.id !== before) outcome = deploymentOutcome(latest.status);
+    if (latest && latest.id !== before) {
+      deploymentId = latest.id;
+      outcome = deploymentOutcome(latest.status);
+    }
     if (outcome === 'pending') await sleep(POLL_MS);
   }
-  if (outcome !== 'ok') {
+  if (outcome === 'skipped') {
     fail(
-      `${service} deployment ${outcome === 'failed' ? 'failed' : 'timed out'}. ` +
-        `Logs: railway logs -s ${service}`
+      `Railway skipped the ${service} build (its watch paths saw no change), so nothing was ` +
+        `deployed. Remove the service watch paths (Settings > Build > Watch Paths) and ` +
+        `build.watchPatterns in apps/${service}/railway.json, then deploy again.`
     );
+  }
+  if (outcome !== 'ok') {
+    const logs = deploymentId
+      ? `Build logs: railway logs ${deploymentId} -s ${service} --build; ` +
+        `runtime logs: railway logs ${deploymentId} -s ${service} --deployment`
+      : `Logs: railway logs -s ${service}`;
+    fail(`${service} deployment ${outcome === 'failed' ? 'failed' : 'timed out'}. ${logs}`);
   }
   const healthPath = service === 'api' ? '/health' : '/';
   if (!(await probe(urls[service], healthPath))) {

@@ -11,8 +11,9 @@ export const SERVICES = ['api', 'web'];
 
 const MIN_AUTH_SECRET_LENGTH = 32;
 const ENCRYPTION_KEY_ENTRY = /^[^:,\s]+:[A-Za-z0-9+/_-]+={0,2}$/;
-const TERMINAL_OK = new Set(['SUCCESS']);
-const TERMINAL_FAILED = new Set(['FAILED', 'CRASHED', 'REMOVED', 'SKIPPED']);
+/** SLEEPING = deployed and healthy, idle under Railway serverless. */
+const TERMINAL_OK = new Set(['SUCCESS', 'SLEEPING']);
+const TERMINAL_FAILED = new Set(['FAILED', 'CRASHED', 'REMOVED']);
 
 /** Parses `railway variables --kv` output (KEY=value lines) into an object. */
 export function parseKv(text) {
@@ -186,9 +187,13 @@ export function checkConsistency({ apiVars, webVars, apiUrl, webUrl }) {
   return problems;
 }
 
-/** `'ok' | 'failed' | 'pending'` for a Railway deployment status. */
+/**
+ * `'ok' | 'skipped' | 'failed' | 'pending'` for a Railway deployment status.
+ * `skipped`: Railway did not build because its watch paths saw no change, so nothing was deployed.
+ */
 export function deploymentOutcome(status) {
   if (TERMINAL_OK.has(status)) return 'ok';
+  if (status === 'SKIPPED') return 'skipped';
   if (TERMINAL_FAILED.has(status)) return 'failed';
   return 'pending';
 }

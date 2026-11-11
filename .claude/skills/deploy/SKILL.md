@@ -13,7 +13,9 @@ pnpm deploy:railway           # api, then web
 pnpm deploy:railway api       # one service (or: web)
 ```
 
-Use `timeout: 600000` or run in the background: builds take minutes.
+Use `timeout: 600000` or run in the background: builds take minutes. Never pipe the output (`| tail`, `| grep`): the pipe hides the script's exit code and a failed deploy looks like a success. Read the full output.
+
+No watch paths: neither `apps/*/railway.json` (`build.watchPatterns`) nor the Railway service settings may define them. With watch paths Railway skips `railway up` builds it thinks are unchanged, and nothing gets deployed (the script reports `skipped`).
 
 ## What the script does
 
