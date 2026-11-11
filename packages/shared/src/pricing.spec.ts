@@ -22,6 +22,21 @@ describe('estimateCost', () => {
     expect(MODEL_PRICES['gemini-3.8-live']).toEqual({ inputPerM: 3, outputPerM: 12 });
   });
 
+  it('prices the replacement corrector models per million tokens', () => {
+    expect(MODEL_PRICES['gpt-6-luna']).toEqual({ inputPerM: 0.1, outputPerM: 0.5 });
+    expect(MODEL_PRICES['gemini-3.5-flash-lite']).toEqual({ inputPerM: 0.3, outputPerM: 2.5 });
+    expect(estimateCost('gpt-6-luna', 1_000_000, 0)).toBeCloseTo(0.1);
+    expect(estimateCost('gpt-6-luna', 0, 1_000_000)).toBeCloseTo(0.5);
+    expect(estimateCost('gemini-3.5-flash-lite', 1_000_000, 0)).toBeCloseTo(0.3);
+    expect(estimateCost('gemini-3.5-flash-lite', 0, 1_000_000)).toBeCloseTo(2.5);
+  });
+
+  it('keeps the prices of the corrector models being retired', () => {
+    expect(MODEL_PRICES['gpt-4o-mini']).toEqual({ inputPerM: 0.15, outputPerM: 0.6 });
+    expect(MODEL_PRICES['gemini-2.5-flash']).toEqual({ inputPerM: 0.3, outputPerM: 2.5 });
+    expect(MODEL_PRICES['gemini-2.5-flash-lite']).toEqual({ inputPerM: 0.1, outputPerM: 0.4 });
+  });
+
   it('has a price for both default voice models', () => {
     expect(estimateCost(DEFAULT_OPENAI_REALTIME_MODEL, 1_000_000, 1_000_000)).toBeCloseTo(30);
     expect(estimateCost(DEFAULT_GEMINI_LIVE_MODEL, 1_000_000, 1_000_000)).toBeCloseTo(15);
@@ -36,6 +51,8 @@ describe('estimateCost', () => {
   it('is null for a model id close to a known one but not listed', () => {
     expect(estimateCost('gpt-realtime-2.1-nano', 1000, 1000)).toBeNull();
     expect(estimateCost('gemini-3.8-live-preview', 1000, 1000)).toBeNull();
+    expect(estimateCost('gpt-6-luna-mini', 1000, 1000)).toBeNull();
+    expect(estimateCost('gemini-3.5-flash', 1000, 1000)).toBeNull();
   });
 
   it('is zero without tokens and null for an unknown model', () => {

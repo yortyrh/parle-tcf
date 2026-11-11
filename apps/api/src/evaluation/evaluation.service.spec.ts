@@ -343,6 +343,10 @@ describe('EvaluationService', () => {
       );
     });
 
+    it('defaults Gemini users to gemini-3.5-flash-lite (gemini-2.5-flash shuts down)', () => {
+      expect(DEFAULT_GEMINI_TEXT_MODEL).toBe('gemini-3.5-flash-lite');
+    });
+
     it('uses the default Gemini text model for a Gemini user', async () => {
       const geminiSettings = new ProviderSettingsService(
         testDb.db,
@@ -355,7 +359,10 @@ describe('EvaluationService', () => {
       });
       const { calls, factory } = recordingFactory(goodModel());
       await new EvaluationService(testDb.db, geminiSettings, factory).evaluate(userId, attemptId);
-      expect(calls).toEqual([['gemini', 'AIzaSyTestKey0123456789', DEFAULT_GEMINI_TEXT_MODEL]]);
+      expect(calls).toEqual([['gemini', 'AIzaSyTestKey0123456789', 'gemini-3.5-flash-lite']]);
+      expect((await attempts.get(userId, attemptId)).evaluation?.correctorModel).toBe(
+        'gemini-3.5-flash-lite'
+      );
     });
 
     it("prefers the user's own text model", async () => {

@@ -136,12 +136,12 @@ describe('renderResultsTable', () => {
       ])
     ).toBe(
       [
-        '| Modèle | Cas | Exact | ±1 niveau | Erreur moy. | Stabilité | Latence moy. | Coût |',
+        '| Model | Cases | Exact | ±1 level | Mean error | Stability | Mean latency | Cost |',
         '| --- | --- | --- | --- | --- | --- | --- | --- |',
-        '| gpt-4o-mini | 3 | 67 % | 100 % | 0.33 | 50 % | 2.3 s | 0.0123 $ |',
+        '| gpt-4o-mini | 3 | 67 % | 100 % | 0.33 | 50 % | 2.3 s | $0.0123 |',
         '| mystery | 1 | 67 % | 100 % | 0.33 | 50 % | 2.3 s | — |',
         '',
-        '| Modèle | adequation | coherence | vocabulaire | grammaire | aisance |',
+        '| Model | adequation | coherence | vocabulaire | grammaire | aisance |',
         '| --- | --- | --- | --- | --- | --- |',
         '| gpt-4o-mini | 100 % | 50 % | 0 % | 67 % | 25 % |',
         '| mystery | 100 % | 50 % | 0 % | 67 % | 25 % |',
@@ -149,9 +149,9 @@ describe('renderResultsTable', () => {
     );
   });
 
-  it('shows a zero cost as 0.0000 $, not as unknown', () => {
+  it('shows a zero cost as $0.0000, not as unknown', () => {
     const table = renderResultsTable([{ model: 'free', summary, costUsd: 0 }]);
-    expect(table).toContain('| 0.0000 $ |');
+    expect(table).toContain('| $0.0000 |');
     expect(table).not.toContain('—');
   });
 
