@@ -1,17 +1,8 @@
-# Runs the corrector evals: by hand, and when the rubric or the evaluator changes.
+# Runs the corrector evals. Manual only: nothing runs on push or pull requests.
 name: Evals
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/api/config/français/**'
-      - 'apps/api/src/evaluation/**'
-  pull_request:
-    paths:
-      - 'apps/api/config/français/**'
-      - 'apps/api/src/evaluation/**'
 
 permissions:
   contents: read

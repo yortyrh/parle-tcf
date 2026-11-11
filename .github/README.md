@@ -2,16 +2,13 @@
 
 GitHub Actions workflows live here (no duplicate workflows under `apps/*/.github`).
 
-## Active workflow
+## Triggers
+
+Every workflow is **manual only** (`workflow_dispatch`): nothing runs on push, pull requests or a schedule. Start them from the Actions tab or with `gh workflow run <file>`. Locally, `pnpm verify` runs the quality checks and `pnpm push` enforces it.
 
 ### [`workflows/ci.yml`](./workflows/ci.yml) — **CI**
 
-**Triggers**: manual only (`workflow_dispatch`) for now. Locally, `pnpm verify` runs the same checks and `pnpm push` enforces it.
-
-**Jobs**:
-
-1. **Lint, format & types** — `pnpm lint`, `pnpm format:check`, `pnpm typecheck` (Turborepo across `@parle-tcf/web`, `@parle-tcf/api` and `@parle-tcf/shared`).
-2. **Build & tests** — `pnpm build` then `pnpm test`.
+Quality (lint, format, types) → unit tests with coverage + build → integration (Testcontainers) → end-to-end (Playwright + axe), plus the scaffold smoke test.
 
 **Tooling**: Node.js **24** (matches `.nvmrc`), **pnpm 10.33.0** (root `package.json` → `packageManager`), install with `--frozen-lockfile`.
 
@@ -21,9 +18,10 @@ GitHub Actions workflows live here (no duplicate workflows under `apps/*/.github
 
 ## Summary
 
-| File        | When it runs | Purpose                 |
-| ----------- | ------------ | ----------------------- |
-| `ci.yml`    | Manual       | Quality + build + tests |
-| `evals.yml` | Manual       | Corrector evals         |
+| File           | When it runs | Purpose                 |
+| -------------- | ------------ | ----------------------- |
+| `ci.yml`       | Manual       | Quality + build + tests |
+| `evals.yml`    | Manual       | Corrector evals         |
+| `mutation.yml` | Manual       | Mutation testing        |
 
 Hosting (**API** + **Web** on Railway): [README.md](../README.md), [CLAUDE.md](../CLAUDE.md), [DOCKER.md](../DOCKER.md).

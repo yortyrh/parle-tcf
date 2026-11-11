@@ -2,10 +2,8 @@
 # → end-to-end (Playwright + axe), plus the scaffold smoke test.
 name: CI
 
+# Manual only: nothing runs on push or pull requests (`pnpm push` runs `pnpm verify` locally).
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 concurrency:

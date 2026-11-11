@@ -1,9 +1,7 @@
-# Nightly mutation testing (Stryker, incremental thanks to the cached reports).
+# Mutation testing (Stryker, incremental thanks to the cached reports). Manual only.
 name: Mutation
 
 on:
-  schedule:
-    - cron: '0 3 * * *'
   workflow_dispatch:
 
 permissions:
