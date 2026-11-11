@@ -11,5 +11,5 @@ Next.js candidate UI for TCF speaking practice.
 
 ---
 
-**Main docs**: [README.md](../../README.md) and [CLAUDE.md](../../CLAUDE.md) at the repo root.  
+**Main docs**: [docs/](../../docs/README.md), [README.md](../../README.md) and [CLAUDE.md](../../CLAUDE.md) at the repo root.  
 **Exercises guide**: [EXERCISES.md](../../EXERCISES.md).

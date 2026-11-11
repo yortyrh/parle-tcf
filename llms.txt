@@ -1,0 +1,41 @@
+# parle-tcf
+
+> Open-source practice for the speaking test (expression orale, Tâches 1–3) of the TCF, the French language test. An AI examiner (OpenAI Realtime or Gemini Live, with the user's own API key) runs each task in the browser with official timing; a separate text model then grades the transcript on the CEFR scale (A1–C2) with per-criterion feedback and a corrected transcript. pnpm 12 + Turborepo monorepo: Next.js 15 web app, NestJS 11 API, PostgreSQL with Drizzle. Node.js 26 LTS, installed by pnpm.
+
+Exam content, model prompts and the UI are in French; code and docs are in English. Contributor and agent rules (scaffolds, tests by a separate author, commits, pushes) are in CLAUDE.md.
+
+## Docs
+
+- [Documentation index](docs/README.md): map of every page
+- [Architecture](docs/architecture.md): packages, runtime components, voice session flow, data model, security model
+- [Development](docs/development.md): toolchain (Node.js LTS through pnpm), local setup, scripts, quality gates, testing strategy
+- [Deployment](docs/deployment.md): Docker, Railway, environment variables, operations
+- [API reference](docs/api.md): every route, schemas, authentication, error codes
+- [Examiner prompts](docs/prompts.md): how session prompts are assembled and the provider best practices they follow
+
+## Features
+
+- [Exam sessions](docs/features/exam-sessions.md): practice and full exam, timing, live transcript, checkpoints, closing
+- [Voice providers](docs/features/voice-providers.md): OpenAI Realtime (WebRTC) and Gemini Live (WebSocket), credentials, default models and voices, turn detection
+- [Provider keys and settings](docs/features/provider-settings.md): bring-your-own key, AES-256-GCM at rest, rotation, connection test
+- [Evaluation](docs/features/evaluation.md): CEFR rubric, structured output, retries, overall exam level, evals
+- [Results, history and progress](docs/features/results-and-progress.md): result page, history, progression, comparison, dashboard
+- [Exercise bank](docs/features/exercise-bank.md): monthly subjects, deduplication, importer, topic browser
+- [Accounts and authentication](docs/features/accounts.md): Better Auth, bearer tokens, OAuth hand-off, email flows, account deletion
+- [Usage limits and costs](docs/features/usage-limits.md): cost estimates, per-attempt cost, daily and monthly caps
+- [Audio recording](docs/features/audio-recording.md): opt-in recording, presigned uploads, deletion
+- [Website, privacy and email](docs/features/website.md): landing page, privacy page, SEO, transactional emails
+
+## Reference
+
+- [CLAUDE.md](CLAUDE.md): rules for coding agents working in this repository
+- [EXERCISES.md](EXERCISES.md): examiner YAML and exercise bank maintenance
+- [Service configuration](apps/api/config/SERVICE_CONFIG.md): default voice and model
+- [Architecture decision records](docs/adr/0001-drizzle-over-prisma.md): ADR 0001–0005
+- [Changelog](CHANGELOG.md)
+
+## Optional
+
+- [Original product requirements](docs/prd.md)
+- [Docker notes](DOCKER.md)
+- [CI workflows](.github/README.md)

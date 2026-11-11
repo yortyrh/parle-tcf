@@ -62,15 +62,15 @@ depends on another one or on the order.
 
 ### `session.spec.ts`: `exam.session.create`, `exam.session.token`
 
-| Route                 | Behaviour                                                                                                                                                                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `exam.session.create` | no key → 412 `PROVIDER_NOT_CONFIGURED`, nothing created                                                                                                                                           |
-|                       | BYOK: the stored key is encrypted, decrypted to mint (`fake-client-secret:<provider>:<key length>`); OpenAI defaults `gpt-realtime-mini`/`alloy`, Gemini voice `Puck`; the user's model/voice win |
-|                       | in-progress attempt with provider, model, task, `t1-entretien` for tâche 1                                                                                                                        |
-|                       | tâche 2/3: requested subject + ordered ids of that task; random subject of the task otherwise; unknown id or another task's id → 404, nothing created; tâche 1 has no navigation; bad task → 400  |
-|                       | full mode creates a run and reuses it; practice ignores `runId`                                                                                                                                   |
-|                       | daily minutes (1.99/2 allowed, 2/2 refused) and monthly cost (0.4999/0.50 allowed, 0.50 refused) → 429 `LIMIT_REACHED`, nothing created; other users' usage does not count                        |
-| `exam.session.token`  | fresh secret and the attempt clock restarts; finished attempt → 409; provider switched → 409; limit reached → 429; key removed → 412; unknown attempt → 404                                       |
+| Route                 | Behaviour                                                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exam.session.create` | no key → 412 `PROVIDER_NOT_CONFIGURED`, nothing created                                                                                                                                                                         |
+|                       | BYOK: the stored key is encrypted, decrypted to mint (`fake-client-secret:<provider>:<key length>`); OpenAI defaults `gpt-realtime-2.1-mini`/`marin`, Gemini `gemini-3.8-live`, Gemini voice `Puck`; the user's model/voice win |
+|                       | in-progress attempt with provider, model, task, `t1-entretien` for tâche 1                                                                                                                                                      |
+|                       | tâche 2/3: requested subject + ordered ids of that task; random subject of the task otherwise; unknown id or another task's id → 404, nothing created; tâche 1 has no navigation; bad task → 400                                |
+|                       | full mode creates a run and reuses it; practice ignores `runId`                                                                                                                                                                 |
+|                       | daily minutes (1.99/2 allowed, 2/2 refused) and monthly cost (0.4999/0.50 allowed, 0.50 refused) → 429 `LIMIT_REACHED`, nothing created; other users' usage does not count                                                      |
+| `exam.session.token`  | fresh secret and the attempt clock restarts; finished attempt → 409; provider switched → 409; limit reached → 429; key removed → 412; unknown attempt → 404                                                                     |
 
 ### `attempts.spec.ts`: attempts, evaluation, usage
 

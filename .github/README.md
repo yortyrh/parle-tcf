@@ -10,7 +10,7 @@ Every workflow is **manual only** (`workflow_dispatch`): nothing runs on push, p
 
 Quality (lint, format, types) → unit tests with coverage + build → integration (Testcontainers) → end-to-end (Playwright + axe), plus the scaffold smoke test.
 
-**Tooling**: Node.js **24** (matches `.nvmrc`), **pnpm 10.33.0** (root `package.json` → `packageManager`), install with `--frozen-lockfile`.
+**Tooling**: Node.js **26 LTS** (`.nvmrc`, mirrors `devEngines.runtime`), pnpm from the root `package.json` → `packageManager` (12.18.0), install with `--frozen-lockfile`.
 
 **Concurrency**: one active run per workflow and Git ref (`cancel-in-progress`).
 

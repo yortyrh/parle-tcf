@@ -75,4 +75,4 @@ When a new generator or script is added, add it to this table.
 - **Migrations at deploy:** Railway pre-deploy runs `node packages/db/dist/migrate.js`; `docker-compose.yml` has a one-shot `migrate` service.
 - **Web bundle boundary:** `apps/web/lib/web-bundle-security.test.ts` fails if web code imports server-only modules or secrets.
 - **Deploy:** Railway, two services (`apps/{api,web}/railway.json`, monorepo root). `NEXT_PUBLIC_EXAM_API_URL` is inlined at web build time; set the API's `CORS_ORIGINS` to the web URL. Order: API → web → CORS.
-- **Decisions:** `docs/adr/`. Product requirements: `PRD · yorty-tcf preparación a la expresión oral del TCF.md`.
+- **Docs:** one page per feature in `docs/features/`, indexed by `docs/README.md` and `llms.txt`; update the matching page when behaviour changes. Decisions: `docs/adr/`. Original product requirements: `docs/prd.md`.
