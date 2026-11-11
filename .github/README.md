@@ -25,3 +25,7 @@ Quality (lint, format, types) → unit tests with coverage + build → integrati
 | `mutation.yml` | Manual       | Mutation testing        |
 
 Hosting (**API** + **Web** on Railway): [README.md](../README.md), [CLAUDE.md](../CLAUDE.md), [DOCKER.md](../DOCKER.md).
+
+## Social preview
+
+[`social-preview.png`](./social-preview.png) (1280×640) is the repository's social card, rendered from [`social-preview.html`](./social-preview.html) (site colours and fonts). GitHub has no API for it: upload the PNG under **Settings → General → Social preview** once the repository is public. To change it, edit the HTML, screenshot it at 1280×640 (for example with Playwright) and overwrite the PNG.

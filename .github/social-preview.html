@@ -1,0 +1,123 @@
+<!doctype html>
+<!--
+  Source of social-preview.png (GitHub repository social preview, 1280×640).
+  Colours and fonts match apps/web/styles/globals.css and apps/web/app/opengraph-image.tsx.
+  Regenerate: render this page at 1280×640 (e.g. Playwright screenshot) and overwrite the PNG.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Public+Sans:wght@400;600&display=block"
+    />
+    <style>
+      @font-face {
+        font-family: 'Commit Mono';
+        src: url('../apps/web/public/commit-mono-400-regular.woff') format('woff');
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 640px;
+      }
+      body {
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 56px;
+        padding: 0 80px;
+        background: #fbf8f2;
+        color: #1b2236;
+        font-family: 'Public Sans', sans-serif;
+      }
+      body::after {
+        content: '';
+        position: absolute;
+        right: -160px;
+        top: -160px;
+        width: 620px;
+        height: 620px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(31, 93, 140, 0.1), rgba(31, 93, 140, 0) 70%);
+        z-index: 0;
+      }
+      main {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+      .wordmark {
+        font-family: 'Fraunces', serif;
+        font-weight: 700;
+        font-size: 40px;
+        letter-spacing: -0.01em;
+      }
+      .wordmark span {
+        color: #e2562f;
+      }
+      h1 {
+        font-family: 'Fraunces', serif;
+        font-weight: 500;
+        font-size: 66px;
+        line-height: 1.06;
+        letter-spacing: -0.02em;
+      }
+      h1 em {
+        font-style: normal;
+        color: #1f5d8c;
+      }
+      .sub {
+        font-size: 26px;
+        color: #4a5468;
+      }
+      .rule {
+        width: 200px;
+        height: 8px;
+        border-radius: 4px;
+        background: #1f5d8c;
+      }
+      .stack {
+        font-family: 'Commit Mono', monospace;
+        font-size: 19px;
+        color: #4a5468;
+      }
+      .logo {
+        position: relative;
+        z-index: 1;
+        flex: none;
+        width: 360px;
+        height: 360px;
+        border-radius: 50%;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(27, 34, 54, 0.22);
+      }
+      .logo img {
+        /* crop the white ring around the blue disc */
+        width: 122%;
+        height: 122%;
+        margin: -11%;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="wordmark">parle<span>·</span>tcf</div>
+      <h1>Practice the TCF speaking test with an <em>AI examiner</em></h1>
+      <p class="sub">Tâches 1–3 at official timing · CEFR scoring on 5 criteria</p>
+      <div class="rule"></div>
+      <p class="stack">Next.js · NestJS · OpenAI Realtime · Postgres</p>
+    </main>
+    <div class="logo"><img src="../apps/web/public/logo.png" alt="" /></div>
+  </body>
+</html>
