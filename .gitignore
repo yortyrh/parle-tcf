@@ -24,6 +24,8 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env*.local
+# Backups written by `pnpm setup:env` (they hold secrets)
+.env.bak
 
 # Build outputs
 dist/

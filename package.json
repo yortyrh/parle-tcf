@@ -30,7 +30,7 @@
     "scaffold:package": "node scripts/scaffold.mjs package",
     "scaffold:smoke": "node scripts/scaffold.mjs smoke",
     "db:generate:custom": "pnpm --filter @parle-tcf/db exec drizzle-kit generate --custom --name",
-    "infra:up": "bash scripts/compose.sh up -d --wait && pnpm --filter @parle-tcf/db build && node scripts/infra-init.mjs",
+    "infra:up": "bash scripts/compose.sh up -d --wait && pnpm --filter @parle-tcf/db build && node --env-file-if-exists=apps/api/.env scripts/infra-init.mjs",
     "infra:down": "bash scripts/compose.sh down",
     "infra:reset": "bash scripts/compose.sh down --volumes",
     "infra:logs": "bash scripts/compose.sh logs -f",
