@@ -58,9 +58,18 @@ test.describe('topic picker', () => {
     await expect(page.getByRole('status').filter({ hasText: /^0 sujet$/ })).toBeVisible();
     await expectAccessible(page);
 
-    // Task filter: Tâche 3 subjects only.
+    // Pagination moves to the next 20 (Tâche 2: the sample bank has more than 20 subjects).
     await searchBox(page).fill('');
     await expect.poll(() => subjectCount(page)).toBe(allTache2);
+    const firstOnPage1 = await practiceLinks(page).first().getAttribute('href');
+    await page
+      .getByRole('navigation', { name: 'Pagination' })
+      .getByRole('button', { name: 'Suivant' })
+      .click();
+    await expect(page.getByText(/^Page 2 \/ \d+$/)).toBeVisible();
+    await expect(practiceLinks(page).first()).not.toHaveAttribute('href', firstOnPage1!);
+
+    // Task filter: Tâche 3 subjects only.
     await taskButton(page, 3).click();
     await expect(taskButton(page, 3)).toHaveAttribute('aria-pressed', 'true');
     await expect(taskButton(page, 2)).toHaveAttribute('aria-pressed', 'false');
@@ -71,15 +80,6 @@ test.describe('topic picker', () => {
       expect(href).toMatch(/^\/tcf\/tache3\//);
     }
     expect(await subjectCount(page)).toBeGreaterThan(0);
-
-    // Pagination moves to the next 20.
-    const firstOnPage1 = await practiceLinks(page).first().getAttribute('href');
-    await page
-      .getByRole('navigation', { name: 'Pagination' })
-      .getByRole('button', { name: 'Suivant' })
-      .click();
-    await expect(page.getByText(/^Page 2 \/ \d+$/)).toBeVisible();
-    await expect(practiceLinks(page).first()).not.toHaveAttribute('href', firstOnPage1!);
   });
 
   test('starting from a chosen subject opens that subject', async ({ page }) => {

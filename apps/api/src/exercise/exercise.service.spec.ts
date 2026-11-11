@@ -1,11 +1,15 @@
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  SAMPLE_EXERCISE_BANK_PATH,
   contentHash,
   eq,
   exerciseAliases,
   exerciseOccurrences,
   exerciseSessions,
   exercises,
+  inArray,
+  loadExerciseBank,
 } from '@parle-tcf/db';
 import { type TestDb, createTestDb } from '@parle-tcf/db/testing';
 import { ExerciseService } from './exercise.service.js';
@@ -28,6 +32,8 @@ describe('ExerciseService', () => {
 
   beforeAll(async () => {
     testDb = await createTestDb();
+    // The migrations ship no subjects: start from the sample bank, like a fresh install.
+    await loadExerciseBank(testDb.db, readFileSync(SAMPLE_EXERCISE_BANK_PATH, 'utf8'));
     service = new ExerciseService(testDb.db);
   });
   afterAll(() => testDb.close());
@@ -67,15 +73,24 @@ describe('ExerciseService', () => {
     });
   };
 
-  // Runs first, on the data migrated from the CSV.
-  describe('on the migrated bank', () => {
-    it('lists the 44 sessions and every subject exercise', async () => {
+  // Runs first, on the loaded sample bank (2026-09 and 2026-10).
+  describe('on the sample bank', () => {
+    it('lists the 2 sample sessions, newest first, and every subject exercise', async () => {
       const sessions = await service.listSessions();
-      expect(sessions).toHaveLength(44);
+      expect(sessions.map((s) => [s.year, s.month])).toEqual([
+        [2026, 10],
+        [2026, 9],
+      ]);
       const t2 = await service.listExercises({ task: 2, limit: 1 });
       const t3 = await service.listExercises({ task: 3, limit: 1 });
       expect(t2.items).toHaveLength(1);
-      expect(t2.total + t3.total).toBe(1656);
+      expect(t2.total).toBeGreaterThanOrEqual(21);
+      expect(t3.total).toBeGreaterThanOrEqual(5);
+      const subjects = await testDb.db
+        .select({ id: exercises.id })
+        .from(exercises)
+        .where(inArray(exercises.task, [2, 3]));
+      expect(t2.total + t3.total).toBe(subjects.length);
       for (let i = 1; i < sessions.length; i++) {
         const prev = sessions[i - 1];
         const cur = sessions[i];
@@ -83,10 +98,11 @@ describe('ExerciseService', () => {
       }
     });
 
-    it('features the latest migrated session with at most 3 subjects per task', async () => {
+    it('features the latest sample session with 3 subjects per task', async () => {
       const [latest] = await service.listSessions();
       const out = await service.featured();
       expect(out.session).toEqual(latest);
+      expect([out.session?.year, out.session?.month]).toEqual([2026, 10]);
       const t2 = await service.listExercises({
         task: 2,
         sessionId: latest.id,
@@ -96,15 +112,18 @@ describe('ExerciseService', () => {
         sessionId: latest.id,
       });
       expect(out.items).toEqual([...t2.items.slice(0, 3), ...t3.items.slice(0, 3)]);
-      expect(out.items.length).toBeLessThanOrEqual(6);
+      // Each sample session has more than 3 subjects of each task.
+      expect(out.items).toHaveLength(6);
     });
 
-    it('resolves a migrated alias to its canonical exercise', async () => {
-      const [alias] = await testDb.db.select().from(exerciseAliases).limit(1);
-      expect(alias).toBeDefined();
-      const row = await service.getExerciseById(alias.aliasId);
-      expect(row).toBeTruthy();
-      expect(row!.id).toBe(alias.exerciseId);
+    it('finds a sample subject by its id', async () => {
+      const [first] = await testDb.db
+        .select()
+        .from(exercises)
+        .where(eq(exercises.id, '2026-10-t2-p001-s001'));
+      expect(first).toBeDefined();
+      const row = await service.getExerciseById(first.id);
+      expect(row).toMatchObject({ id: first.id, content: first.prompt });
     });
   });
 

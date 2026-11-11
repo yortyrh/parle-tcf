@@ -42,13 +42,13 @@ describe('createTestDb', () => {
     expect(existsSync(join(tmp.dir, files[0]))).toBe(true);
   });
 
-  it('applies every migration (data migration included)', async () => {
+  it('applies every migration (the tâche 1 row included, but no exercise bank)', async () => {
     const other = await createTestDb();
     try {
-      const [ex] = await other.db.select({ n: count() }).from(exercises);
+      const rows = await other.db.select({ id: exercises.id }).from(exercises);
       const [sessions] = await other.db.select({ n: count() }).from(exerciseSessions);
-      expect(ex.n).toBeGreaterThan(0);
-      expect(sessions.n).toBeGreaterThan(0);
+      expect(rows).toEqual([{ id: 't1-entretien' }]);
+      expect(sessions.n).toBe(0);
     } finally {
       await other.close();
     }
@@ -72,7 +72,7 @@ describe('createTestDb', () => {
       const id = await other.createUser('query@test.local');
       const found = await other.db.query.user.findFirst({ where: eq(user.id, id) });
       expect(found?.email).toBe('query@test.local');
-      expect(await other.db.query.exerciseSessions.findFirst()).toBeDefined();
+      expect(await other.db.query.exercises.findFirst()).toMatchObject({ id: 't1-entretien' });
     } finally {
       await other.close();
     }

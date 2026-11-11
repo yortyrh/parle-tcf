@@ -15,7 +15,7 @@ import { importSession } from '../../../../packages/importer/src/import.js';
 import { type TestApp, createTestApp } from './create-test-app.js';
 import { ok, rpc, signUpVerifiedUser } from './helpers.js';
 
-/** A month far in the future so it never collides with the migrated bank. */
+/** A month far in the future so it never collides with the sample bank. */
 const YEAR = 2099;
 const URL_NOV = 'https://reussir-tcfcanada.com/novembre-2099-expression-orale/';
 const URL_DEC = 'https://reussir-tcfcanada.com/decembre-2099-expression-orale/';
@@ -42,7 +42,7 @@ describe('importer upsert against the real Postgres', () => {
   });
 
   afterAll(async () => {
-    // Leave the shared database as the migrations made it.
+    // Leave the shared database as the global setup made it (migrations + sample bank).
     await t.db.delete(exerciseOccurrences).where(inArray(exerciseOccurrences.exerciseId, ids));
     await t.db.delete(exercises).where(inArray(exercises.id, ids));
     await t.db.delete(exerciseSessions).where(eq(exerciseSessions.year, YEAR));

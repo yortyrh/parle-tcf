@@ -36,6 +36,22 @@ describe('railway.json', () => {
       expect(config.build).not.toHaveProperty('watchPatterns');
     }
   );
+
+  // The exercise bank is not in the migrations (private repository): the API pre-deploy
+  // step loads it right after migrating, and stops the deploy if migrating fails.
+  it('apps/api/railway.json migrates, then loads the exercise bank, before each deploy', () => {
+    const config = JSON.parse(readRepoFile('apps/api/railway.json'));
+    const command = [config.deploy.preDeployCommand].flat().join(' && ');
+    const steps = command.split('&&').map((step) => step.trim());
+    expect(steps).toEqual([
+      'node packages/db/dist/migrate.js',
+      'node packages/db/dist/load-exercise-bank.js',
+    ]);
+  });
+
+  it('builds the exercise bank loader with the db package', () => {
+    expect(existsSync(new URL('packages/db/src/load-exercise-bank.ts', ROOT))).toBe(true);
+  });
 });
 
 describe('Dockerfiles', () => {

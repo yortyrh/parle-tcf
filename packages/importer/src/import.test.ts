@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  SAMPLE_EXERCISE_BANK_PATH,
   and,
   asc,
   contentHash,
@@ -9,6 +11,7 @@ import {
   exerciseOccurrences,
   exerciseSessions,
   exercises,
+  loadExerciseBank,
   ne,
 } from '@parle-tcf/db';
 import { type TestDb, createTestDb } from '@parle-tcf/db/testing';
@@ -17,6 +20,8 @@ import type { ParsedSubject } from './parse';
 
 const URL_DEC = 'https://reussir-tcfcanada.com/decembre-2025-expression-orale/';
 const URL_JAN = 'https://reussir-tcfcanada.com/janvier-2026-expression-orale/';
+/** A month after every session of the sample bank (2026-09 and 2026-10). */
+const URL_DEC_2026 = 'https://reussir-tcfcanada.com/decembre-2026-expression-orale/';
 const URL_JUN = 'https://reussir-tcfcanada.com/juin-2025-expression-orale/';
 
 const A = 'Je suis votre voisin. Vous me posez des questions sur le quartier.';
@@ -50,6 +55,8 @@ describe('importSession', () => {
 
   beforeAll(async () => {
     testDb = await createTestDb();
+    // The migrations ship no subjects: start from the sample bank, like a fresh install.
+    await loadExerciseBank(testDb.db, readFileSync(SAMPLE_EXERCISE_BANK_PATH, 'utf8'));
   });
   afterAll(() => testDb.close());
 
@@ -60,9 +67,9 @@ describe('importSession', () => {
     return row.n;
   };
 
-  // Runs first, on the data migrated from the CSV (no truncation yet).
-  describe('on the migrated bank', () => {
-    it('reuses a migrated CSV exercise with the same task and text', async () => {
+  // Runs first, on the loaded sample bank (no truncation yet).
+  describe('on a loaded bank', () => {
+    it('reuses a bank exercise with the same task and text', async () => {
       const [existing] = await testDb.db
         .select()
         .from(exercises)
@@ -78,7 +85,7 @@ describe('importSession', () => {
       const text = existing.prompt.replace(/'/g, '’').replace(/ /g, '  ');
       const result = await importSession(
         testDb.db,
-        { year: 2026, month: 1, sourceUrl: URL_JAN },
+        { year: 2026, month: 12, sourceUrl: URL_DEC_2026 },
         [subject(2, 1, 1, text, { scenario: 'Scénario importé' })],
         { now: NOW_1 }
       );
@@ -90,14 +97,14 @@ describe('importSession', () => {
 
       const [after] = await testDb.db.select().from(exercises).where(eq(exercises.id, existing.id));
       expect(after.prompt).toBe(existing.prompt);
-      expect(after.lastSeenOn).toBe('2026-01-01');
+      expect(after.lastSeenOn).toBe('2026-12-01');
       expect(after.firstSeenOn).toBe(existing.firstSeenOn);
       expect(after.scenario).toBe('Scénario importé');
 
       const [occ] = await testDb.db
         .select()
         .from(exerciseOccurrences)
-        .where(eq(exerciseOccurrences.sourceRef, '2026-01-t2-p001-s001'));
+        .where(eq(exerciseOccurrences.sourceRef, '2026-12-t2-p001-s001'));
       expect(occ.exerciseId).toBe(existing.id);
     });
   });

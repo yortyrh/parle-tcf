@@ -9,7 +9,7 @@ import type {
 import { type TestApp, createTestApp } from './create-test-app.js';
 import { expectError, ok, rpc, signUpVerifiedUser } from './helpers.js';
 
-describe('exercises (bank from the real migrations)', () => {
+describe('exercises (sample bank loaded after the real migrations)', () => {
   let t: TestApp;
   let token: string;
   let sessions: ExerciseSession[];
@@ -40,6 +40,10 @@ describe('exercises (bank from the real migrations)', () => {
   describe('exercises.sessions', () => {
     it('lists the months newest first with their subject counts', () => {
       expect(sessions.length).toBeGreaterThan(0);
+      // The two months of the sample bank (2026-10 is the newest).
+      const sample = sessions.filter((s) => s.year === 2026 && (s.month === 9 || s.month === 10));
+      expect(sample.map((s) => s.month)).toEqual([10, 9]);
+      expect(sessions[0]).toMatchObject({ year: 2026, month: 10 });
       const keys = sessions.map((s) => s.year * 100 + s.month);
       expect([...keys].sort((a, b) => b - a)).toEqual(keys);
       for (const s of sessions) expect(s.tache2 + s.tache3).toBeGreaterThan(0);
@@ -70,6 +74,12 @@ describe('exercises (bank from the real migrations)', () => {
       expect(accented.total).toBeGreaterThan(0);
       expect(plain.total).toBe(accented.total);
       expect(plain.items.map((i) => i.id)).toEqual(accented.items.map((i) => i.id));
+    });
+
+    it('finds the housing role plays of the sample bank', async () => {
+      const page = await list({ task: 2, search: 'logement' });
+      expect(page.total).toBeGreaterThan(0);
+      for (const item of page.items) expect(item.prompt.toLowerCase()).toContain('logement');
     });
 
     it('treats LIKE wildcards in the search literally', async () => {

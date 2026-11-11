@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import type { StartedTestContainer } from 'testcontainers';
 import type { TestProject } from 'vitest/node';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
@@ -34,8 +35,9 @@ function usesPodman(): boolean {
 }
 
 /**
- * Starts Postgres 17 and Mailpit once for the whole integration run and
- * applies the real migrations (exercise bank included).
+ * Starts Postgres 17 and Mailpit once for the whole integration run, applies the
+ * real migrations, then loads the sample exercise bank (the real one is private),
+ * like a fresh install.
  */
 export async function setup(project: TestProject): Promise<void> {
   // Rootless Podman cannot run the Ryuk reaper (teardown stops the containers anyway).
@@ -43,7 +45,8 @@ export async function setup(project: TestProject): Promise<void> {
   if (usesPodman()) process.env.TESTCONTAINERS_RYUK_DISABLED ??= 'true';
   const { GenericContainer, Wait } = await import('testcontainers');
   const { PostgreSqlContainer } = await import('@testcontainers/postgresql');
-  const { runMigrations } = await import('@parle-tcf/db');
+  const { SAMPLE_EXERCISE_BANK_PATH, createDb, loadExerciseBank, runMigrations } =
+    await import('@parle-tcf/db');
 
   [postgres, mailpit] = await Promise.all([
     new PostgreSqlContainer(POSTGRES_IMAGE).start(),
@@ -54,6 +57,12 @@ export async function setup(project: TestProject): Promise<void> {
   ]);
   const databaseUrl = postgres.getConnectionUri();
   await runMigrations(databaseUrl);
+  const handle = createDb({ url: databaseUrl, max: 1 });
+  try {
+    await loadExerciseBank(handle.db, readFileSync(SAMPLE_EXERCISE_BANK_PATH, 'utf8'));
+  } finally {
+    await handle.close();
+  }
 
   project.provide('databaseUrl', databaseUrl);
   project.provide('smtpUrl', `smtp://${mailpit.getHost()}:${mailpit.getMappedPort(1025)}`);
