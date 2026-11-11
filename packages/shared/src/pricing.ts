@@ -5,8 +5,12 @@ export interface ModelPrice {
 }
 
 export const MODEL_PRICES: Record<string, ModelPrice> = {
+  // Realtime: audio token prices. Older ids stay for attempts and settings that still use them.
+  'gpt-realtime-2.1-mini': { inputPerM: 10, outputPerM: 20 },
+  'gpt-realtime-2.1': { inputPerM: 32, outputPerM: 64 },
   'gpt-realtime-mini': { inputPerM: 10, outputPerM: 20 },
   'gpt-realtime': { inputPerM: 32, outputPerM: 64 },
+  'gemini-3.8-live': { inputPerM: 3, outputPerM: 12 },
   'gpt-4o-mini': { inputPerM: 0.15, outputPerM: 0.6 },
   'gpt-4o': { inputPerM: 2.5, outputPerM: 10 },
   'gpt-4.1-mini': { inputPerM: 0.4, outputPerM: 1.6 },
@@ -32,6 +36,8 @@ export function estimateCost(
  * cost is computed from token usage once the task is over.
  */
 const REALTIME_USD_PER_MIN: Record<string, number> = {
+  'gpt-realtime-2.1-mini': 0.06,
+  'gpt-realtime-2.1': 0.3,
   'gpt-realtime-mini': 0.06,
   'gpt-realtime': 0.3,
 };

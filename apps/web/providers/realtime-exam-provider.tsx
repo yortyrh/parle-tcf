@@ -24,6 +24,7 @@ import { toastAlert } from '@/components/ui/alert-toast';
 import { ApiError, api } from '@/lib/api';
 import { AttemptRecorder } from '@/lib/audio-recorder';
 import { restartOptions } from '@/lib/exam-flow';
+import { EXAM_TOOL_DESCRIPTIONS } from '@/lib/exam-tools';
 import { FakeLiveSession, isFakeVoice } from '@/lib/fake-live';
 import { GeminiLiveSession } from '@/lib/gemini-live';
 import {
@@ -51,7 +52,7 @@ const CHECKPOINT_DEBOUNCE_MS = 10_000;
 const TIME_UP_GRACE_MS = 10_000;
 
 const TIME_UP_MESSAGE =
-  "Le temps imparti pour cette tâche est écoulé. Remercie brièvement le candidat et clos l'épreuve en une phrase, sans poser de nouvelle question.";
+  "Le temps imparti pour cette tâche est écoulé. Applique la clôture maintenant : dis « Merci, l'épreuve est terminée. » puis appelle finSession, sans poser de nouvelle question.";
 
 /** Candidate/examiner lines in the shape the API stores (index = seq). */
 export function toApiLines(lines: ExamTranscriptLine[]): TranscriptLine[] {
@@ -141,7 +142,7 @@ export interface RealtimeExamContextValue {
   isConnecting: boolean;
   isRestarting: boolean;
   fatalError: string | null;
-  /** Erreur session/outil (ex. échec d’envoi du rapport) — affichée à la place du loader infini */
+  /** Session or tool error, shown instead of an endless loader. */
   sessionError: string | null;
   start: (taskType: string, exerciseId?: string, options?: StartOptions) => Promise<void>;
   end: () => void;
@@ -697,8 +698,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
 
         const finSession = tool({
           name: 'finSession',
-          description:
-            "Signale la fin de la session d'examen. À appeler quand l'épreuve est terminée, après avoir dit au revoir.",
+          description: EXAM_TOOL_DESCRIPTIONS.finSession,
           parameters: z.object({}),
           execute: () => {
             onFinSession();
@@ -708,8 +708,7 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
 
         const recommencerTest = tool({
           name: 'recommencerTest',
-          description:
-            "À appeler lorsque le candidat demande de recommencer le test ou de refaire l'épreuve depuis le début. Réinitialise la conversation et le déroulement comme au premier lancement.",
+          description: EXAM_TOOL_DESCRIPTIONS.recommencerTest,
           parameters: z.object({}),
           execute: () => {
             void restartExamRef.current();
@@ -764,6 +763,10 @@ export function RealtimeExamProvider({ children }: { children: React.ReactNode }
             audio: {
               input: {
                 noiseReduction: { type: 'near_field' },
+                // The candidate speaks French: the hint improves transcription accuracy.
+                transcription: { model: 'gpt-4o-mini-transcribe', language: 'fr' },
+                // Learners pause to find their words: low eagerness waits before ending the turn.
+                turnDetection: { type: 'semantic_vad', eagerness: 'low' },
               },
             },
           },

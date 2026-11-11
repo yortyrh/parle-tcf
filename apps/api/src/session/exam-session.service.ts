@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { ORPCError } from '@orpc/server';
-import type {
-  CreateExamSessionInput,
-  CreateExamSessionOutput,
-  RefreshSessionTokenInput,
-  RefreshSessionTokenOutput,
-  TaskType,
+import {
+  type CreateExamSessionInput,
+  type CreateExamSessionOutput,
+  DEFAULT_GEMINI_LIVE_MODEL,
+  DEFAULT_OPENAI_REALTIME_MODEL,
+  type RefreshSessionTokenInput,
+  type RefreshSessionTokenOutput,
+  type TaskType,
 } from '@parle-tcf/shared';
 import { AttemptsService } from '../attempts/attempts.service.js';
 import { ExamConfigService } from '../config/exam-config.service.js';
@@ -16,7 +18,7 @@ import { ProviderSettingsService } from '../settings/provider-settings.service.j
 import { UsageService } from '../usage/usage.service.js';
 
 /** Default Live API model; override per user or with GEMINI_LIVE_MODEL. */
-export const DEFAULT_GEMINI_LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
+export { DEFAULT_GEMINI_LIVE_MODEL };
 const DEFAULT_GEMINI_VOICE = 'Puck';
 
 @Injectable()
@@ -42,7 +44,7 @@ export class ExamSessionService {
       return process.env.GEMINI_LIVE_MODEL ?? DEFAULT_GEMINI_LIVE_MODEL;
     }
     if (serviceModel && serviceModel !== 'realtime') return serviceModel;
-    return process.env.OPENAI_REALTIME_MODEL ?? 'gpt-realtime-mini';
+    return process.env.OPENAI_REALTIME_MODEL ?? DEFAULT_OPENAI_REALTIME_MODEL;
   }
 
   private resolveVoice(
@@ -156,8 +158,8 @@ export class ExamSessionService {
   ): string {
     let full = `${agentYaml.baseInstructions}\n\n${agentYaml.instructions}`;
     if (contentAppend) {
-      // Tâche 1 reçoit une banque de questions de référence; les autres tâches reçoivent
-      // l'énoncé d'exercice à dérouler. Le libellé guide le modèle sur l'usage attendu.
+      // Tâche 1 gets a reference question bank; the other tasks get the exercise statement
+      // to play out. The label tells the model how to use it.
       const label =
         taskType === 'tache1'
           ? 'BANQUE DE QUESTIONS DE RÉFÉRENCE (à puiser, à varier, à ne JAMAIS lire ni énumérer au candidat)'

@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ExamRun, TaskType } from '@parle-tcf/shared';
-import { TASK_DURATIONS, estimateSessionCost } from '@parle-tcf/shared';
+import {
+  DEFAULT_OPENAI_REALTIME_MODEL,
+  TASK_DURATIONS,
+  estimateSessionCost,
+} from '@parle-tcf/shared';
 import { APP_CONFIG_DEFAULTS } from '@/app-config';
 import { LevelBadge } from '@/components/app/level-badge';
 import { PreparationView } from '@/components/app/preparation-view';
@@ -19,7 +23,8 @@ import { RealtimeExamProvider, useRealtimeExam } from '@/providers/realtime-exam
 
 const STEPS: TaskType[] = ['tache1', 'tache2', 'tache3'];
 const examCost = STEPS.reduce(
-  (sum, t) => sum + (estimateSessionCost('gpt-realtime-mini', TASK_DURATIONS[t].speakingS) ?? 0),
+  (sum, t) =>
+    sum + (estimateSessionCost(DEFAULT_OPENAI_REALTIME_MODEL, TASK_DURATIONS[t].speakingS) ?? 0),
   0
 );
 

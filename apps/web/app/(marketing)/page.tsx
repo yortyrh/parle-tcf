@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {
   CRITERIA,
   CRITERION_LABELS,
+  DEFAULT_OPENAI_REALTIME_MODEL,
   TASK_DURATIONS,
   type TaskType,
   estimateSessionCost,
@@ -96,7 +97,7 @@ const FAQ = [
 export default async function LandingPage() {
   const featured = await getFeaturedExercises();
   const costs = STEPS.map(
-    (s) => estimateSessionCost('gpt-realtime-mini', TASK_DURATIONS[s.task].speakingS) ?? 0
+    (s) => estimateSessionCost(DEFAULT_OPENAI_REALTIME_MODEL, TASK_DURATIONS[s.task].speakingS) ?? 0
   );
   const examCost = costs.reduce((a, b) => a + b, 0);
 
@@ -310,7 +311,9 @@ export default async function LandingPage() {
             </ul>
           </div>
           <div className="bg-card shadow-card rounded-2xl border p-6">
-            <p className="text-sm font-semibold">Coût indicatif avec gpt-realtime-mini</p>
+            <p className="text-sm font-semibold">
+              Coût indicatif avec {DEFAULT_OPENAI_REALTIME_MODEL}
+            </p>
             <table className="mt-4 w-full text-sm">
               <caption className="sr-only">Coût estimé par tâche</caption>
               <tbody>

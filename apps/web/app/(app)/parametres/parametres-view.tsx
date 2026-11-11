@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { AudioStatus, ProviderSettings } from '@parle-tcf/shared';
+import {
+  type AudioStatus,
+  DEFAULT_GEMINI_LIVE_MODEL,
+  DEFAULT_OPENAI_REALTIME_MODEL,
+  type ProviderSettings,
+} from '@parle-tcf/shared';
 import { FieldLabel, FormError } from '@/components/app/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -241,8 +246,8 @@ export function ParametresView() {
                       defaultValue={settings.realtimeModel ?? ''}
                       placeholder={
                         provider === 'gemini'
-                          ? 'gemini-2.5-flash-native-audio-preview-09-2025'
-                          : 'gpt-realtime-mini'
+                          ? DEFAULT_GEMINI_LIVE_MODEL
+                          : DEFAULT_OPENAI_REALTIME_MODEL
                       }
                     />
                   </div>

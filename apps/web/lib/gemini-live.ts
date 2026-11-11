@@ -1,4 +1,11 @@
-import { GoogleGenAI, type LiveServerMessage, Modality, type Session } from '@google/genai';
+import {
+  EndSensitivity,
+  GoogleGenAI,
+  type LiveServerMessage,
+  Modality,
+  type Session,
+} from '@google/genai';
+import { EXAM_TOOL_DESCRIPTIONS } from '@/lib/exam-tools';
 import { TurnTranscript, floatToPcm16Base64, pcm16Base64ToFloat } from '@/lib/live-audio';
 import type { ExamTranscriptLine } from '@/lib/transcript-from-history';
 
@@ -60,16 +67,23 @@ export class GeminiLiveSession {
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: opts.voice } } },
         inputAudioTranscription: {},
         outputAudioTranscription: {},
+        // Learners pause to find their words: a low end-of-speech sensitivity (the Gemini API
+        // default is high) waits longer before treating a pause as the end of the turn.
+        realtimeInputConfig: {
+          automaticActivityDetection: {
+            endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_LOW,
+          },
+        },
         tools: [
           {
             functionDeclarations: [
               {
                 name: 'finSession',
-                description: "À appeler quand l'épreuve est terminée, après avoir dit au revoir.",
+                description: EXAM_TOOL_DESCRIPTIONS.finSession,
               },
               {
                 name: 'recommencerTest',
-                description: "À appeler si le candidat demande de recommencer l'épreuve.",
+                description: EXAM_TOOL_DESCRIPTIONS.recommencerTest,
               },
             ],
           },

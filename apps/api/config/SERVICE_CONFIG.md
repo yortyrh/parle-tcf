@@ -17,7 +17,7 @@ This file lives at **`apps/api/config/service.yml`**. The NestJS **`ExamConfigSe
 llm:
   provider: "openai"
   model: "realtime"
-  voice: "alloy"
+  voice: "marin"
   modalities:
     - "text"
     - "audio"
@@ -25,11 +25,11 @@ llm:
 
 ### OpenAI Realtime voices
 
-`alloy` (default), `ash`, `ballad`, `coral`, `echo`, `sage`, `shimmer`, `verse`, `marin` and `cedar` (OpenAI recommends `marin` and `cedar` for the best quality). `fable`, `onyx` and `nova` are text-to-speech voices only and are rejected by Realtime. A per-user voice set in the settings page overrides this value; Gemini uses its own voices (default `Puck`).
+`marin` (default), `cedar`, `alloy`, `ash`, `ballad`, `coral`, `echo`, `sage`, `shimmer` and `verse` (OpenAI recommends `marin` and `cedar` for the best quality). `fable`, `onyx` and `nova` are text-to-speech voices only and are rejected by Realtime. A per-user voice set in the settings page overrides this value; Gemini uses its own voices (default `Puck`).
 
 ## Environment override
 
-Set **`OPENAI_REALTIME_MODEL`** in `apps/api/.env` (or the host environment) to pick a specific Realtime model when `llm.model` is `realtime`. See `ExamSessionService.resolveRealtimeModel` in `apps/api/src/session/exam-session.service.ts`.
+Set **`OPENAI_REALTIME_MODEL`** in `apps/api/.env` (or the host environment) to pick a specific Realtime model when `llm.model` is `realtime`; the built-in default is `DEFAULT_OPENAI_REALTIME_MODEL` from `@parle-tcf/shared` (`gpt-realtime-2.1-mini`). Gemini sessions use `GEMINI_LIVE_MODEL`, else `DEFAULT_GEMINI_LIVE_MODEL` (`gemini-3.8-live`). A model saved in the user's settings wins over both. See `ExamSessionService.resolveRealtimeModel` in `apps/api/src/session/exam-session.service.ts`.
 
 ## Where task prompts live
 

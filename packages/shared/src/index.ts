@@ -8,6 +8,7 @@ export * from './schemas/evaluation';
 export * from './schemas/audio';
 export * from './schemas/exercises';
 export * from './pricing';
+export * from './models';
 
 /** HTTP route of every API procedure (all POST + JSON, cookie session). */
 export const API_ROUTES = {
