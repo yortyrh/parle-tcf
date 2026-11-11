@@ -167,7 +167,7 @@ describe('attempts', () => {
       expect(detail.status).toBe('completed');
       expect(detail.durationS).toBeGreaterThanOrEqual(89);
       expect(detail.durationS).toBeLessThan(200);
-      // gpt-realtime-mini: 1000 × 10 $/M + 500 × 20 $/M = 0.02 $ (+ a negligible correction).
+      // gpt-realtime-2.1-mini: 1000 × 10 $/M + 500 × 20 $/M = 0.02 $ (+ a negligible correction).
       expect(detail.estimatedCostUsd).toBeCloseTo(0.02, 3);
 
       expect(detail.evaluationStatus).toBe('done');

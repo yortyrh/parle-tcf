@@ -36,4 +36,9 @@ describe('package entry point', () => {
     expect(typeof shared.listExercisesInputSchema.parse).toBe('function');
     expect(typeof shared.estimateCost).toBe('function');
   });
+
+  it('re-exports the default voice models', () => {
+    expect(shared.DEFAULT_OPENAI_REALTIME_MODEL).toBe('gpt-realtime-2.1-mini');
+    expect(shared.DEFAULT_GEMINI_LIVE_MODEL).toBe('gemini-3.8-live');
+  });
 });

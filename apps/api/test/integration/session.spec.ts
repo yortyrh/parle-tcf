@@ -87,15 +87,15 @@ describe('exam.session.create and exam.session.token', () => {
       // The fake provider echoes the length of the key it received.
       expect(body.clientSecret).toBe(`fake-client-secret:openai:${OPENAI_KEY.length}`);
       expect(body.provider).toBe('openai');
-      expect(body.agentConfig.model).toBe('gpt-realtime-mini');
-      expect(body.agentConfig.voice).toBe('alloy');
+      expect(body.agentConfig.model).toBe('gpt-realtime-2.1-mini');
+      expect(body.agentConfig.voice).toBe('marin');
 
       const row = await attemptRow(body.attemptId);
       expect(row).toMatchObject({
         userId: u.id,
         status: 'in_progress',
         provider: 'openai',
-        model: 'gpt-realtime-mini',
+        model: 'gpt-realtime-2.1-mini',
         task: 1,
         mode: 'practice',
         runId: null,
@@ -110,7 +110,11 @@ describe('exam.session.create and exam.session.token', () => {
       expect(body.clientSecret).toBe(`fake-client-secret:gemini:${GEMINI_KEY.length}`);
       expect(body.provider).toBe('gemini');
       expect(body.agentConfig.voice).toBe('Puck');
-      expect((await attemptRow(body.attemptId)).provider).toBe('gemini');
+      expect(body.agentConfig.model).toBe('gemini-3.8-live');
+      expect(await attemptRow(body.attemptId)).toMatchObject({
+        provider: 'gemini',
+        model: 'gemini-3.8-live',
+      });
     });
 
     it('keeps the user’s own model and voice', async () => {

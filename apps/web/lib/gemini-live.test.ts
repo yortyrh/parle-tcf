@@ -1,4 +1,5 @@
 import { type Mock, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EXAM_TOOL_DESCRIPTIONS } from './exam-tools';
 import { type GeminiLiveOptions, GeminiLiveSession } from './gemini-live';
 import { floatToPcm16Base64 } from './live-audio';
 
@@ -24,6 +25,10 @@ const genai = vi.hoisted(() => ({
 
 vi.mock('@google/genai', () => ({
   Modality: { AUDIO: 'AUDIO' },
+  EndSensitivity: {
+    END_SENSITIVITY_HIGH: 'END_SENSITIVITY_HIGH',
+    END_SENSITIVITY_LOW: 'END_SENSITIVITY_LOW',
+  },
   GoogleGenAI: class {
     live = {
       connect: (args: unknown) => {
@@ -148,6 +153,26 @@ describe('GeminiLiveSession.connect', () => {
       'finSession',
       'recommencerTest',
     ]);
+  });
+
+  it('gives the exam tools the same descriptions as the OpenAI session', async () => {
+    const { args } = await connected();
+
+    const tools = args.config.tools as {
+      functionDeclarations: { name: string; description: string }[];
+    }[];
+    expect(tools[0].functionDeclarations).toEqual([
+      { name: 'finSession', description: EXAM_TOOL_DESCRIPTIONS.finSession },
+      { name: 'recommencerTest', description: EXAM_TOOL_DESCRIPTIONS.recommencerTest },
+    ]);
+  });
+
+  it('waits longer before ending the candidate turn (low end-of-speech sensitivity)', async () => {
+    const { args } = await connected();
+
+    expect(args.config.realtimeInputConfig).toEqual({
+      automaticActivityDetection: { endOfSpeechSensitivity: 'END_SENSITIVITY_LOW' },
+    });
   });
 
   it('captures the microphone at 16 kHz through an audio worklet and revokes the module URL', async () => {

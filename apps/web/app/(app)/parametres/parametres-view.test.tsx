@@ -71,3 +71,21 @@ describe('ParametresView API key field', () => {
     expect(input).toHaveAttribute('minlength', String(shortest));
   });
 });
+
+describe('ParametresView realtime model field', () => {
+  it('suggests the default OpenAI realtime model', async () => {
+    getSettings.mockResolvedValue(settings());
+    render(<ParametresView />);
+
+    const input = await screen.findByLabelText('Modèle vocal (Realtime)');
+    expect(input).toHaveAttribute('placeholder', 'gpt-realtime-2.1-mini');
+  });
+
+  it('suggests the default Gemini Live model for a Gemini key', async () => {
+    getSettings.mockResolvedValue(settings({ provider: 'gemini' }));
+    render(<ParametresView />);
+
+    const input = await screen.findByLabelText('Modèle vocal (Realtime)');
+    expect(input).toHaveAttribute('placeholder', 'gemini-3.8-live');
+  });
+});

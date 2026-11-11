@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contentHash, eq, examAttempts, exercises } from '@parle-tcf/db';
 import { type TestDb, createTestDb } from '@parle-tcf/db/testing';
+import { DEFAULT_GEMINI_LIVE_MODEL as SHARED_DEFAULT_GEMINI_LIVE_MODEL } from '@parle-tcf/shared';
 import { AttemptsService } from '../attempts/attempts.service.js';
 import { ExamConfigService } from '../config/exam-config.service.js';
 import { ExerciseService } from '../exercise/exercise.service.js';
@@ -275,13 +276,41 @@ describe('ExamSessionService', () => {
         registryOf(voice)
       );
 
-    it('defaults OpenAI to gpt-realtime-mini and the service voice', async () => {
+    it('defaults OpenAI to gpt-realtime-2.1-mini and the service voice', async () => {
       await settings.upsert(userId, { apiKey: KEY });
-      const out = await service.createSession(userId, { taskType: 'tache2', mode: 'practice' });
-      expect(out.agentConfig.model).toBe('gpt-realtime-mini');
+      const out = await withServiceModel('realtime').createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(out.agentConfig.model).toBe('gpt-realtime-2.1-mini');
       expect(out.agentConfig.voice).toBe('alloy');
-      expect(voice.mintCalls[0]?.params).toEqual({ model: 'gpt-realtime-mini', voice: 'alloy' });
-      expect((await attempts.get(userId, out.attemptId)).model).toBe('gpt-realtime-mini');
+      expect(voice.mintCalls[0]?.params).toEqual({
+        model: 'gpt-realtime-2.1-mini',
+        voice: 'alloy',
+      });
+      expect((await attempts.get(userId, out.attemptId)).model).toBe('gpt-realtime-2.1-mini');
+    });
+
+    it('uses gpt-realtime-2.1-mini and the marin voice with the real service.yml', async () => {
+      const realConfigService = new ExamSessionService(
+        new ExerciseService(testDb.db),
+        new ExamConfigService(),
+        settings,
+        attempts,
+        new UsageService(testDb.db),
+        registryOf(voice)
+      );
+      await settings.upsert(userId, { apiKey: KEY });
+      const out = await realConfigService.createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(out.agentConfig.model).toBe('gpt-realtime-2.1-mini');
+      expect(out.agentConfig.voice).toBe('marin');
+      expect(voice.mintCalls[0]?.params).toEqual({
+        model: 'gpt-realtime-2.1-mini',
+        voice: 'marin',
+      });
     });
 
     it('takes the OpenAI default from OPENAI_REALTIME_MODEL', async () => {
@@ -318,7 +347,12 @@ describe('ExamSessionService', () => {
         taskType: 'tache2',
         mode: 'practice',
       });
-      expect(out.agentConfig.model).toBe('gpt-realtime-mini');
+      expect(out.agentConfig.model).toBe('gpt-realtime-2.1-mini');
+    });
+
+    it('exports the shared Gemini Live default', () => {
+      expect(DEFAULT_GEMINI_LIVE_MODEL).toBe('gemini-3.8-live');
+      expect(DEFAULT_GEMINI_LIVE_MODEL).toBe(SHARED_DEFAULT_GEMINI_LIVE_MODEL);
     });
 
     it('takes the Gemini default from GEMINI_LIVE_MODEL, then the built-in one', async () => {
@@ -337,7 +371,9 @@ describe('ExamSessionService', () => {
         taskType: 'tache2',
         mode: 'practice',
       });
-      expect(builtIn.agentConfig.model).toBe(DEFAULT_GEMINI_LIVE_MODEL);
+      expect(builtIn.agentConfig.model).toBe('gemini-3.8-live');
+      expect(gemini.mintCalls[0]?.params.model).toBe('gemini-3.8-live');
+      expect((await attempts.get(userId, builtIn.attemptId)).model).toBe('gemini-3.8-live');
 
       vi.stubEnv('GEMINI_LIVE_MODEL', 'gemini-env-model');
       const fromEnv = await geminiService.createSession(userId, {
@@ -345,6 +381,30 @@ describe('ExamSessionService', () => {
         mode: 'practice',
       });
       expect(fromEnv.agentConfig.model).toBe('gemini-env-model');
+    });
+
+    it("prefers the user's Gemini model over GEMINI_LIVE_MODEL and the built-in default", async () => {
+      vi.stubEnv('GEMINI_LIVE_MODEL', 'gemini-env-model');
+      const gemini = fakeVoiceProvider('gemini');
+      const geminiService = new ExamSessionService(
+        new ExerciseService(testDb.db),
+        new StubConfig({ model: 'gpt-realtime-service', voice: 'alloy' }),
+        settings,
+        attempts,
+        new UsageService(testDb.db),
+        registryOf(voice, gemini)
+      );
+      await settings.upsert(userId, {
+        provider: 'gemini',
+        apiKey: 'AIzaSyTestKey0123456789',
+        realtimeModel: 'gemini-user-model',
+      });
+      const out = await geminiService.createSession(userId, {
+        taskType: 'tache2',
+        mode: 'practice',
+      });
+      expect(out.agentConfig.model).toBe('gemini-user-model');
+      expect(gemini.mintCalls[0]?.params.model).toBe('gemini-user-model');
     });
 
     it("keeps the user's own voice for Gemini", async () => {
@@ -394,8 +454,8 @@ describe('ExamSessionService', () => {
       expect(out.agentConfig).toEqual({
         instructions: `${base('tache2')}\n\nEXERCICE À UTILISER:\nJeu de rôle un`,
         greeting: agent('tache2').greeting,
-        voice: 'alloy',
-        model: 'gpt-realtime-mini',
+        voice: 'marin',
+        model: 'gpt-realtime-2.1-mini',
         allowInterruptions: agent('tache2').settings.allowInterruptions,
       });
       expect(out.provider).toBe('openai');

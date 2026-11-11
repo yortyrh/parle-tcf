@@ -9,8 +9,23 @@ import type { RealtimeExamContextValue } from '@/providers/realtime-exam-provide
 import { ExamRunApp } from './exam-run-app';
 
 const h = vi.hoisted(() => {
-  const state: { exam: unknown; push: Mock } = { exam: null, push: vi.fn() };
+  const state: { exam: unknown; push: Mock; costModels: string[] } = {
+    exam: null,
+    push: vi.fn(),
+    costModels: [],
+  };
   return state;
+});
+
+vi.mock('@parle-tcf/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@parle-tcf/shared')>();
+  return {
+    ...actual,
+    estimateSessionCost: (model: string, speakingSeconds: number) => {
+      h.costModels.push(model);
+      return actual.estimateSessionCost(model, speakingSeconds);
+    },
+  };
 });
 
 vi.mock('@/providers/realtime-exam-provider', () => ({
@@ -160,6 +175,18 @@ describe('intro screen', () => {
       'href',
       '/tcf'
     );
+  });
+
+  it('estimates the full exam with the default OpenAI realtime model', () => {
+    setup();
+    // One estimate per task, all with the shared default (not a hard-coded retired id).
+    expect(h.costModels).toEqual([
+      'gpt-realtime-2.1-mini',
+      'gpt-realtime-2.1-mini',
+      'gpt-realtime-2.1-mini',
+    ]);
+    // 2 + 3,5 + 4,5 min of speaking at 0,06 $/min.
+    expect(screen.getByText(/Coût estimé : environ 0,60 \$/)).toBeInTheDocument();
   });
 
   it('starts task 1 in full-exam mode', async () => {

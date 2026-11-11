@@ -8,7 +8,7 @@ import type { GeminiLiveOptions } from '@/lib/gemini-live';
 import { RealtimeExamProvider, toApiLines, useRealtimeExam } from './realtime-exam-provider';
 
 const fakes = vi.hoisted(() => {
-  type Tool = { name: string; execute: () => string };
+  type Tool = { name: string; description: string; execute: () => string };
 
   class FakeAgent {
     static instances: FakeAgent[] = [];
@@ -30,7 +30,7 @@ const fakes = vi.hoisted(() => {
     close = vi.fn();
     constructor(
       readonly agent: FakeAgent,
-      readonly options: { model: string }
+      readonly options: { model: string; config?: { audio?: { input?: unknown } } }
     ) {
       FakeRealtimeSession.instances.push(this);
     }
@@ -149,6 +149,14 @@ const EXPECTED_LINES = [
   { seq: 0, speaker: 'examiner', text: 'Bonjour, présentez-vous.' },
   { seq: 1, speaker: 'candidate', text: 'Je m’appelle Ana.' },
 ];
+
+const TIME_UP_MESSAGE =
+  "Le temps imparti pour cette tâche est écoulé. Applique la clôture maintenant : dis « Merci, l'épreuve est terminée. » puis appelle finSession, sans poser de nouvelle question.";
+
+const FIN_SESSION_DESCRIPTION =
+  "Clôt l'épreuve. À appeler une seule fois, juste après avoir dit « Merci, l'épreuve est terminée. », quand le temps est écoulé ou que le candidat demande d'arrêter. Ne jamais appeler pendant l'épreuve.";
+const RECOMMENCER_TEST_DESCRIPTION =
+  "Recommence l'épreuve depuis le début. À appeler uniquement si le candidat demande explicitement de recommencer l'épreuve, jamais pour une hésitation ou une reformulation.";
 
 const START_MESSAGE =
   "Le candidat est prêt. Commence la session d'examen immédiatement en suivant ta consigne d'accueil et ton rôle d'examinateur.";
@@ -353,6 +361,25 @@ describe('start (OpenAI)', () => {
     expect(agent.instructions).toContain('Bonjour !');
     expect(agent.voice).toBe('alloy');
     expect(agent.tools.map((t) => t.name)).toEqual(['finSession', 'recommencerTest']);
+  });
+
+  it('transcribes the candidate in French and waits patiently before taking the turn', async () => {
+    const { result } = renderProvider();
+    await startTask(result, 'tache1');
+
+    expect(lastSession().options.config?.audio?.input).toEqual({
+      noiseReduction: { type: 'near_field' },
+      transcription: { model: 'gpt-4o-mini-transcribe', language: 'fr' },
+      turnDetection: { type: 'semantic_vad', eagerness: 'low' },
+    });
+  });
+
+  it('describes when the examiner may call each exam tool', async () => {
+    const { result } = renderProvider();
+    await startTask(result, 'tache1');
+
+    expect(tool('finSession').description).toBe(FIN_SESSION_DESCRIPTION);
+    expect(tool('recommencerTest').description).toBe(RECOMMENCER_TEST_DESCRIPTION);
   });
 
   it('opens the microphone muted', async () => {
@@ -964,6 +991,11 @@ describe('time up', () => {
       content: { text: string }[];
     };
     expect(sent.content[0].text).toContain('Le temps imparti pour cette tâche est écoulé');
+    expect(sent).toEqual({
+      type: 'message',
+      role: 'user',
+      content: [{ type: 'input_text', text: TIME_UP_MESSAGE }],
+    });
     expect(result.current.micEnabled).toBe(false);
     expect(track.enabled).toBe(false);
     expect(toast).not.toHaveBeenCalled();
@@ -1272,6 +1304,7 @@ describe('Gemini Live', () => {
     expect(lastGemini().sendText).toHaveBeenLastCalledWith(
       expect.stringContaining('Le temps imparti pour cette tâche est écoulé')
     );
+    expect(lastGemini().sendText).toHaveBeenLastCalledWith(TIME_UP_MESSAGE);
   });
 
   it('ignores callbacks of a closed session', async () => {
