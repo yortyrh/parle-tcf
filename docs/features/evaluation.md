@@ -13,7 +13,7 @@ The result page (`/resultats/<attemptId>`) shows « Évaluation en cours » and 
 - **Trigger:** `/attempts/complete` closes the attempt; the API then calls `EvaluationService.evaluate` in the background (in-process, fire-and-forget, never throws). A claim on the row prevents two concurrent runs.
 - **Prompt:** system prompt `apps/api/config/français/rubrique-v1.md` (rubric v1: warnings about speech recognition artefacts, the five criteria, expectations per task, output rules, CEFR descriptors). The user prompt holds the task, the subject and the numbered transcript (`buildPrompt`).
 - **Criteria:** `adequation` (task fulfilment), `coherence`, `vocabulaire`, `grammaire`, `aisance` (fluency visible in the text; pronunciation is not judged).
-- **Model call:** Vercel AI SDK structured output with the Zod schema of `packages/shared/src/schemas/evaluation.ts`, `temperature: 0`, with the user's key: OpenAI (`gpt-4o-mini` by default) or Gemini (`gemini-3.5-flash-lite`), overridable per user ("text model" in settings).
+- **Model call:** Vercel AI SDK structured output with the Zod schema of `packages/shared/src/schemas/evaluation.ts`, `temperature: 0`, with the user's key: OpenAI (`gpt-6-luna` by default, reasoning effort `none`) or Gemini (`gemini-3.5-flash-lite`), overridable per user ("text model" in settings).
 - **Validation:** up to 3 tries when the output is missing or does not match the schema. Error excerpts are located in the original line (`locateErrors`) so the UI can highlight them.
 - **No candidate speech:** the evaluation fails with a clear message instead of inventing a level.
 - **Overall level of a full exam:** once the three tasks are graded, a deterministic weighted median (weights 1, 1.5, 2 for Tâches 1, 2, 3) is stored on the run. No LLM call.
@@ -22,7 +22,9 @@ The result page (`/resultats/<attemptId>`) shows « Évaluation en cours » and 
 
 ## Quality: evals
 
-`pnpm --filter @parle-tcf/api evals -- --model <ids> --passes 3` (needs `OPENAI_API_KEY_EVALS`) runs the corrector on a labelled dataset (`apps/api/evals/dataset`, synthetic for now) and reports exact and ±1 level agreement, per-criterion agreement, stability across passes, cost and latency. The `evals.yml` workflow runs it manually.
+`pnpm --filter @parle-tcf/api evals -- --model <id>[@<effort>],... --passes 3` (needs `OPENAI_API_KEY_EVALS`) runs the corrector on a labelled dataset (`apps/api/evals/dataset`, synthetic for now) and reports exact and ±1 level agreement, per-criterion agreement, stability across passes, cost and latency. A `@none|low|medium|high` suffix sets the reasoning effort of OpenAI reasoning models. The `evals.yml` workflow runs it manually; the latest results are in [`apps/api/evals/results.md`](../../apps/api/evals/results.md).
+
+Latest run (Nov 2026, 6 synthetic cases × 5 passes): `gpt-6-luna` without reasoning 100 % exact level agreement, mean error 0, 4.4 s; `gpt-4o-mini` 67 %, 0.33, 5.1 s. With reasoning effort `low` / `high`, `gpt-6-luna` fell to 33 % / 0 % (too severe), hence the `none` effort in production.
 
 ## API
 

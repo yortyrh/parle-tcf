@@ -1,11 +1,13 @@
 /**
  * Runs the corrector against the human-labelled dataset and writes evals/results.md.
  *
- * Usage: OPENAI_API_KEY_EVALS=sk-... pnpm --filter @parle-tcf/api evals -- --model gpt-4o-mini,gpt-4.1-mini --passes 3
+ * Usage: OPENAI_API_KEY_EVALS=sk-... pnpm --filter @parle-tcf/api evals -- --model gpt-4o-mini,gpt-6-luna@low --passes 3
+ * A `@<effort>` suffix sets the OpenAI reasoning effort of reasoning models (none, low, medium, high).
  */
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { defaultSettingsMiddleware, wrapLanguageModel } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { estimateCost } from '@parle-tcf/shared';
 import {
@@ -36,6 +38,19 @@ const cases: EvalCase[] = readdirSync(join(dir, 'dataset'))
   .filter((f) => f.endsWith('.json'))
   .flatMap((f) => JSON.parse(readFileSync(join(dir, 'dataset', f), 'utf8')) as EvalCase[]);
 
+/** `gpt-6-luna@low` → the model with that reasoning effort; a plain id as is. */
+function languageModel(spec: string) {
+  const [id, effort] = spec.split('@');
+  const model = createOpenAI({ apiKey })(id);
+  if (!effort) return model;
+  return wrapLanguageModel({
+    model,
+    middleware: defaultSettingsMiddleware({
+      settings: { providerOptions: { openai: { reasoningEffort: effort } } },
+    }),
+  });
+}
+
 const rows = [];
 for (const model of models) {
   const runs: CaseRun[] = [];
@@ -46,7 +61,7 @@ for (const model of models) {
     let outputTokens = 0;
     const started = Date.now();
     for (let i = 0; i < passes; i++) {
-      const res = await runEvaluation(createOpenAI({ apiKey })(model), prompt);
+      const res = await runEvaluation(languageModel(model), prompt);
       outputs.push(res.output);
       inputTokens += res.inputTokens;
       outputTokens += res.outputTokens;
@@ -66,7 +81,7 @@ for (const model of models) {
   rows.push({
     model,
     summary,
-    costUsd: estimateCost(model, summary.inputTokens, summary.outputTokens),
+    costUsd: estimateCost(model.split('@')[0], summary.inputTokens, summary.outputTokens),
   });
 }
 

@@ -20,7 +20,7 @@ jobs:
       - name: Run evals
         env:
           OPENAI_API_KEY_EVALS: ${{ secrets.OPENAI_API_KEY_EVALS }}
-        run: pnpm --filter @parle-tcf/api evals -- --model gpt-4o-mini --passes 3
+        run: pnpm --filter @parle-tcf/api evals -- --model gpt-6-luna@none,gpt-4o-mini --passes 3
       - uses: actions/upload-artifact@v4
         with:
           name: evals-results

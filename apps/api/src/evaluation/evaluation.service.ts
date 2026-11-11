@@ -41,7 +41,11 @@ export const providerModelFactory: LanguageModelFactory = (provider, apiKey, mod
     ? createGoogleGenerativeAI({ apiKey })(modelId)
     : createOpenAI({ apiKey })(modelId);
 
-export const DEFAULT_TEXT_MODEL = 'gpt-4o-mini';
+/**
+ * gpt-4o-mini is removed on 2027-01-14. gpt-6-luna without reasoning agreed with the reference
+ * levels best in the evals (more reasoning made it too severe); see apps/api/evals/results.md.
+ */
+export const DEFAULT_TEXT_MODEL = 'gpt-6-luna';
 /** gemini-2.5-flash shuts down on 2026-12-01; Google routes it to gemini-3.5-flash-lite. */
 export const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-3.5-flash-lite';
 const MAX_ATTEMPTS = 3; // first try + 2 retries
@@ -70,6 +74,9 @@ export async function runEvaluation(
         system: loadRubric(),
         prompt,
         temperature: 0,
+        // OpenAI reasoning models (gpt-6-luna): grading needs no reasoning, and it made levels
+        // too severe in the evals. Other providers ignore the option.
+        providerOptions: { openai: { reasoningEffort: 'none' } },
         output: Output.object({ schema: evaluationOutputSchema }),
       });
       inputTokens += res.usage.inputTokens ?? 0;
