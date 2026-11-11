@@ -1,138 +1,118 @@
-# Changelog - Simplification du projet
+# Changelog - Project simplification (historical)
 
-## Résumé des modifications
+Early history of the web app, from when it was a LiveKit voice starter (translated from French). Most files named here no longer exist; current changes are in the root [`CHANGELOG.md`](../../CHANGELOG.md).
 
-Cette mise à jour simplifie et nettoie significativement le projet yorty-tcf-livekit-web en supprimant les fonctionnalités inutilisées et en réduisant la complexité du code.
+## Summary
 
-## Modifications principales
+This update simplified and cleaned up the yorty-tcf-livekit-web project by removing unused features and reducing code complexity.
 
-### 1. Configuration simplifiée
+## Main changes
+
+### 1. Simplified configuration
 
 #### `app-config.ts`
 
-- ✅ Suppression du support sandbox LiveKit Cloud
-- ✅ Personnalisation pour TCF (titres, descriptions en français)
-- ✅ Désactivation de la vidéo et du partage d'écran par défaut
-- ✅ Interface réduite et plus focalisée
+- Removed LiveKit Cloud sandbox support
+- Customised for the TCF (titles and descriptions in French)
+- Video and screen sharing disabled by default
+- Smaller, more focused interface
 
 #### `lib/utils.ts`
 
-- ✅ Suppression des fonctions liées au sandbox
-- ✅ Suppression de la logique de configuration distante
-- ✅ Fonction `getAppConfig()` simplifiée (retourne directement les valeurs par défaut)
-- ✅ Code réduit de ~100 lignes
+- Removed sandbox-related functions
+- Removed the remote configuration logic
+- Simplified `getAppConfig()` (returns the defaults directly)
+- About 100 fewer lines
 
-### 2. Composants simplifiés
+### 2. Simplified components
 
 #### `components/app/view-controller.tsx`
 
-- ✅ Suppression de la bibliothèque `motion/react`
-- ✅ Suppression des animations complexes
-- ✅ Logique de transition simplifiée avec simple if/else
-- ✅ Code plus lisible et maintenable
+- Removed the `motion/react` library
+- Removed complex animations
+- Transition logic simplified to a plain if/else
+- More readable and maintainable code
 
 #### `components/app/welcome-view.tsx`
 
-- ✅ Texte traduit en français
-- ✅ Suppression du lien vers la documentation externe
-- ✅ Interface épurée et simplifiée
-- ✅ Props React simplifiées
+- Text translated into French
+- Removed the link to the external documentation
+- Cleaner interface
+- Simpler React props
 
 #### `components/app/session-view.tsx`
 
-- ✅ Suppression des animations Framer Motion
-- ✅ Simplification du composant `Fade`
-- ✅ Correction du gradient CSS (`bg-gradient-to-*` au lieu de `bg-linear-to-*`)
-- ✅ Code plus simple et performant
+- Removed Framer Motion animations
+- Simplified the `Fade` component
+- Fixed the CSS gradient (`bg-gradient-to-*` instead of `bg-linear-to-*`)
+- Simpler, faster code
 
 #### `components/app/app.tsx`
 
-- ✅ Suppression de la logique de token source conditionnel
-- ✅ Code simplifié avec un seul endpoint
-- ✅ Traduction en français ("Démarrer l'audio")
+- Removed the conditional token source logic
+- Simplified to a single endpoint
+- Translated into French ("Démarrer l'audio")
 
-### 3. Hooks optimisés
+### 3. Optimised hooks
 
 #### `hooks/useDebug.ts`
 
-- ✅ Suppression de l'exposition du room dans window global
-- ✅ Simplification de la gestion des log levels
-- ✅ Code réduit de ~15 lignes
+- The room is no longer exposed on the global `window`
+- Simpler log level handling
+- About 15 fewer lines
 
 #### `hooks/useAgentErrors.tsx`
 
-- ✅ Messages d'erreur traduits en français
-- ✅ Suppression du lien vers la documentation externe
-- ✅ Interface utilisateur plus simple
+- Error messages translated into French
+- Removed the link to the external documentation
+- Simpler user interface
 
-### 4. Pages et layouts
+### 4. Pages and layouts
 
 #### `app/(app)/page.tsx`
 
-- ✅ Suppression de l'async/await inutile
-- ✅ Suppression de la gestion des headers
-- ✅ Composant fonctionnel standard
+- Removed needless async/await
+- Removed header handling
+- Standard function component
 
 #### `app/layout.tsx`
 
-- ✅ Suppression de l'async/await inutile
-- ✅ Langue changée de "en" à "fr"
-- ✅ Chargement de seulement 2 variantes de police au lieu de 4
+- Removed needless async/await
+- Language changed from "en" to "fr"
+- Loads only 2 font variants instead of 4
 
-### 5. Fichiers supprimés
+### 5. Deleted files
 
-- ✅ `.eslintrc.json` (doublon de `eslint.config.mjs`)
-- ✅ `fonts/CommitMono-700-Regular.otf` (non utilisé)
-- ✅ `fonts/CommitMono-700-Italic.otf` (non utilisé)
+- `.eslintrc.json` (duplicate of `eslint.config.mjs`)
+- `fonts/CommitMono-700-Regular.otf` (unused)
+- `fonts/CommitMono-700-Italic.otf` (unused)
 
-### 6. Dépendances nettoyées
+### 6. Cleaned-up dependencies
 
-#### Supprimées de `package.json`
+#### Removed from `package.json`
 
-- `motion` - Bibliothèque d'animation non utilisée (~200KB)
-- `buffer-image-size` - Non utilisé
-- `mime` - Non utilisé
-- `jose` - Non utilisé
-- `tw-animate-css` - Non utilisé
+- `motion`: unused animation library (~200 KB)
+- `buffer-image-size`: unused
+- `mime`: unused
+- `jose`: unused
+- `tw-animate-css`: unused
 
-#### Nom du package
+#### Package name
 
-- Renommé de `agent-starter-react` à `yorty-tcf-livekit-web`
+- Renamed from `agent-starter-react` to `yorty-tcf-livekit-web`
 
 ### 7. Documentation
 
-- ✅ README.md complètement réécrit en français
-- ✅ Documentation adaptée au projet TCF
-- ✅ Instructions claires et concises
+- README rewritten in French
+- Documentation adapted to the TCF project
 
 ## Impact
 
-### Taille du bundle
-
-- **Réduction estimée** : ~300-400KB (grâce à la suppression de motion, fonts inutilisées, etc.)
-
-### Maintenabilité
-
-- **Complexité réduite** : ~500 lignes de code en moins
-- **Dépendances réduites** : 6 packages supprimés
-- **Concepts simplifiés** : Suppression des animations complexes, logique asynchrone inutile
-
-### Performance
-
-- **Chargement plus rapide** : Moins de JavaScript à télécharger et parser
-- **Rendu plus simple** : Pas d'animations coûteuses
-- **Bundle optimisé** : Seulement les dépendances essentielles
-
-## Prochaines étapes recommandées
-
-1. Tester l'application en développement : `pnpm dev`
-2. Vérifier que toutes les fonctionnalités fonctionnent
-3. Mettre à jour les dépendances : `pnpm update`
-4. Rebuild et tester en production : `pnpm build && pnpm start`
+- **Bundle size:** an estimated 300–400 KB less (motion, unused fonts, etc.).
+- **Maintainability:** about 500 fewer lines of code and 6 fewer dependencies.
+- **Performance:** less JavaScript to download and parse, no costly animations.
 
 ## Notes
 
-- Toutes les fonctionnalités core (voix, chat, transcription) sont préservées
-- Le code est maintenant plus simple à comprendre et maintenir
-- L'interface est adaptée pour le contexte français (TCF)
-- Aucune régression fonctionnelle introduite
+- All core features (voice, chat, transcription) were kept.
+- No functional regression was introduced.

@@ -31,7 +31,7 @@ interface WelcomeViewProps {
   onStartCall: (taskType: string) => void;
   tasks: Task[];
   homeHref?: string;
-  /** Pré-sélection (ex. slug `/tcf/tache2`) pour activer « Commencer » sans re-cliquer la carte. */
+  /** Preselection (e.g. slug `/tcf/tache2`) that enables « Commencer » without clicking the card again. */
   initialSelectedTaskType?: string | null;
 }
 

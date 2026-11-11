@@ -38,7 +38,7 @@ export function ViewController({
   const [selectedTask, setSelectedTask] = useState<Task | null>(() =>
     initialTaskType ? (appConfig.tasks.find((t) => t.taskType === initialTaskType) ?? null) : null
   );
-  /** Dernière route pour laquelle on a tenté une auto-connexion (évite boucles si l’appel échoue). */
+  /** Last route an auto-connect was tried for (avoids loops when the call fails). */
   const autoConnectAttemptKeyRef = useRef<string | null>(null);
   const wasConnectedRef = useRef(false);
   const isMountedRef = useRef(true);

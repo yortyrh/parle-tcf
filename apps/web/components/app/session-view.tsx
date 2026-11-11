@@ -47,15 +47,15 @@ function SpeakingIndicator({
   icons = 'none',
   evaluatorCaptionVisible = true,
 }: {
-  /** Libellé visible (ex. « Vous »). Omis pour l’évaluateur (casque + barres seuls). */
+  /** Visible label (e.g. « Vous »). Omitted for the examiner (headset and bars only). */
   label?: string;
   active: boolean;
   color: 'cyan' | 'emerald';
   levelRef: React.RefObject<number>;
   variant?: 'default' | 'barsOnly';
-  /** Casque à gauche des barres, sans texte — pour le canal agent uniquement. */
+  /** Headset left of the bars, no text: for the agent channel only. */
   icons?: 'none' | 'evaluator';
-  /** Affiche « Évaluateur » à côté des barres (desktop assez haut uniquement). */
+  /** Shows « Évaluateur » next to the bars (tall enough desktop only). */
   evaluatorCaptionVisible?: boolean;
 }) {
   const barsRef = useRef<(HTMLSpanElement | null)[]>([]);
