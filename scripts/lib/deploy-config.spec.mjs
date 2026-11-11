@@ -52,14 +52,30 @@ describe('Dockerfiles', () => {
     expect(nodeFroms.length).toBeGreaterThan(0);
   });
 
-  it.each(DOCKERFILES)('%s pins every node base image to a literal Node 24 tag', (path) => {
-    const nodeFroms = fromLines(readRepoFile(path)).filter((line) => nodeImage(line));
-    for (const line of nodeFroms) {
-      const tag = nodeImage(line);
-      expect(tag, line).not.toContain('$');
-      expect(tag, line).toMatch(/^24(?:[.-]|$)/);
-    }
+  // The Node.js major the repo runs on, from `.nvmrc` (e.g. 26.13.1 -> 26).
+  const nvmrcVersion = readRepoFile('.nvmrc').trim().replace(/^v/, '');
+  const nodeMajor = nvmrcVersion.split('.')[0];
+
+  it('.nvmrc holds a full Node.js version that matches devEngines.runtime in package.json', () => {
+    expect(nvmrcVersion).toMatch(/^\d+\.\d+\.\d+$/);
+    const { devEngines } = JSON.parse(readRepoFile('package.json'));
+    expect(devEngines.runtime.name).toBe('node');
+    expect(devEngines.runtime.version).toBe(nvmrcVersion);
   });
+
+  it.each(DOCKERFILES)(
+    '%s pins every node base image to a literal tag of the .nvmrc Node major',
+    (path) => {
+      const nodeFroms = fromLines(readRepoFile(path)).filter((line) => nodeImage(line));
+      expect(nodeFroms.length).toBeGreaterThan(0);
+      for (const line of nodeFroms) {
+        const tag = nodeImage(line);
+        expect(tag, line).not.toContain('$');
+        // `26`, `26-slim`, `26.13.1-alpine`… but not `260` or `2`.
+        expect(tag, line).toMatch(new RegExp(`^${nodeMajor}(?:[.-]|$)`));
+      }
+    }
+  );
 
   it.each(DOCKERFILES)('%s takes no FROM image from a build-arg substitution', (path) => {
     for (const line of fromLines(readRepoFile(path))) {

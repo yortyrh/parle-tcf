@@ -104,12 +104,16 @@ describe('.next-dev is ignored like the other build output', () => {
     expect(await isIgnored('apps/web/lib/page.ts')).toBe(false);
   }, 30_000);
 
-  it('the docker build context leaves it out', () => {
+  it('the docker build context leaves it out, nested apps included', () => {
     const lines = readRepoFile('.dockerignore')
       .split('\n')
       .map((line) => line.trim());
-    expect(lines).toContain('.next');
-    expect(lines.some((line) => /^(\*\*\/)?\.next-dev\/?$/.test(line))).toBe(true);
+    // A bare pattern only matches at the context root, so it would keep apps/web/.next-dev.
+    const ignoresNested = (dir) => lines.includes(`**/${dir}`) || lines.includes(`**/${dir}/`);
+    expect(ignoresNested('.next-dev')).toBe(true);
+    expect(ignoresNested('.next')).toBe(true);
+    // The bare `node_modules` once let the nested app dependencies into the context.
+    expect(ignoresNested('node_modules')).toBe(true);
   });
 });
 
