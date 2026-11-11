@@ -6,10 +6,7 @@ const nextConfig: NextConfig = {
   // `pnpm build` (and `pnpm push`) never replace the folder of a running dev server.
   distDir: process.env.NEXT_DIST_DIR || '.next',
   transpilePackages: ['@parle-tcf/shared'],
-  // Lint runs during the build too, with the repo's root ESLint config.
-  eslint: {
-    dirs: ['app', 'components', 'hooks', 'lib', 'providers'],
-  },
+  // Next.js 16 no longer lints during `next build`: `pnpm lint` (part of `pnpm verify`) does.
 };
 
 export default nextConfig;

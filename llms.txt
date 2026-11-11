@@ -1,6 +1,6 @@
 # parle-tcf
 
-> Open-source practice for the speaking test (expression orale, Tâches 1–3) of the TCF, the French language test. An AI examiner (OpenAI Realtime or Gemini Live, with the user's own API key) runs each task in the browser with official timing; a separate text model then grades the transcript on the CEFR scale (A1–C2) with per-criterion feedback and a corrected transcript. pnpm 12 + Turborepo monorepo: Next.js 15 web app, NestJS 11 API, PostgreSQL with Drizzle. Node.js 26 LTS, installed by pnpm.
+> Open-source practice for the speaking test (expression orale, Tâches 1–3) of the TCF, the French language test. An AI examiner (OpenAI Realtime or Gemini Live, with the user's own API key) runs each task in the browser with official timing; a separate text model then grades the transcript on the CEFR scale (A1–C2) with per-criterion feedback and a corrected transcript. pnpm 12 + Turborepo monorepo: Next.js 16 web app, NestJS 11 API, PostgreSQL with Drizzle. Node.js 26 LTS, installed by pnpm.
 
 Exam content, model prompts and the UI are in French; code and docs are in English. Contributor and agent rules (scaffolds, tests by a separate author, commits, pushes) are in CLAUDE.md.
 

@@ -60,7 +60,7 @@ To run the whole stack in containers instead: `cp .env.example .env`, fill in th
 
 | Area       | Choice                                                                                      |
 | ---------- | ------------------------------------------------------------------------------------------- |
-| Web        | Next.js 15 (App Router), React, Tailwind CSS 4, shadcn/ui                                   |
+| Web        | Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui                                |
 | Voice      | OpenAI Realtime (`@openai/agents`, WebRTC), Gemini Live (`@google/genai`, WebSocket)        |
 | API        | NestJS 11, oRPC contract with Zod schemas, Better Auth (email, GitHub, Google)              |
 | Grading    | Vercel AI SDK structured output, versioned CEFR rubric, offline evals                       |

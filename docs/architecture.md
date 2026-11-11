@@ -8,7 +8,7 @@ parle-tcf is a pnpm + Turborepo monorepo. A Next.js web app runs the voice sessi
 
 | Package                    | Role                                                                                                                                   |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web`                 | Next.js 15 App Router UI (shadcn/ui, Tailwind 4). Voice session state in `providers/realtime-exam-provider.tsx`. French UI.            |
+| `apps/web`                 | Next.js 16 App Router UI (shadcn/ui, Tailwind 4). Voice session state in `providers/realtime-exam-provider.tsx`. French UI.            |
 | `apps/api`                 | NestJS 11. Better Auth, oRPC contract, session minting, attempts, evaluation, usage limits, audio, mail.                               |
 | `apps/e2e`                 | Playwright end-to-end tests with axe accessibility checks, against a fake voice provider.                                              |
 | `packages/db`              | Drizzle schema, SQL migrations (including the exercise bank data), migration runner, PGlite test helper.                               |

@@ -2,8 +2,6 @@ import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  // tsconfig has `jsx: preserve` for Next; tests need the automatic runtime (no React import).
-  esbuild: { jsx: 'automatic' },
   test: {
     // Node 25+ ships its own global `localStorage`, which shadows jsdom's and is unusable
     // without --localstorage-file. Turning it off lets the jsdom Storage through.
