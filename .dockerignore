@@ -1,24 +1,27 @@
-# Dependencies (installed fresh inside Docker)
-node_modules
+# Dependencies (installed fresh inside Docker). `**/` also matches nested packages: a bare
+# pattern only matches at the context root.
+**/node_modules
 
 # Build artifacts (rebuilt inside Docker)
-.next
-.next-dev
-dist
-.turbo
+**/.next
+**/.next-dev
+**/.next-e2e
+**/dist
+**/.turbo
 
 # Git
 .git
 
 # Environment (injected via Railway / docker-compose env vars)
-.env
-.env.*
+**/.env
+**/.env.*
+!**/.env.example
 
 # Secrets
-*.pem
+**/*.pem
 
 # OS
-.DS_Store
+**/.DS_Store
 Thumbs.db
 
 # IDE / editor
@@ -30,10 +33,13 @@ Thumbs.db
 *.swo
 
 # TypeScript incremental cache
-*.tsbuildinfo
+**/*.tsbuildinfo
 
 # Test output
-coverage
+**/coverage
+**/reports
+**/playwright-report
+**/test-results
 
 # CI / docs not needed at build time
 .github
