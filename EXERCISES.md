@@ -12,9 +12,11 @@ Files live in **`apps/api/config/agents/`** and are loaded by the API when creat
 
 - `name` / `description` — task metadata.
 - `settings` — e.g. `allowInterruptions`.
-- `baseInstructions` — shared system instructions.
-- `instructions` — task-specific instructions.
+- `baseInstructions` — role, objective and language pinning.
+- `instructions` — tone, turn length, flow, forbidden behaviours, silences and unclear audio, tools, closing.
 - `greeting` — opening line for the oral interaction.
+
+The section structure and the provider best practices behind it are described in [docs/prompts.md](./docs/prompts.md).
 
 ### Supported tasks
 
@@ -52,12 +54,12 @@ See [apps/api/config/SERVICE_CONFIG.md](./apps/api/config/SERVICE_CONFIG.md) for
 
 ## Reference material
 
-`apps/api/config/français/` holds reference documents that the code does not load yet (CEFR self-assessment grid, logical connectors). They are the starting point for the evaluation rubric.
+`apps/api/config/français/rubrique-v1.md` is the corrector's system prompt (CEFR rubric v1, see [docs/features/evaluation.md](./docs/features/evaluation.md)). The other files there (CEFR self-assessment grid, logical connectors) are reference material the code does not load.
 
 ---
 
 ## Prompt tips
 
-- **Language**: keep candidate-facing and in-character content in **French**; technical notes in YAML can be English if you prefer.
-- **Constraints**: durations, number of questions, etc. belong in `instructions`.
+- **Language**: keep candidate-facing and in-character content in **French**; YAML comments are in English.
+- **Constraints**: durations, number of questions, etc. belong in `instructions`, phrased as events the model receives (a silent turn, the time-up message), not as seconds it cannot measure.
 - **Tone**: adjust in `instructions` / `greeting`.
