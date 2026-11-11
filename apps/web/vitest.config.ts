@@ -5,6 +5,9 @@ export default defineConfig({
   // tsconfig has `jsx: preserve` for Next; tests need the automatic runtime (no React import).
   esbuild: { jsx: 'automatic' },
   test: {
+    // Node 25+ ships its own global `localStorage`, which shadows jsdom's and is unusable
+    // without --localstorage-file. Turning it off lets the jsdom Storage through.
+    poolOptions: { forks: { execArgv: ['--no-experimental-webstorage'] } },
     coverage: {
       provider: 'v8',
       include: ['lib/**/*.ts', 'hooks/**/*.{ts,tsx}', 'components/**/*.tsx', 'providers/**/*.tsx'],

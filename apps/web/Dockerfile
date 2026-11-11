@@ -1,30 +1,30 @@
 # syntax=docker/dockerfile:1
 # Turborepo monorepo build for the Next.js web application.
 # Build context MUST be the repository root.
-# Node 24 is pinned in every FROM (not a build ARG): Railway overrode the ARG with 22.
+# Node 26 (LTS) is pinned in every FROM (not a build ARG): Railway overrode the ARG with 22.
 
 # --- Stage 1: Prune the monorepo to only what @parle-tcf/web needs ---
-FROM node:24-alpine AS pruner
+FROM node:26-alpine AS pruner
 
-RUN npm install -g pnpm@10 turbo@^2
+RUN npm install -g pnpm@12.18.0 turbo@^2.11.10
 WORKDIR /app
 COPY . .
 RUN turbo prune @parle-tcf/web --docker
 
 # --- Stage 2: Install dependencies ---
-FROM node:24-alpine AS installer
+FROM node:26-alpine AS installer
 
 RUN apk add --no-cache libc6-compat
-RUN npm install -g pnpm@10
+RUN npm install -g pnpm@12.18.0
 WORKDIR /app
 
 COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 
 # --- Stage 3: Build ---
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 
-RUN npm install -g pnpm@10 turbo@^2
+RUN npm install -g pnpm@12.18.0 turbo@^2.11.10
 WORKDIR /app
 
 COPY --from=installer /app/ .
@@ -44,7 +44,7 @@ ENV NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED=$NEXT_PUBLIC_AUTH_GOOGLE_OAUTH_ENABLED
 RUN turbo run build --filter=@parle-tcf/web
 
 # --- Stage 4: Production runner ---
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 
 WORKDIR /app
 

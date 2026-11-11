@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-parle-tcf: practice for the **TCF speaking test** (Tâches 1–3) with an AI examiner. pnpm + Turborepo monorepo, Node 24 (`.nvmrc`).
+parle-tcf: practice for the **TCF speaking test** (Tâches 1–3) with an AI examiner. pnpm 12 + Turborepo monorepo, Node.js 26 LTS (installed by pnpm from `devEngines.runtime`; `.nvmrc` mirrors it).
 
 - `apps/web`: Next.js App Router UI (shadcn, Tailwind 4). The voice session runs **in the browser** (OpenAI Realtime over WebRTC via `@openai/agents`, experimental Gemini Live). State lives in `providers/realtime-exam-provider.tsx`.
 - `apps/api`: NestJS 11. Better Auth at `/api/auth/*`, oRPC contract in `src/contract/` (POST routes from `API_ROUTES`), session minting in `src/session/` + `src/providers/`, attempts, CEFR evaluation (`src/evaluation`, in-process), usage limits, consented audio (S3), mail (SMTP, Mailpit locally).

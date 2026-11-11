@@ -2,13 +2,20 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
-onlyBuiltDependencies:
-  - '@nestjs/core'
-  - '@tailwindcss/oxide'
-  - esbuild
-  - lefthook
-  - sharp
-  - unrs-resolver
+# Dependencies allowed (true) or denied (false) to run install scripts. pnpm 11+ fails the
+# install when a dependency with a build script is in neither list.
+allowBuilds:
+  '@nestjs/core': true
+  '@swc/core': false
+  '@tailwindcss/oxide': true
+  better-sqlite3: false
+  cpu-features: false
+  esbuild: true
+  lefthook: true
+  protobufjs: false
+  sharp: true
+  ssh2: false
+  unrs-resolver: true
 
 patchedDependencies:
   '@openai/agents-core@0.8.2': patches/@openai__agents-core@0.8.2.patch
