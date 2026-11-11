@@ -84,3 +84,5 @@ Issues and pull requests are welcome. Before opening a pull request:
 1. Read [development](docs/development.md) and [`CLAUDE.md`](CLAUDE.md): scaffolds first, tests in their own commit before the code, Conventional Commits.
 2. Run `pnpm verify` (format, lint, types, unit tests with coverage, build). For API or flow changes, also `pnpm test:integration` and `pnpm test:e2e`.
 3. Keep candidate-facing text in French and everything else in English.
+
+Security issues: please report them privately, see [SECURITY.md](SECURITY.md).
