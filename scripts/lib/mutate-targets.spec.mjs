@@ -123,6 +123,24 @@ describe('mutateTargets', () => {
       ).toEqual([]);
     });
 
+    it('drops the load-exercise-bank CLI entry (env, pool, exit codes)', () => {
+      expect(mutateTargets(['packages/db/src/load-exercise-bank.ts'])).toEqual([]);
+    });
+
+    it('keeps the exercise bank loader and near-misses of the CLI name', () => {
+      const targets = mutateTargets([
+        'packages/db/src/load-exercise-bank.ts',
+        'packages/db/src/exercise-bank-loader.ts',
+        'packages/db/src/load-exercise-bank-helpers.ts',
+        'packages/db/src/cli/load-exercise-bank.ts',
+      ]);
+      expect(filesOf(targets, 'packages/db')).toEqual([
+        'src/exercise-bank-loader.ts',
+        'src/load-exercise-bank-helpers.ts',
+        'src/cli/load-exercise-bank.ts',
+      ]);
+    });
+
     it('keeps spec files, nested schema dirs and other sources', () => {
       const targets = mutateTargets([
         'packages/db/src/migrate.ts',
