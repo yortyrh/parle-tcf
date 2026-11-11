@@ -6,9 +6,7 @@
  * 3. Neither: messages are only logged. Refused in production at startup.
  */
 export type MailTransport =
-  | { kind: 'resend'; apiKey: string }
-  | { kind: 'smtp'; url: string }
-  | { kind: 'log' };
+  { kind: 'resend'; apiKey: string } | { kind: 'smtp'; url: string } | { kind: 'log' };
 
 export interface OutgoingMail {
   to: string;

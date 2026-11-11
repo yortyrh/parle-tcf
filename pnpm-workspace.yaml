@@ -20,3 +20,9 @@ allowBuilds:
 patchedDependencies:
   '@openai/agents-core@0.8.2': patches/@openai__agents-core@0.8.2.patch
   '@openai/agents-realtime@0.8.2': patches/@openai__agents-realtime@0.8.2.patch
+
+# Security fixes inside the same major version for transitive dependencies that their parents
+# pin (Next.js 15 pins postcss 8.4.x). Drop an entry once the parent ships the fix itself.
+overrides:
+  postcss@<8.5.10: ^8.5.10
+  postcss-selector-parser@<6.1.5: ^6.1.5

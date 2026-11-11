@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-Earlier history of the web app (in French) lives in [`apps/web/CHANGELOG.md`](./apps/web/CHANGELOG.md).
+Earlier history of the web app lives in [`apps/web/CHANGELOG.md`](./apps/web/CHANGELOG.md).
 
 ## [Unreleased]
 
@@ -25,10 +25,13 @@ Earlier history of the web app (in French) lives in [`apps/web/CHANGELOG.md`](./
 - The examiner no longer writes a report (`envoiRapport`) nor coaches after the task; `finSession` closes the task and the separate corrector evaluates it.
 - The exercise bank moved from SQLite to PostgreSQL; `generate-db` is replaced by `db:seed`.
 - Sessions are minted with the signed-in user's key; `OPENAI_API_KEY` is no longer read by the API.
-
-
-### Changed
-
+- Toolchain: pnpm 12 (`allowBuilds` replaces `onlyBuiltDependencies`) and Node.js 26 LTS, installed by pnpm from `devEngines.runtime`; Docker images, CI and `.nvmrc` follow. Turborepo 2.11.
+- Default voice models: `gpt-realtime-2.1-mini` (OpenAI retires `gpt-realtime-mini` on 2027-01-20) and `gemini-3.8-live`; default OpenAI voice `marin`.
+- Sessions suit learners who pause: low semantic VAD eagerness and a French transcription hint (OpenAI), low end-of-speech sensitivity (Gemini).
+- Examiner prompts restructured after the OpenAI and Gemini prompting guides (labelled sections, French pinned, unclear-audio and tool rules, no contradictions).
+- Dependencies updated within their ranges, plus Next.js 15.5.29 and nodemailer 10, fixing the known advisories that had a patch.
+- Documentation: one page per feature in `docs/`, `llms.txt`, rewritten README; every document is in English (PRD translated to `docs/prd.md`).
+- Docker builds no longer send nested `node_modules`/build output to the context; the Turborepo cache no longer stores `.next/cache`.
 - Renamed the project to **parle-tcf** and the workspace scope to `@parle-tcf/*`.
 - Zod 4 everywhere (`apps/api` and `packages/shared` moved from Zod 3).
 - Node 24 in Docker images, CI and `engines`, matching `.nvmrc`.

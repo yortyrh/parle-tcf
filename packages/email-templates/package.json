@@ -16,18 +16,18 @@
     "preview": "email dev --dir src/templates --port 3030"
   },
   "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "^3.2.7",
-    "prettier": "^3.8.1",
+    "prettier": "^3.9.10",
     "react-email": "^4.3.2",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@react-email/components": "^0.5.7",
     "@react-email/render": "^1.4.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   }
 }
