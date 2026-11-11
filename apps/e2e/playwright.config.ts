@@ -23,6 +23,8 @@ export default defineConfig({
     locale: 'fr-FR',
     trace: 'retain-on-failure',
     permissions: ['microphone'],
+    // Final state of CSS animations (DemoLoop fades): axe must not sample animation frames.
+    reducedMotion: 'reduce',
     launchOptions: {
       args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
     },
