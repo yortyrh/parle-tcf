@@ -25,7 +25,15 @@ const readIfExists = (path) => (existsSync(path) ? readFileSync(path, 'utf8') : 
 
 const previous = parseDotenv(readIfExists(API_ENV));
 // Port overrides: the shell wins, then the values stored in apps/api/.env by a previous run.
-const PORT_KEYS = ['POSTGRES_PORT', 'MAILPIT_SMTP_PORT', 'MAILPIT_UI_PORT', 'API_PORT', 'WEB_PORT'];
+const PORT_KEYS = [
+  'POSTGRES_PORT',
+  'MAILPIT_SMTP_PORT',
+  'MAILPIT_UI_PORT',
+  'STORAGE_PORT',
+  'STORAGE_CONSOLE_PORT',
+  'API_PORT',
+  'WEB_PORT',
+];
 const infra = devInfra({ ...previous, ...process.env });
 const portOverrides = PORT_KEYS.filter((key) => (process.env[key] ?? previous[key])?.trim()).map(
   (key) => `${key}=${(process.env[key] ?? previous[key]).trim()}`

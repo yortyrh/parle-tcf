@@ -9,7 +9,7 @@ API_ENV="$REPO_ROOT/apps/api/.env"
 
 # Port overrides saved in apps/api/.env (see `pnpm setup:env`); the shell environment wins.
 if [[ -f "$API_ENV" ]]; then
-  for key in POSTGRES_PORT MAILPIT_SMTP_PORT MAILPIT_UI_PORT; do
+  for key in POSTGRES_PORT MAILPIT_SMTP_PORT MAILPIT_UI_PORT STORAGE_PORT STORAGE_CONSOLE_PORT; do
     if [[ -z "${!key:-}" ]]; then
       value="$(grep -E "^${key}=" "$API_ENV" | tail -n1 | cut -d= -f2- || true)"
       [[ -n "$value" ]] && export "$key=$value"

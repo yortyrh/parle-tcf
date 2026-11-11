@@ -3,9 +3,10 @@
  * (scripts/setup-local-env.mjs). Pure functions: no I/O.
  *
  * Three kinds of keys:
- *   1. Infrastructure, rewritten every run: DATABASE_URL, SMTP_URL, ports and URLs.
+ *   1. Infrastructure, rewritten every run: DATABASE_URL, SMTP_URL, S3_* (local
+ *      RustFS of docker-compose.dev.yml), ports and URLs.
  *   2. Operator keys, preserved from the previous API env: auth flags, OAuth
- *      credentials, usage limits, optional S3/Resend/model settings.
+ *      credentials, usage limits, optional Resend/model settings.
  *   3. Secrets, generated once and then preserved. ENCRYPTION_KEYS is never
  *      replaced once valid: it decrypts the users' stored provider keys.
  *
@@ -39,6 +40,8 @@ const DEFAULT_PORTS = {
   postgresPort: ['POSTGRES_PORT', 5432],
   smtpPort: ['MAILPIT_SMTP_PORT', 1025],
   mailpitUiPort: ['MAILPIT_UI_PORT', 8025],
+  storagePort: ['STORAGE_PORT', 9000],
+  storageConsolePort: ['STORAGE_CONSOLE_PORT', 9001],
   apiPort: ['API_PORT', 3001],
   webPort: ['WEB_PORT', 3000],
 };
@@ -55,9 +58,41 @@ export function devInfra(env) {
     const value = raw === undefined || raw.trim() === '' ? NaN : Number(raw);
     out[name] = Number.isInteger(value) && value > 0 ? value : fallback;
   }
-  return /** @type {{ postgresPort: number, smtpPort: number, mailpitUiPort: number, apiPort: number, webPort: number }} */ (
+  return /** @type {{ postgresPort: number, smtpPort: number, mailpitUiPort: number, storagePort: number, storageConsolePort: number, apiPort: number, webPort: number }} */ (
     out
   );
+}
+
+/**
+ * The local S3 storage (RustFS service of docker-compose.dev.yml). The
+ * credentials must match RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY there.
+ * @param {ReturnType<typeof devInfra>} infra
+ */
+export function devStorage(infra) {
+  return {
+    endpoint: `http://127.0.0.1:${infra.storagePort}`,
+    region: 'us-east-1',
+    bucket: 'parle-tcf-audio',
+    accessKeyId: 'parle',
+    secretAccessKey: 'parle-dev-secret',
+    forcePathStyle: true,
+  };
+}
+
+/**
+ * Bucket CORS: the browser uploads with a presigned POST from the web origin
+ * and plays recordings back with GET.
+ * @param {ReturnType<typeof devInfra>} infra
+ */
+export function storageCorsRules(infra) {
+  return [
+    {
+      AllowedOrigins: [`http://localhost:${infra.webPort}`],
+      AllowedMethods: ['GET', 'POST'],
+      AllowedHeaders: ['*'],
+      MaxAgeSeconds: 3000,
+    },
+  ];
 }
 
 /** 48 random bytes, base64url (64 characters). */
@@ -136,16 +171,7 @@ const OPERATOR_DEFAULTS = {
   DEFAULT_MONTHLY_COST_USD: '10',
 };
 
-const OPTIONAL_KEYS = [
-  'OPENAI_REALTIME_MODEL',
-  'S3_BUCKET',
-  'S3_ENDPOINT',
-  'S3_REGION',
-  'S3_ACCESS_KEY_ID',
-  'S3_SECRET_ACCESS_KEY',
-  'S3_FORCE_PATH_STYLE',
-  'RESEND_API_KEY',
-];
+const OPTIONAL_KEYS = ['OPENAI_REALTIME_MODEL', 'RESEND_API_KEY'];
 
 /** @param {string} value */
 const quote = (value) => (/[\s#"']/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value);
@@ -159,6 +185,7 @@ export function composeApiEnv({ infra, previous, secrets }) {
   const operator = Object.fromEntries(
     Object.entries(OPERATOR_DEFAULTS).map(([key, fallback]) => [key, previous[key] ?? fallback])
   );
+  const storage = devStorage(infra);
   const optional = OPTIONAL_KEYS.filter((key) => previous[key]).map(
     (key) => `${key}=${quote(previous[key])}`
   );
@@ -175,6 +202,13 @@ export function composeApiEnv({ infra, previous, secrets }) {
     `BETTER_AUTH_URL=http://localhost:${infra.apiPort}`,
     `WEB_URL=http://localhost:${infra.webPort}`,
     `CORS_ORIGINS=http://localhost:${infra.webPort}`,
+    '# Local RustFS (docker-compose.dev.yml); console on the STORAGE_CONSOLE_PORT.',
+    `S3_BUCKET=${storage.bucket}`,
+    `S3_ENDPOINT=${storage.endpoint}`,
+    `S3_REGION=${storage.region}`,
+    `S3_ACCESS_KEY_ID=${storage.accessKeyId}`,
+    `S3_SECRET_ACCESS_KEY=${storage.secretAccessKey}`,
+    `S3_FORCE_PATH_STYLE=${storage.forcePathStyle}`,
     '',
     '# --- Secrets (generated once, then preserved) ---',
     `BETTER_AUTH_SECRET=${secrets.BETTER_AUTH_SECRET}`,
@@ -193,7 +227,7 @@ export function composeApiEnv({ infra, previous, secrets }) {
     `DEFAULT_DAILY_MINUTES=${operator.DEFAULT_DAILY_MINUTES}`,
     `DEFAULT_MONTHLY_COST_USD=${operator.DEFAULT_MONTHLY_COST_USD}`,
     '',
-    '# --- Optional (OPENAI_REALTIME_MODEL, S3_*, RESEND_API_KEY): kept when set ---',
+    '# --- Optional (OPENAI_REALTIME_MODEL, RESEND_API_KEY): kept when set ---',
     ...optional,
   ];
   return `${lines.join('\n')}\n`;

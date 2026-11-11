@@ -20,6 +20,20 @@ services:
       timeout: 5s
       retries: 30
 
+  # S3-compatible object storage for consented attempt recordings. Console UI on :9001.
+  # `pnpm infra:up` creates the bucket and its CORS rules; any S3 server works.
+  storage:
+    image: docker.io/rustfs/rustfs:1.0.4
+    environment:
+      RUSTFS_ACCESS_KEY: parle
+      RUSTFS_SECRET_KEY: parle-dev-secret
+      RUSTFS_CONSOLE_ENABLE: 'true'
+    ports:
+      - '${STORAGE_PORT:-9000}:9000'
+      - '${STORAGE_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - parle-tcf-dev-storage:/data
+
   # SMTP sink for verification, reset and account-deletion emails. Inbox UI on :8025.
   mailpit:
     image: axllent/mailpit:v1.33.0
@@ -32,3 +46,4 @@ services:
 
 volumes:
   parle-tcf-dev-pgdata:
+  parle-tcf-dev-storage:

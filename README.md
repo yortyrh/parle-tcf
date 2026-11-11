@@ -89,14 +89,15 @@ Requires Node 24 (`.nvmrc`), pnpm 10 and Docker (or Podman).
 
 ```bash
 pnpm install
-pnpm infra:up        # Postgres + Mailpit (docker-compose.dev.yml), then migrations
+pnpm infra:up        # Postgres + Mailpit + S3 storage (docker-compose.dev.yml), then migrations and the audio bucket
 pnpm setup:env       # writes apps/api/.env and apps/web/.env.local (secrets generated once, then kept)
 pnpm samples:seed    # dev users; passwords: pnpm local:credentials
 pnpm dev             # web http://localhost:3000, api http://localhost:3001
 ```
 
 - **Email:** every local email (verification, reset, account deletion) lands in Mailpit at http://localhost:8025.
-- **Ports:** set `POSTGRES_PORT`, `MAILPIT_SMTP_PORT`, `MAILPIT_UI_PORT` before `pnpm setup:env` and `pnpm infra:up`; they are saved in `apps/api/.env`.
+- **Audio recordings:** stored in a local RustFS (S3 API on http://localhost:9000, console on http://localhost:9001, login `parle` / `parle-dev-secret`). `pnpm setup:env` points the API's `S3_*` at it; enable recording per user in Paramètres.
+- **Ports:** set `POSTGRES_PORT`, `MAILPIT_SMTP_PORT`, `MAILPIT_UI_PORT`, `STORAGE_PORT`, `STORAGE_CONSOLE_PORT` before `pnpm setup:env` and `pnpm infra:up`; they are saved in `apps/api/.env`.
 - **Stop / wipe:** `pnpm infra:down` / `pnpm infra:reset`.
 
 ### Social sign-in (GitHub / Google) locally

@@ -56,7 +56,7 @@ When a new generator or script is added, add it to this table.
 
 ## Commands
 
-- Setup (Docker or Podman): `pnpm install && pnpm infra:up && pnpm setup:env && pnpm samples:seed` (the exercise bank arrives with the migrations). `infra:up` starts Postgres + Mailpit (`docker-compose.dev.yml`) and migrates; `setup:env` writes `apps/api/.env` and `apps/web/.env.local` (keeps secrets, OAuth credentials, port overrides). `pnpm infra:down` / `infra:reset` stop or wipe it.
+- Setup (Docker or Podman): `pnpm install && pnpm infra:up && pnpm setup:env && pnpm samples:seed` (the exercise bank arrives with the migrations). `infra:up` starts Postgres + Mailpit + RustFS S3 storage (`docker-compose.dev.yml`), migrates and creates the audio bucket with CORS; `setup:env` writes `apps/api/.env` and `apps/web/.env.local` (keeps secrets, OAuth credentials, port overrides; points `S3_*` at the local storage). `pnpm infra:down` / `infra:reset` stop or wipe it.
 - Dev login: `developer@parle-tcf.local`, password from `pnpm local:credentials`.
 - `pnpm dev`: web :3000 + api :3001. Mailpit UI: http://localhost:8025 (all local emails land there).
 - `pnpm verify`: full pipeline (node version, format:check, lint, typecheck, unit tests with coverage thresholds, script tests, build, env-schema:check). `pnpm push` runs it. Integration, e2e and mutation tests run separately (CI: `ci.yml`, nightly `mutation.yml`).
