@@ -8,10 +8,12 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const webRoot = resolve(currentDir, '..');
 
 const SCAN_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs']);
-// Build output (.next, and .next-e2e for end-to-end builds) is checked by the last test only.
+// Build output (.next, .next-dev for the dev server, .next-e2e for end-to-end builds) is not
+// source: only the production .next/static is checked, by the last test.
 const SKIP_DIRS = new Set([
   'node_modules',
   '.next',
+  '.next-dev',
   '.next-e2e',
   'coverage',
   'dist',
