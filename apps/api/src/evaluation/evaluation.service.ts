@@ -42,7 +42,8 @@ export const providerModelFactory: LanguageModelFactory = (provider, apiKey, mod
     : createOpenAI({ apiKey })(modelId);
 
 export const DEFAULT_TEXT_MODEL = 'gpt-4o-mini';
-export const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-2.5-flash';
+/** gemini-2.5-flash shuts down on 2026-12-01; Google routes it to gemini-3.5-flash-lite. */
+export const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-3.5-flash-lite';
 const MAX_ATTEMPTS = 3; // first try + 2 retries
 export const STALE_RUNNING_MS = 5 * 60_000;
 

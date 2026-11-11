@@ -70,13 +70,13 @@ for (const model of models) {
   });
 }
 
-const md = `# Résultats des évaluations
+const md = `# Corrector evaluation results
 
-Rubrique \`${RUBRIC_VERSION}\` · ${cases.length} cas · ${passes} passes par cas · ${new Date().toISOString().slice(0, 10)}
+Rubric \`${RUBRIC_VERSION}\` · ${cases.length} cases · ${passes} passes per case · ${new Date().toISOString().slice(0, 10)}
 
 ${renderResultsTable(rows)}
 
-> Les niveaux de référence du jeu de données sont **synthétiques** (rédigés par le mainteneur) : ils mesurent la cohérence du correcteur, pas sa fidélité à un examinateur certifié.
+> The reference levels of the dataset are **synthetic** (written by the maintainer): they measure the corrector's consistency, not its agreement with a certified examiner.
 `;
 writeFileSync(join(dir, 'results.md'), md);
 console.log(md);

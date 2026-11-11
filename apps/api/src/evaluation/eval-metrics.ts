@@ -95,10 +95,10 @@ export function renderResultsTable(
   rows: { model: string; summary: EvalSummary; costUsd: number | null }[]
 ): string {
   const header =
-    '| Modèle | Cas | Exact | ±1 niveau | Erreur moy. | Stabilité | Latence moy. | Coût |\n| --- | --- | --- | --- | --- | --- | --- | --- |';
+    '| Model | Cases | Exact | ±1 level | Mean error | Stability | Mean latency | Cost |\n| --- | --- | --- | --- | --- | --- | --- | --- |';
   const body = rows.map(
     (r) =>
-      `| ${r.model} | ${r.summary.cases} | ${pct(r.summary.exactMatch)} | ${pct(r.summary.withinOne)} | ${r.summary.meanAbsError.toFixed(2)} | ${pct(r.summary.stability)} | ${(r.summary.meanLatencyMs / 1000).toFixed(1)} s | ${r.costUsd === null ? '—' : `${r.costUsd.toFixed(4)} $`} |`
+      `| ${r.model} | ${r.summary.cases} | ${pct(r.summary.exactMatch)} | ${pct(r.summary.withinOne)} | ${r.summary.meanAbsError.toFixed(2)} | ${pct(r.summary.stability)} | ${(r.summary.meanLatencyMs / 1000).toFixed(1)} s | ${r.costUsd === null ? '—' : `$${r.costUsd.toFixed(4)}`} |`
   );
   const crit = rows.map(
     (r) =>
@@ -108,7 +108,7 @@ export function renderResultsTable(
     header,
     ...body,
     '',
-    `| Modèle | ${CRITERIA.join(' | ')} |`,
+    `| Model | ${CRITERIA.join(' | ')} |`,
     `| --- | ${CRITERIA.map(() => '---').join(' | ')} |`,
     ...crit,
   ].join('\n');

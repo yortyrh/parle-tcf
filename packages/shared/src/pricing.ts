@@ -11,10 +11,13 @@ export const MODEL_PRICES: Record<string, ModelPrice> = {
   'gpt-realtime-mini': { inputPerM: 10, outputPerM: 20 },
   'gpt-realtime': { inputPerM: 32, outputPerM: 64 },
   'gemini-3.8-live': { inputPerM: 3, outputPerM: 12 },
+  // Corrector (text) models.
+  'gpt-6-luna': { inputPerM: 0.1, outputPerM: 0.5 },
   'gpt-4o-mini': { inputPerM: 0.15, outputPerM: 0.6 },
   'gpt-4o': { inputPerM: 2.5, outputPerM: 10 },
   'gpt-4.1-mini': { inputPerM: 0.4, outputPerM: 1.6 },
   'gpt-4.1': { inputPerM: 2, outputPerM: 8 },
+  'gemini-3.5-flash-lite': { inputPerM: 0.3, outputPerM: 2.5 },
   'gemini-2.5-flash': { inputPerM: 0.3, outputPerM: 2.5 },
   'gemini-2.5-flash-lite': { inputPerM: 0.1, outputPerM: 0.4 },
 };
