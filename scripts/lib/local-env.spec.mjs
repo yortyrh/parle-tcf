@@ -1,13 +1,18 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import {
   composeApiEnv,
   composeWebEnv,
   devInfra,
+  devStorage,
   generateEncryptionKey,
   generateSecret,
   parseDotenv,
   resolveSecrets,
+  storageCorsRules,
 } from './local-env.mjs';
+
+const DEV_COMPOSE = readFileSync(new URL('../../docker-compose.dev.yml', import.meta.url), 'utf8');
 
 const KEY_RE = /^v\d+:[A-Za-z0-9+/]{43}=$/;
 const keyOf = (version, byte) => `${version}:${Buffer.alloc(32, byte).toString('base64')}`;
@@ -30,6 +35,8 @@ const INFRA = {
   mailpitUiPort: 9025,
   apiPort: 4001,
   webPort: 4000,
+  storagePort: 9100,
+  storageConsolePort: 9101,
 };
 
 const SECRETS = {
@@ -38,16 +45,39 @@ const SECRETS = {
   ENCRYPTION_KEY_CURRENT: 'v2',
 };
 
-const OPTIONAL_KEYS = [
-  'OPENAI_REALTIME_MODEL',
+const OPTIONAL_KEYS = ['OPENAI_REALTIME_MODEL', 'RESEND_API_KEY'];
+
+const S3_KEYS = [
   'S3_BUCKET',
   'S3_ENDPOINT',
   'S3_REGION',
   'S3_ACCESS_KEY_ID',
   'S3_SECRET_ACCESS_KEY',
   'S3_FORCE_PATH_STYLE',
-  'RESEND_API_KEY',
 ];
+
+/** The S3 block composeApiEnv must write for INFRA (local RustFS). */
+const LOCAL_S3 = {
+  S3_BUCKET: 'parle-tcf-audio',
+  S3_ENDPOINT: 'http://127.0.0.1:9100',
+  S3_REGION: 'us-east-1',
+  S3_ACCESS_KEY_ID: 'parle',
+  S3_SECRET_ACCESS_KEY: 'parle-dev-secret',
+  S3_FORCE_PATH_STYLE: 'true',
+};
+
+const STALE_S3 = {
+  S3_BUCKET: 'recordings',
+  S3_ENDPOINT: 'https://acc.r2.cloudflarestorage.com',
+  S3_REGION: 'auto',
+  S3_ACCESS_KEY_ID: 'AKIA123',
+  S3_SECRET_ACCESS_KEY: 's3-secret',
+  S3_FORCE_PATH_STYLE: 'false',
+};
+
+/** @param {string} body @param {string} key */
+const countKey = (body, key) =>
+  body.split('\n').filter((line) => line.startsWith(`${key}=`)).length;
 
 const apiEnvOf = (previous = {}) =>
   parseDotenv(composeApiEnv({ infra: INFRA, previous, secrets: SECRETS }));
@@ -113,6 +143,8 @@ describe('devInfra', () => {
       mailpitUiPort: 8025,
       apiPort: 3001,
       webPort: 3000,
+      storagePort: 9000,
+      storageConsolePort: 9001,
     });
   });
 
@@ -124,6 +156,8 @@ describe('devInfra', () => {
         MAILPIT_UI_PORT: '8026',
         API_PORT: '3101',
         WEB_PORT: '3100',
+        STORAGE_PORT: '9200',
+        STORAGE_CONSOLE_PORT: '9201',
       })
     ).toEqual({
       postgresPort: 5433,
@@ -131,8 +165,31 @@ describe('devInfra', () => {
       mailpitUiPort: 8026,
       apiPort: 3101,
       webPort: 3100,
+      storagePort: 9200,
+      storageConsolePort: 9201,
     });
   });
+
+  it('reads the storage ports independently (no swap between API and console)', () => {
+    expect(devInfra({ STORAGE_PORT: '9300' })).toMatchObject({
+      storagePort: 9300,
+      storageConsolePort: 9001,
+    });
+    expect(devInfra({ STORAGE_CONSOLE_PORT: '9301' })).toMatchObject({
+      storagePort: 9000,
+      storageConsolePort: 9301,
+    });
+  });
+
+  it.each([[''], ['   '], ['abc'], ['0'], ['-9000'], ['9000.5']])(
+    'falls back to the default storage ports for %j',
+    (raw) => {
+      expect(devInfra({ STORAGE_PORT: raw, STORAGE_CONSOLE_PORT: raw })).toMatchObject({
+        storagePort: 9000,
+        storageConsolePort: 9001,
+      });
+    }
+  );
 
   it('falls back per key for empty or non-numeric values', () => {
     expect(
@@ -142,6 +199,8 @@ describe('devInfra', () => {
         MAILPIT_UI_PORT: '8030',
         API_PORT: 'not-a-port',
         WEB_PORT: undefined,
+        STORAGE_PORT: 'nope',
+        STORAGE_CONSOLE_PORT: '9031',
       })
     ).toEqual({
       postgresPort: 5432,
@@ -149,13 +208,88 @@ describe('devInfra', () => {
       mailpitUiPort: 8030,
       apiPort: 3001,
       webPort: 3000,
+      storagePort: 9000,
+      storageConsolePort: 9031,
     });
   });
 
   it('returns numbers, not strings', () => {
-    const infra = devInfra({ API_PORT: '3201' });
+    const infra = devInfra({
+      API_PORT: '3201',
+      STORAGE_PORT: '9400',
+      STORAGE_CONSOLE_PORT: '9401',
+    });
+    expect(Object.keys(infra)).toHaveLength(7);
     for (const value of Object.values(infra)) {
       expect(typeof value).toBe('number');
+    }
+  });
+
+  it('uses the same storage port variables and defaults as docker-compose.dev.yml', () => {
+    const defaults = devInfra({});
+    expect(DEV_COMPOSE).toContain(`'\${STORAGE_PORT:-${defaults.storagePort}}:9000'`);
+    expect(DEV_COMPOSE).toContain(
+      `'\${STORAGE_CONSOLE_PORT:-${defaults.storageConsolePort}}:9001'`
+    );
+  });
+});
+
+describe('devStorage', () => {
+  it('describes the local RustFS bucket for the given infra', () => {
+    expect(devStorage(INFRA)).toEqual({
+      endpoint: 'http://127.0.0.1:9100',
+      region: 'us-east-1',
+      bucket: 'parle-tcf-audio',
+      accessKeyId: 'parle',
+      secretAccessKey: 'parle-dev-secret',
+      forcePathStyle: true,
+    });
+  });
+
+  it('points at the S3 API port, not the console port', () => {
+    const storage = devStorage({ ...INFRA, storagePort: 9555, storageConsolePort: 9556 });
+    expect(storage.endpoint).toBe('http://127.0.0.1:9555');
+  });
+
+  it('uses the default port with devInfra defaults', () => {
+    expect(devStorage(devInfra({})).endpoint).toBe('http://127.0.0.1:9000');
+  });
+
+  it('forces path-style addressing (boolean true)', () => {
+    expect(devStorage(INFRA).forcePathStyle).toBe(true);
+  });
+
+  it('uses the credentials of the storage service in docker-compose.dev.yml', () => {
+    const { accessKeyId, secretAccessKey } = devStorage(INFRA);
+    expect(DEV_COMPOSE).toMatch(new RegExp(`^\\s*RUSTFS_ACCESS_KEY:\\s*${accessKeyId}\\s*$`, 'm'));
+    expect(DEV_COMPOSE).toMatch(
+      new RegExp(`^\\s*RUSTFS_SECRET_KEY:\\s*${secretAccessKey}\\s*$`, 'm')
+    );
+  });
+});
+
+describe('storageCorsRules', () => {
+  it('allows GET and POST from the web origin only', () => {
+    expect(storageCorsRules(INFRA)).toEqual([
+      {
+        AllowedOrigins: ['http://localhost:4000'],
+        AllowedMethods: ['GET', 'POST'],
+        AllowedHeaders: ['*'],
+        MaxAgeSeconds: 3000,
+      },
+    ]);
+  });
+
+  it('follows the web port, not the API port', () => {
+    const [rule] = storageCorsRules({ ...INFRA, webPort: 3555, apiPort: 3556 });
+    expect(rule.AllowedOrigins).toEqual(['http://localhost:3555']);
+  });
+
+  it('never allows a wildcard origin, PUT or DELETE', () => {
+    for (const rule of storageCorsRules(devInfra({}))) {
+      expect(rule.AllowedOrigins).not.toContain('*');
+      expect(rule.AllowedMethods).not.toContain('PUT');
+      expect(rule.AllowedMethods).not.toContain('DELETE');
     }
   });
 });
@@ -467,6 +601,46 @@ describe('composeApiEnv', () => {
     ).toBe(expected);
   });
 
+  it('always writes the local S3 storage keys, even when previous is empty', () => {
+    expect(apiEnvOf()).toMatchObject(LOCAL_S3);
+  });
+
+  it('derives the S3 keys from devStorage(infra)', () => {
+    const storage = devStorage(INFRA);
+    expect(apiEnvOf()).toMatchObject({
+      S3_BUCKET: storage.bucket,
+      S3_ENDPOINT: storage.endpoint,
+      S3_REGION: storage.region,
+      S3_ACCESS_KEY_ID: storage.accessKeyId,
+      S3_SECRET_ACCESS_KEY: storage.secretAccessKey,
+      S3_FORCE_PATH_STYLE: String(storage.forcePathStyle),
+    });
+  });
+
+  it('overrides stale S3 values from previous', () => {
+    expect(apiEnvOf(STALE_S3)).toMatchObject(LOCAL_S3);
+  });
+
+  it('writes each S3 key exactly once, with or without previous values', () => {
+    for (const previous of [{}, STALE_S3, LOCAL_S3]) {
+      const body = composeApiEnv({ infra: INFRA, previous, secrets: SECRETS });
+      for (const key of S3_KEYS) {
+        expect(countKey(body, key), `${key} with ${JSON.stringify(previous)}`).toBe(1);
+      }
+    }
+  });
+
+  it('follows the storage port, not the console port', () => {
+    const env = parseDotenv(
+      composeApiEnv({
+        infra: { ...INFRA, storagePort: 9777, storageConsolePort: 9778 },
+        previous: {},
+        secrets: SECRETS,
+      })
+    );
+    expect(env.S3_ENDPOINT).toBe('http://127.0.0.1:9777');
+  });
+
   it('omits optional keys that are absent or empty', () => {
     const absent = apiEnvOf();
     const empty = apiEnvOf(Object.fromEntries(OPTIONAL_KEYS.map((key) => [key, ''])));
@@ -479,15 +653,20 @@ describe('composeApiEnv', () => {
   it('copies every optional key that is present and non-empty', () => {
     const previous = {
       OPENAI_REALTIME_MODEL: 'gpt-realtime-mini',
-      S3_BUCKET: 'recordings',
-      S3_ENDPOINT: 'https://acc.r2.cloudflarestorage.com',
-      S3_REGION: 'auto',
-      S3_ACCESS_KEY_ID: 'AKIA123',
-      S3_SECRET_ACCESS_KEY: 's3-secret',
-      S3_FORCE_PATH_STYLE: 'true',
       RESEND_API_KEY: 're_123',
     };
     expect(apiEnvOf(previous)).toMatchObject(previous);
+  });
+
+  it('copies each optional key exactly once', () => {
+    const body = composeApiEnv({
+      infra: INFRA,
+      previous: { OPENAI_REALTIME_MODEL: 'gpt-realtime-mini', RESEND_API_KEY: 're_123' },
+      secrets: SECRETS,
+    });
+    for (const key of OPTIONAL_KEYS) {
+      expect(countKey(body, key)).toBe(1);
+    }
   });
 
   it('copies one optional key without inventing the others', () => {
@@ -496,6 +675,13 @@ describe('composeApiEnv', () => {
     for (const key of OPTIONAL_KEYS.filter((k) => k !== 'RESEND_API_KEY')) {
       expect(env).not.toHaveProperty(key);
     }
+  });
+
+  it('keeps optional keys alongside the local S3 keys', () => {
+    expect(apiEnvOf({ ...STALE_S3, RESEND_API_KEY: 're_123' })).toMatchObject({
+      ...LOCAL_S3,
+      RESEND_API_KEY: 're_123',
+    });
   });
 
   it('drops unknown keys from previous', () => {
@@ -523,7 +709,10 @@ describe('composeApiEnv', () => {
       RESEND_API_KEY: 're_123',
     };
     const first = apiEnvOf(previous);
+    expect(first.S3_BUCKET).toBe('parle-tcf-audio');
     expect(apiEnvOf(first)).toEqual(first);
+    const body = composeApiEnv({ infra: INFRA, previous: first, secrets: SECRETS });
+    expect(body).toBe(composeApiEnv({ infra: INFRA, previous: apiEnvOf(first), secrets: SECRETS }));
   });
 
   it('uses devInfra defaults end to end', () => {
@@ -532,6 +721,7 @@ describe('composeApiEnv', () => {
     expect(env.SMTP_URL).toBe('smtp://127.0.0.1:1025');
     expect(env.PORT).toBe('3001');
     expect(env.WEB_URL).toBe('http://localhost:3000');
+    expect(env.S3_ENDPOINT).toBe('http://127.0.0.1:9000');
   });
 });
 
@@ -608,6 +798,8 @@ describe('composeWebEnv', () => {
       K2,
       'gh-secret-value',
       'g-secret-value',
+      'parle-dev-secret',
+      'S3_SECRET_ACCESS_KEY',
       'BETTER_AUTH_SECRET',
       'ENCRYPTION_KEYS',
       'DATABASE_URL',
