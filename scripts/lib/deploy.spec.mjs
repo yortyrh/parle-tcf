@@ -437,11 +437,15 @@ describe('checkConsistency', () => {
 });
 
 describe('deploymentOutcome', () => {
-  it('maps SUCCESS to ok', () => {
-    expect(deploymentOutcome('SUCCESS')).toBe('ok');
+  it.each(['SUCCESS', 'SLEEPING'])('maps %s to ok', (status) => {
+    expect(deploymentOutcome(status)).toBe('ok');
   });
 
-  it.each(['FAILED', 'CRASHED', 'REMOVED', 'SKIPPED'])('maps %s to failed', (status) => {
+  it('maps SKIPPED to its own skipped outcome, not failed', () => {
+    expect(deploymentOutcome('SKIPPED')).toBe('skipped');
+  });
+
+  it.each(['FAILED', 'CRASHED', 'REMOVED'])('maps %s to failed', (status) => {
     expect(deploymentOutcome(status)).toBe('failed');
   });
 
