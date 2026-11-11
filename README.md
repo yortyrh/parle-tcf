@@ -86,3 +86,7 @@ Issues and pull requests are welcome. Before opening a pull request:
 3. Keep candidate-facing text in French and everything else in English.
 
 Security issues: please report them privately, see [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE). The exam subjects and the TCF format belong to their respective owners; parle-tcf is not affiliated with France Éducation international.

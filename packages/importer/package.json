@@ -25,5 +25,6 @@
     "@parle-tcf/db": "workspace:*",
     "cheerio": "^1.2.0",
     "domhandler": "^5.0.3"
-  }
+  },
+  "license": "MIT"
 }

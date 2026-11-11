@@ -56,5 +56,6 @@
     "@electric-sql/pglite": {
       "optional": true
     }
-  }
+  },
+  "license": "MIT"
 }
