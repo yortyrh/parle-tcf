@@ -15,7 +15,12 @@ export const MUTATION_PACKAGES = [
       /^src\/test-helpers\.ts$/,
     ],
   },
-  { dir: 'packages/db', roots: ['src/'], exclude: [/\.test\.ts$/, /^src\/schema\//] },
+  {
+    dir: 'packages/db',
+    roots: ['src/'],
+    // load-exercise-bank.ts is the CLI entry (env, pg pool, exit codes), like the importer's cli.ts.
+    exclude: [/\.test\.ts$/, /^src\/schema\//, /^src\/load-exercise-bank\.ts$/],
+  },
   { dir: 'packages/importer', roots: ['src/'], exclude: [/\.(spec|test)\.ts$/, /^src\/cli\.ts$/] },
   { dir: 'packages/shared', roots: ['src/'], exclude: [/\.spec\.ts$/] },
   { dir: 'apps/web', roots: ['lib/'], exclude: [/\.test\.ts$/] },
