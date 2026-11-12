@@ -7,6 +7,7 @@ Earlier history of the web app lives in [`apps/web/CHANGELOG.md`](./apps/web/CHA
 ## [Unreleased]
 
 ### Added
+- `pnpm readme:images`: regenerates the README screenshots and the repository social preview (Playwright, fake voice provider, throw-away database with the sample bank).
 - Accounts (Better Auth: email/password, optional GitHub/Google) with email verification and password reset.
 - Per-user OpenAI API key, encrypted with AES-256-GCM (versioned master keys, `rotate-keys` script); settings page with connection test.
 - PostgreSQL persistence (`@parle-tcf/db`, Drizzle): exercise bank seed, exam runs, attempts and transcripts, scoped by user.
@@ -30,6 +31,8 @@ Earlier history of the web app lives in [`apps/web/CHANGELOG.md`](./apps/web/CHA
 - Sessions suit learners who pause: low semantic VAD eagerness and a French transcription hint (OpenAI), low end-of-speech sensitivity (Gemini).
 - Examiner prompts restructured after the OpenAI and Gemini prompting guides (labelled sections, French pinned, unclear-audio and tool rules, no contradictions).
 - Dependencies updated within their ranges, plus Next.js 15.5.29 and nodemailer 10, fixing the known advisories that had a patch.
+- **Breaking:** the web app moved to Next.js 16.4 (`next build` no longer lints; `pnpm lint` does).
+- README: social preview as the header, screenshots, configuration, common commands and repository layout; the social preview says “Practise” and lists Gemini Live.
 - Documentation: one page per feature in `docs/`, `llms.txt`, rewritten README; every document is in English (PRD translated to `docs/prd.md`).
 - Corrector: OpenAI users are graded by `gpt-6-luna` with reasoning effort `none` (gpt-4o-mini is removed on 2027-01-14; evals: 100 % vs 67 % exact level agreement), Gemini users by `gemini-3.5-flash-lite`; the evals runner accepts `model@effort` and writes its report in English.
 - The real exercise bank (third-party texts) moved to the private repository `yortyrh/parle-tcf-data`, loaded into an empty bank at pre-deploy, by `pnpm infra:up` and by `pnpm exercises:load`; the public repository ships an original sample bank and migration 0003 keeps only its structural part (ADR 0006).
