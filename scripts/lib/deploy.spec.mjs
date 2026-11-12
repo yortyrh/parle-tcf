@@ -301,6 +301,134 @@ describe('checkApiVariables', () => {
       expect(checkApiVariables({ ...validApi(), VOICE_PROVIDER: value })).toEqual([]);
     });
   });
+
+  describe('S3 storage', () => {
+    const STORAGE_KEYS = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'];
+    const STORAGE_VALUES = {
+      S3_BUCKET: 'audio-bucket',
+      S3_ACCESS_KEY_ID: 'key-id',
+      S3_SECRET_ACCESS_KEY: 'secret',
+    };
+    const withStorage = (keys, extra = {}) => ({
+      ...validApi(),
+      ...Object.fromEntries(keys.map((key) => [key, STORAGE_VALUES[key]])),
+      ...extra,
+    });
+    const storageProblems = (problems) => problems.filter((p) => p.message.includes('S3'));
+
+    it('reports nothing when storage is not configured (audio is optional)', () => {
+      expect(checkApiVariables(withStorage([]))).toEqual([]);
+    });
+
+    it('reports nothing when all storage keys are blank', () => {
+      const vars = {
+        ...validApi(),
+        S3_BUCKET: '  ',
+        S3_ACCESS_KEY_ID: '',
+        S3_SECRET_ACCESS_KEY: ' ',
+      };
+      expect(checkApiVariables(vars)).toEqual([]);
+    });
+
+    it('reports nothing when bucket and credentials are all set', () => {
+      expect(checkApiVariables(withStorage(STORAGE_KEYS))).toEqual([]);
+    });
+
+    it('reports nothing for a complete set with the optional S3 keys', () => {
+      const vars = withStorage(STORAGE_KEYS, {
+        S3_ENDPOINT: 'https://storage.example.com',
+        S3_REGION: 'auto',
+        S3_FORCE_PATH_STYLE: 'true',
+      });
+      expect(checkApiVariables(vars)).toEqual([]);
+    });
+
+    it.each([
+      ['S3_ENDPOINT', 'https://storage.example.com'],
+      ['S3_REGION', 'auto'],
+      ['S3_FORCE_PATH_STYLE', 'true'],
+    ])('does not flag %s on its own', (key, value) => {
+      expect(checkApiVariables({ ...validApi(), [key]: value })).toEqual([]);
+    });
+
+    it('does not flag the optional S3 keys together without bucket or credentials', () => {
+      const vars = {
+        ...validApi(),
+        S3_ENDPOINT: 'https://storage.example.com',
+        S3_REGION: 'auto',
+        S3_FORCE_PATH_STYLE: '1',
+      };
+      expect(checkApiVariables(vars)).toEqual([]);
+    });
+
+    it.each([
+      [['S3_BUCKET']],
+      [['S3_ACCESS_KEY_ID']],
+      [['S3_SECRET_ACCESS_KEY']],
+      [['S3_BUCKET', 'S3_ACCESS_KEY_ID']],
+      [['S3_BUCKET', 'S3_SECRET_ACCESS_KEY']],
+      [['S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY']],
+    ])('flags a partial set with only %j', (setKeys) => {
+      const problems = checkApiVariables(withStorage(setKeys));
+      expect(problems).toHaveLength(1);
+      const [problem] = problems;
+      expect(problem.service).toBe('api');
+      expect(problem.message).toContain('S3');
+      expect(problem.message).toContain('audio');
+      expect(problem.fix).toEqual(expect.any(String));
+      expect(problem.fix.trim()).not.toBe('');
+      for (const key of STORAGE_KEYS) {
+        if (setKeys.includes(key)) expect(problem.message).not.toContain(key);
+        else expect(problem.message).toContain(key);
+      }
+    });
+
+    it('treats whitespace-only storage keys as not set', () => {
+      const vars = withStorage(['S3_BUCKET'], {
+        S3_ACCESS_KEY_ID: '   ',
+        S3_SECRET_ACCESS_KEY: '\t',
+      });
+      const problems = storageProblems(checkApiVariables(vars));
+      expect(problems).toHaveLength(1);
+      expect(problems[0].message).toContain('S3_ACCESS_KEY_ID');
+      expect(problems[0].message).toContain('S3_SECRET_ACCESS_KEY');
+      expect(problems[0].message).not.toContain('S3_BUCKET');
+    });
+
+    it('lists the missing keys separated by ", " when only S3_BUCKET is set', () => {
+      const [problem] = checkApiVariables(withStorage(['S3_BUCKET']));
+      expect(problem.message).toContain('S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY');
+    });
+
+    it('lists the missing keys separated by ", " when only S3_SECRET_ACCESS_KEY is set', () => {
+      const [problem] = checkApiVariables(withStorage(['S3_SECRET_ACCESS_KEY']));
+      expect(problem.message).toContain('S3_BUCKET, S3_ACCESS_KEY_ID');
+    });
+
+    it('names all three storage keys in the fix', () => {
+      const [problem] = checkApiVariables(withStorage(['S3_ACCESS_KEY_ID']));
+      expect(problem.fix).toContain('S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY');
+    });
+
+    it('flags a partial set even when the optional S3 keys are set', () => {
+      const vars = withStorage(['S3_BUCKET', 'S3_ACCESS_KEY_ID'], {
+        S3_ENDPOINT: 'https://storage.example.com',
+        S3_REGION: 'auto',
+      });
+      const problems = checkApiVariables(vars);
+      expect(problems).toHaveLength(1);
+      expect(problems[0].message).toContain('S3_SECRET_ACCESS_KEY');
+    });
+
+    it('reports the storage problem alongside other problems', () => {
+      const vars = withStorage(['S3_BUCKET']);
+      delete vars.DATABASE_URL;
+      const problems = checkApiVariables(vars);
+      expect(problems).toHaveLength(2);
+      expect(hasMessage(problems, 'DATABASE_URL')).toBe(true);
+      expect(storageProblems(problems)).toHaveLength(1);
+    });
+  });
 });
 
 describe('checkWebVariables', () => {
