@@ -1,5 +1,7 @@
 # parle-tcf
 
+> 📖 **Case study:** [how and why I built it](https://yorty.info/projects/parle-tcf/) · Built by [Yorty Ruiz Hernandez](https://yorty.info)
+
 ![parle-tcf: practise the TCF speaking test with an AI examiner. Tâches 1–3 at official timing, CEFR scoring on 5 criteria.](.github/social-preview.png)
 
 **Practise the TCF speaking test with an AI examiner, then get a CEFR level, feedback per criterion and your corrected transcript.**
