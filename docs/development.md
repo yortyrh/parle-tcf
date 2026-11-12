@@ -63,13 +63,14 @@ If a tool or a repository script can produce something, run it and edit the outp
 
 ## Quality gates
 
-| Command                 | What it runs                                                                                                                                       |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm verify`           | Node version check, format check, lint (typed rules), typecheck, unit tests with coverage thresholds, script tests, build, env documentation check |
-| `pnpm test:integration` | API integration tests (Supertest) against PostgreSQL and Mailpit in Testcontainers                                                                 |
-| `pnpm test:e2e`         | Playwright + axe against a production build with the fake voice provider (needs `pnpm infra:up`)                                                   |
-| `pnpm mutate`           | Stryker mutation testing on the files changed against `origin/main` (target ≥ 80 %)                                                                |
-| `pnpm push`             | Runs `pnpm verify`, then pushes; the pre-push hook rejects commits that were not verified                                                          |
+| Command                 | What it runs                                                                                                                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`           | Node version check, format check, lint (typed rules), typecheck, unit tests with coverage thresholds, script tests, build, env documentation check                                                    |
+| `pnpm test:integration` | API integration tests (Supertest) against PostgreSQL and Mailpit in Testcontainers                                                                                                                    |
+| `pnpm test:e2e`         | Playwright + axe against a production build with the fake voice provider (needs `pnpm infra:up`)                                                                                                      |
+| `pnpm mutate`           | Stryker mutation testing on the files changed against `origin/main` (target ≥ 80 %)                                                                                                                   |
+| `pnpm readme:images`    | Regenerates the README screenshots (`docs/images`) and the social preview from a throw-away database with the sample bank, fake voice provider and an illustrative evaluation (needs `pnpm infra:up`) |
+| `pnpm push`             | Runs `pnpm verify`, then pushes; the pre-push hook rejects commits that were not verified                                                                                                             |
 
 The GitHub workflows (`ci.yml`, `evals.yml`, `mutation.yml`) are manual only; nothing runs on push.
 
