@@ -21,13 +21,34 @@ Optional recording of the candidate's microphone for each attempt, so they can l
 
 `S3_BUCKET`, `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE`. Unset means recording is unavailable. The bucket CORS must allow POST and GET from the web origin; locally `pnpm infra:up` creates the bucket and its CORS on RustFS.
 
+### Railway
+
+Production uses the Railway Storage Bucket `parle-tcf-audio` (region `iad`, private, virtual-hosted URLs on `https://t3.storageapi.dev`). The `api` service points at it with reference variables, so a credential reset reaches the API on the next deploy:
+
+```
+S3_BUCKET=${{parle-tcf-audio.BUCKET}}
+S3_ENDPOINT=${{parle-tcf-audio.ENDPOINT}}
+S3_ACCESS_KEY_ID=${{parle-tcf-audio.ACCESS_KEY_ID}}
+S3_SECRET_ACCESS_KEY=${{parle-tcf-audio.SECRET_ACCESS_KEY}}
+S3_REGION=auto
+S3_FORCE_PATH_STYLE=false
+```
+
+`S3_REGION` is `auto` (the value `railway bucket credentials` gives), not the bucket's `REGION` variable (`iad`). Apply the CORS rules (GET and POST from every origin in `CORS_ORIGINS`) with:
+
+```
+railway run --service api --environment production -- pnpm storage:cors
+```
+
+Run it again whenever the web URL changes. `pnpm deploy:railway` reports an `S3_*` configuration that is only partly set, because the API would then leave recording off without saying so.
+
 ## Data
 
 `user_preferences.audio_consent_at`, `exam_attempts.audio_key`.
 
 ## Code map
 
-`apps/api/src/audio/` (`audio.service.ts`, `s3-audio-storage.ts`), `apps/web/lib/audio-recorder.ts`.
+`apps/api/src/audio/` (`audio.service.ts`, `s3-audio-storage.ts`), `apps/web/lib/audio-recorder.ts`, `scripts/storage-cors.mjs` (`scripts/lib/storage-cors.mjs`).
 
 ## Tests
 

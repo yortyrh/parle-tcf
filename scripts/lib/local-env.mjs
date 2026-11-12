@@ -14,6 +14,7 @@
  * can never disagree about which OAuth providers exist.
  */
 import { randomBytes } from 'node:crypto';
+import { corsRulesFor } from './storage-cors.mjs';
 
 /** @typedef {Record<string, string>} EnvMap */
 
@@ -85,14 +86,7 @@ export function devStorage(infra) {
  * @param {ReturnType<typeof devInfra>} infra
  */
 export function storageCorsRules(infra) {
-  return [
-    {
-      AllowedOrigins: [`http://localhost:${infra.webPort}`],
-      AllowedMethods: ['GET', 'POST'],
-      AllowedHeaders: ['*'],
-      MaxAgeSeconds: 3000,
-    },
-  ];
+  return corsRulesFor([`http://localhost:${infra.webPort}`]);
 }
 
 /** 48 random bytes, base64url (64 characters). */

@@ -41,7 +41,8 @@
     "exercises:load": "pnpm --filter @parle-tcf/db build && node --env-file-if-exists=apps/api/.env packages/db/dist/load-exercise-bank.js",
     "exercises:import": "pnpm --filter @parle-tcf/importer... build && node --env-file-if-exists=apps/api/.env packages/importer/dist/cli.js",
     "deploy:railway": "node scripts/deploy.mjs",
-    "readme:images": "pnpm --filter @parle-tcf/db build && node --env-file-if-exists=apps/api/.env scripts/readme-images.mjs"
+    "readme:images": "pnpm --filter @parle-tcf/db build && node --env-file-if-exists=apps/api/.env scripts/readme-images.mjs",
+    "storage:cors": "node scripts/storage-cors.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1165.0",

@@ -10,6 +10,8 @@ export const RAILWAY_ENVIRONMENT = 'production';
 export const SERVICES = ['api', 'web'];
 
 const MIN_AUTH_SECRET_LENGTH = 32;
+/** Without all three the API leaves audio recording off (apps/api/src/audio/audio.module.ts). */
+const STORAGE_KEYS = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'];
 const ENCRYPTION_KEY_ENTRY = /^[^:,\s]+:[A-Za-z0-9+/_-]+={0,2}$/;
 /** SLEEPING = deployed and healthy, idle under Railway serverless. */
 const TERMINAL_OK = new Set(['SUCCESS', 'SLEEPING']);
@@ -126,6 +128,16 @@ export function checkApiVariables(vars) {
       service: 'api',
       message: 'VOICE_PROVIDER=fake is refused in production',
       fix: 'delete VOICE_PROVIDER',
+    });
+  }
+  // Audio is optional, but a partial S3 config turns it off without a word.
+  const storageSet = STORAGE_KEYS.filter((key) => filled(vars, key));
+  if (storageSet.length > 0 && storageSet.length < STORAGE_KEYS.length) {
+    const absent = STORAGE_KEYS.filter((key) => !storageSet.includes(key));
+    problems.push({
+      service: 'api',
+      message: `S3 storage is partly configured (missing ${absent.join(', ')}): audio recording stays off`,
+      fix: `set ${STORAGE_KEYS.join(', ')} as references to the Railway bucket (\${{<bucket>.BUCKET}}, ...), or delete them all`,
     });
   }
   return problems;
