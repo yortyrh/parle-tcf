@@ -71,7 +71,7 @@ Before adding features, the repository is reduced to what the product is: TCF sp
 
 - `packages/shared/src/messages.ts` (comment about data channels)
 - reference blocks in `apps/api/config/service.yml`
-- `README.md`, `.github/README.md`, `AGENTS.md`, `SERVICE_CONFIG.md`, `CHANGELOG.md`
+- `README.md`, `.github/workflows/README.md`, `AGENTS.md`, `SERVICE_CONFIG.md`, `CHANGELOG.md`
 - the `.claude/` commands
 - check whether the Socket.io gateway is still needed; if not, remove it
 

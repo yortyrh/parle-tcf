@@ -38,4 +38,4 @@ Exam content, model prompts and the UI are in French; code and docs are in Engli
 
 - [Original product requirements](docs/prd.md)
 - [Docker notes](DOCKER.md)
-- [CI workflows](.github/README.md)
+- [CI workflows](.github/workflows/README.md)

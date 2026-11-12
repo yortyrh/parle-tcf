@@ -1,30 +1,17 @@
-<p align="center">
-  <img src=".github/social-preview.png" alt="parle-tcf: practise the TCF speaking test with an AI examiner. Tâches 1–3 at official timing, CEFR scoring on 5 criteria." width="100%" />
-</p>
+# parle-tcf
 
-<h1 align="center">parle-tcf</h1>
+![parle-tcf: practise the TCF speaking test with an AI examiner. Tâches 1–3 at official timing, CEFR scoring on 5 criteria.](.github/social-preview.png)
 
-<p align="center">
-  <strong>Practise the TCF speaking test with an AI examiner, then get a CEFR level, feedback per criterion and your corrected transcript.</strong>
-</p>
+**Practise the TCF speaking test with an AI examiner, then get a CEFR level, feedback per criterion and your corrected transcript.**
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-1f5d8c" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/node-26_LTS-1f5d8c?logo=nodedotjs&logoColor=white" alt="Node.js 26 LTS" />
-  <img src="https://img.shields.io/badge/pnpm-12-1f5d8c?logo=pnpm&logoColor=white" alt="pnpm 12" />
-  <img src="https://img.shields.io/badge/Next.js-16-1b2236?logo=nextdotjs&logoColor=white" alt="Next.js 16" />
-  <img src="https://img.shields.io/badge/NestJS-11-1b2236?logo=nestjs&logoColor=white" alt="NestJS 11" />
-  <img src="https://img.shields.io/badge/TypeScript-strict-1b2236?logo=typescript&logoColor=white" alt="TypeScript" />
-</p>
+[![License: MIT](https://img.shields.io/badge/license-MIT-1f5d8c)](LICENSE)
+![Node.js 26 LTS](https://img.shields.io/badge/node-26_LTS-1f5d8c?logo=nodedotjs&logoColor=white)
+![pnpm 12](https://img.shields.io/badge/pnpm-12-1f5d8c?logo=pnpm&logoColor=white)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-1b2236?logo=nextdotjs&logoColor=white)
+![NestJS 11](https://img.shields.io/badge/NestJS-11-1b2236?logo=nestjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-1b2236?logo=typescript&logoColor=white)
 
-<p align="center">
-  <a href="#screenshots">Screenshots</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#how-it-works">How it works</a> ·
-  <a href="docs/README.md">Documentation</a> ·
-  <a href="#contributing">Contributing</a>
-</p>
+[Screenshots](#screenshots) · [Features](#features) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Documentation](docs/README.md) · [Contributing](#contributing)
 
 parle-tcf simulates the three tasks of the TCF _expression orale_ with official timing. A real-time voice model plays the examiner in the browser (OpenAI Realtime or Gemini Live, with **your own API key**). When a task ends, a separate model grades the transcript on the CEFR scale (A1–C2), explains each criterion and corrects every sentence you said.
 
